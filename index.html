@@ -1498,7 +1498,8 @@ function renderBcHome() {
 }
 
 // ─── B2: BC ORDER LIST ──────────────────────────────────────
-function renderBcOrders() {
+async function renderBcOrders() {
+  try { await loadOrders(); } catch(e) {}
   // Default date filter: tomorrow (most common delivery date)
   if (!S.bcDateFilter) {
     const t = new Date(); t.setDate(t.getDate() + 1);
