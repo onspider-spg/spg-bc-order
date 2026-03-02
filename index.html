@@ -2118,7 +2118,7 @@ function renderBcHome() {
   const bcAdminMenus = getBcAdminMenus();
 
   document.getElementById('bcHomeContent').innerHTML = `
-    <div class="sec-hd">📊 วันนี้</div>
+    <div class="sec-hd">📊 ส่งวันนี้</div>
     <div class="sum-grid">
       <div class="sum-card ${bs.Pending>0?'sum-red':''}"><div class="sum-num">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
       <div class="sum-card sum-blue"><div class="sum-num">${bs.Ordered||0}</div><div class="sum-label">Ordered</div></div>
