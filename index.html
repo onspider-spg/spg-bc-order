@@ -4471,23 +4471,21 @@ function openHamburger() {
   document.getElementById('hmBody').innerHTML = `
     <div class="hm-item" onclick="location.href='${HOME_URL}'">
       <div class="hm-item-icon">🏠</div>
-      <div>กลับหน้า Home</div>
+      <div>Home</div>
     </div>
     <div class="hm-item" onclick="showProfileInfo()">
       <div class="hm-item-icon">👤</div>
-      <div>ข้อมูลโปรไฟล์</div>
+      <div>Profile</div>
     </div>
     <div class="hm-item" onclick="showNotifPanel();closeHamburger()">
       <div class="hm-item-icon">🔔</div>
       <div>Notifications</div>
       </div>
     </div>
-    
-    <div style="height:1px;background:var(--b2);margin:8px 0"></div>
-    
-    <div class="hm-item" onclick="location.href='https://www.googoole.com'">
+      <div style="height:1px;background:var(--b2);margin:8px 0"></div>
+        <div class="hm-item hm-item-danger" onclick="doLogout()">
       <div class="hm-item-icon">🚪</div>
-      <div>ออกจากระบบ</div>
+      <div>Logout</div>
     </div>
     <div style="padding:16px;font-size:9px;color:var(--td);text-align:center">BC Order v5 · SPG © 2026</div>
   `;
