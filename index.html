@@ -544,7 +544,7 @@ async function loadDashboard() {
   
   // Fallback: compute from loaded orders
   const today = todaySydney();
-  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today || o.order_date === today);
+  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
   S.dashboard = {
     today_total: todayOrders.length,
     by_status: {
