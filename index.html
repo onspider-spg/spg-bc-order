@@ -357,7 +357,7 @@ const HASH_SCREENS = new Set([
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
   'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
-  'admin-waste-dashboard','admin-top-products','admin-announcements'
+  'admin-waste-dashboard','admin-top-products','admin-announcements','admin-product-edit'
 ]);
 let _skipHashChange = false;
 
@@ -963,6 +963,14 @@ function renderApp() {
       </div>
       <div class="content" id="adminAnnouncementsContent"></div>
     </div>
+    
+    <div class="screen" id="scr-admin-product-edit">
+      <div class="topbar" style="background:var(--gold-bg)">
+        <div class="topbar-back" onclick="showScreen('admin-products')">←</div>
+        <div class="topbar-title" style="color:var(--gold)" id="productEditTitle">📦 สินค้า</div>
+      </div>
+      <div class="content" id="productEditContent"></div>
+    </div>
   `;
 }
 
@@ -1007,6 +1015,7 @@ function showScreen(name) {
       case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
       case 'admin-top-products': renderAdminTopProducts(); break;
       case 'admin-announcements': renderAdminAnnouncements(); break;
+      case 'admin-product-edit': renderProductEditScreen(); break;
     }
     // Render BC bottom nav on all BC sub-screens
     if (name.startsWith('bc-') && name !== 'bc-home') {
@@ -2299,124 +2308,174 @@ async function toggleProduct(productId, newActive) {
   } catch(e) { toast('เกิดข้อผิดพลาด', 'error'); }
 }
 
-// N-02: Add/Edit Product form
+// N-02: Add/Edit Product — Full-page
 function showAddProductForm() {
-  showProductForm(null);
+  S._editProduct = null;
+  S._editVisibility = [];
+  showScreen('admin-product-edit');
 }
 
 function showEditProductForm(productId) {
   const prod = (S.products || []).find(p => p.product_id === productId);
   if (!prod) { toast('ไม่พบสินค้า', 'error'); return; }
-  showProductForm(prod);
+  S._editProduct = prod;
+  S._editVisibility = [];
+  showScreen('admin-product-edit');
 }
 
-function showProductForm(editData) {
-  const isEdit = !!editData;
-  const title = isEdit ? '✏️ แก้ไขสินค้า' : '➕ เพิ่มสินค้าใหม่';
-  const btnLabel = isEdit ? '💾 บันทึก' : '➕ เพิ่มสินค้า';
-  const btnAction = isEdit ? `submitEditProduct('${editData.product_id}')` : 'submitNewProduct()';
+async function renderProductEditScreen() {
+  const el = document.getElementById('productEditContent');
+  const p = S._editProduct;
+  const isEdit = !!p;
+  
+  document.getElementById('productEditTitle').textContent = isEdit ? '✏️ ' + p.product_name : '➕ เพิ่มสินค้าใหม่';
+  
+  // Load visibility if editing
+  if (isEdit && S._editVisibility.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+    try {
+      const resp = await api('get_product_visibility', null, { product_id: p.product_id });
+      if (resp.success) S._editVisibility = resp.data || [];
+    } catch(e) {}
+  }
   
   const cats = S.categories || [];
   const sections = ['cake', 'sauce'];
+  const stores = [
+    { id:'MNG', name:'🥭 Mango Coco', depts:['dessert','drink'] },
+    { id:'ISH', name:'🍣 Issho Cafe', depts:['dessert','drink'] },
+    { id:'GB',  name:'🥞 Golden Brown', depts:['dessert','drink'] },
+    { id:'TMC', name:'🧀 Melting Cheese', depts:['dessert','drink'] },
+    { id:'RW',  name:'🍜 Red Wok', depts:['dessert','drink'] },
+  ];
   
-  showDialog(`
-    <div style="font-size:16px;font-weight:700;margin-bottom:16px">${title}</div>
-    ${isEdit ? `<div style="font-size:10px;color:var(--td);margin-bottom:12px">ID: ${editData.product_id}</div>` : ''}
+  const imgUrl = isEdit ? (p.image_url || '') : '';
+  
+  el.innerHTML = `
+    <div class="pad">
+      ${isEdit ? `<div style="font-size:10px;color:var(--td);margin-bottom:12px;background:var(--s2);padding:8px 12px;border-radius:8px">🆔 ${p.product_id}</div>` : ''}
+      
+      <!-- Image Preview -->
+      <div style="text-align:center;margin-bottom:16px">
+        <div id="imgPreview" style="width:120px;height:120px;border-radius:16px;margin:0 auto 8px;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed var(--b2)">
+          ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(isEdit ? p.product_name : '')}'" />` : `<span style="font-size:48px">${isEdit ? prodEmoji(p.product_name) : '📦'}</span>`}
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">🖼️ Image URL</label>
+        <input class="form-input" id="prdImage" placeholder="https://example.com/image.jpg" value="${imgUrl}" oninput="previewProductImage(this.value)">
+        <div style="font-size:9px;color:var(--td);margin-top:2px">วาง URL รูปสินค้า จะแสดงในหน้าสั่งของ + Production Sheet</div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">ชื่อสินค้า *</label>
+        <input class="form-input" id="prdName" placeholder="เช่น Carrot Cake" value="${isEdit ? p.product_name : ''}">
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-input" id="prdCat">
+            ${cats.map(c => `<option value="${c.cat_id||c.category_id}" ${isEdit && (p.cat_id||p.category_id)===(c.cat_id||c.category_id)?'selected':''}>${c.cat_name||c.category_name||c.cat_id}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Section (ทีมผลิต) *</label>
+          <select class="form-input" id="prdSection">
+            ${sections.map(s => `<option value="${s}" ${isEdit && p.section_id===s?'selected':''}>${s === 'cake' ? '🎂 cake' : '🫕 sauce'}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="form-group">
+          <label class="form-label">หน่วย</label>
+          <input class="form-input" id="prdUnit" placeholder="pieces" value="${isEdit ? p.unit||'pieces' : 'pieces'}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">สั่งขั้นต่ำ</label>
+          <input class="form-input" type="number" id="prdMin" min="1" value="${isEdit ? p.min_order||1 : 1}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Step</label>
+          <input class="form-input" type="number" id="prdStep" min="1" value="${isEdit ? p.order_step||1 : 1}">
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group">
+          <label class="form-label">สั่งสูงสุด</label>
+          <input class="form-input" type="number" id="prdMax" min="1" value="${isEdit ? p.max_order||100 : 100}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Allow Stock</label>
+          <select class="form-input" id="prdStock">
+            <option value="true" ${isEdit && p.allow_stock?'selected':''}>Yes</option>
+            <option value="false" ${isEdit && !p.allow_stock?'selected':''}>No</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="prdDesc" rows="2" placeholder="รายละเอียดสินค้า">${isEdit ? p.description||'' : ''}</textarea>
+      </div>
+    </div>
     
-    <div class="form-group">
-      <label class="form-label">ชื่อสินค้า *</label>
-      <input class="form-input" id="prdName" placeholder="เช่น Carrot Cake" value="${isEdit ? editData.product_name : ''}">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="form-group">
-        <label class="form-label">Category</label>
-        <select class="form-input" id="prdCat">
-          ${cats.map(c => `<option value="${c.cat_id||c.category_id}" ${isEdit && (editData.cat_id||editData.category_id)===(c.cat_id||c.category_id)?'selected':''}>${c.cat_name||c.category_name||c.cat_id}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Section *</label>
-        <select class="form-input" id="prdSection">
-          ${sections.map(s => `<option value="${s}" ${isEdit && editData.section_id===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-      <div class="form-group">
-        <label class="form-label">หน่วย</label>
-        <input class="form-input" id="prdUnit" placeholder="pieces" value="${isEdit ? editData.unit||'pieces' : 'pieces'}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">สั่งขั้นต่ำ</label>
-        <input class="form-input" type="number" id="prdMin" min="1" value="${isEdit ? editData.min_order||1 : 1}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Step</label>
-        <input class="form-input" type="number" id="prdStep" min="1" value="${isEdit ? editData.order_step||1 : 1}">
+    <!-- Visibility Section -->
+    <div class="sec-hd">👁️ ร้านที่เห็นสินค้านี้</div>
+    <div class="pad" style="padding-top:0">
+      <div style="font-size:10px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้</div>
+      ${stores.map(store => {
+        return store.depts.map(dept => {
+          const vis = S._editVisibility.find(v => v.store_id === store.id && v.dept_id === dept);
+          const checked = vis ? vis.is_active : (!isEdit); // new product = all checked by default
+          return `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2)">
+            <input type="checkbox" id="vis_${store.id}_${dept}" ${checked ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold)">
+            <label for="vis_${store.id}_${dept}" style="flex:1;font-size:12px;cursor:pointer">
+              <span style="font-weight:600">${store.name}</span>
+              <span style="color:var(--td);font-size:10px"> · ${dept}</span>
+            </label>
+          </div>`;
+        }).join('');
+      }).join('')}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="font-size:10px;color:var(--blue);cursor:pointer" onclick="toggleAllVis(true)">✅ เลือกทั้งหมด</div>
+        <div style="font-size:10px;color:var(--red);cursor:pointer" onclick="toggleAllVis(false)">❌ ยกเลิกทั้งหมด</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="form-group">
-        <label class="form-label">สั่งสูงสุด</label>
-        <input class="form-input" type="number" id="prdMax" min="1" value="${isEdit ? editData.max_order||100 : 100}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Allow Stock</label>
-        <select class="form-input" id="prdStock">
-          <option value="true" ${isEdit && editData.allow_stock?'selected':''}>Yes</option>
-          <option value="false" ${isEdit && !editData.allow_stock?'selected':''}>No</option>
-        </select>
-      </div>
+    
+    <!-- Submit -->
+    <div class="pad" style="padding-bottom:40px">
+      <button class="btn btn-gold" style="width:100%;padding:14px" onclick="submitProductEdit(${isEdit ? `'${p.product_id}'` : 'null'})">${isEdit ? '💾 บันทึกการแก้ไข' : '➕ เพิ่มสินค้า'}</button>
+      ${isEdit ? `<button class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--red);border-color:var(--red)" onclick="toggleProduct('${p.product_id}',${!(p.is_active===true||p.is_active==='TRUE')});showScreen('admin-products')">${p.is_active===true||p.is_active==='TRUE' ? '🔇 ปิดสินค้านี้' : '🔔 เปิดสินค้านี้'}</button>` : ''}
     </div>
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <input class="form-input" id="prdDesc" placeholder="รายละเอียด (optional)" value="${isEdit ? editData.description||'' : ''}">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ยกเลิก</button>
-      <button class="btn btn-gold" style="flex:1" onclick="${btnAction}">${btnLabel}</button>
-    </div>
-  `);
+  `;
 }
 
-async function submitNewProduct() {
-  const name = document.getElementById('prdName').value.trim();
-  if (!name) { toast('กรุณาใส่ชื่อสินค้า', 'error'); return; }
-  
-  const body = {
-    product_name: name,
-    category_id: document.getElementById('prdCat').value,
-    section_id: document.getElementById('prdSection').value,
-    unit: document.getElementById('prdUnit').value || 'pieces',
-    min_order: parseInt(document.getElementById('prdMin').value) || 1,
-    max_order: parseInt(document.getElementById('prdMax').value) || 100,
-    order_step: parseInt(document.getElementById('prdStep').value) || 1,
-    allow_stock: document.getElementById('prdStock').value === 'true',
-    description: document.getElementById('prdDesc').value || '',
-  };
-  
-  try {
-    const resp = await api('create_product', body);
-    if (resp.success) {
-      toast(resp.message || '✅ เพิ่มสินค้าเรียบร้อย', 'success');
-      closeDialog();
-      await renderAdminProducts();
-    } else {
-      toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
-    }
-  } catch(e) {
-    // Demo fallback
-    toast('✅ เพิ่มสินค้าเรียบร้อย (Demo)', 'success');
-    closeDialog();
+function previewProductImage(url) {
+  const preview = document.getElementById('imgPreview');
+  if (!preview) return;
+  if (url && url.startsWith('http')) {
+    preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='❌'" />`;
+  } else {
+    const name = document.getElementById('prdName')?.value || '';
+    preview.innerHTML = `<span style="font-size:48px">${prodEmoji(name) || '📦'}</span>`;
   }
 }
 
-async function submitEditProduct(productId) {
+function toggleAllVis(on) {
+  document.querySelectorAll('[id^="vis_"]').forEach(el => { el.checked = on; });
+}
+
+async function submitProductEdit(productId) {
+  const isEdit = !!productId;
   const name = document.getElementById('prdName').value.trim();
   if (!name) { toast('กรุณาใส่ชื่อสินค้า', 'error'); return; }
   
   const body = {
-    product_id: productId,
     product_name: name,
     category_id: document.getElementById('prdCat').value,
     section_id: document.getElementById('prdSection').value,
@@ -2426,20 +2485,44 @@ async function submitEditProduct(productId) {
     order_step: parseInt(document.getElementById('prdStep').value) || 1,
     allow_stock: document.getElementById('prdStock').value === 'true',
     description: document.getElementById('prdDesc').value || '',
+    image_url: document.getElementById('prdImage').value.trim() || '',
   };
   
+  if (isEdit) body.product_id = productId;
+  
+  // Collect visibility
+  const stores = ['MNG','ISH','GB','TMC','RW'];
+  const depts = ['dessert','drink'];
+  const visibility = [];
+  stores.forEach(sid => {
+    depts.forEach(dept => {
+      const cb = document.getElementById('vis_' + sid + '_' + dept);
+      if (cb) {
+        visibility.push({ store_id: sid, dept_id: dept, is_active: cb.checked });
+      }
+    });
+  });
+  
   try {
-    const resp = await api('update_product', body);
-    if (resp.success) {
-      toast(resp.message || '✅ แก้ไขสินค้าเรียบร้อย', 'success');
-      closeDialog();
-      await renderAdminProducts();
-    } else {
-      toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
+    // Save product
+    const action = isEdit ? 'update_product' : 'create_product';
+    const resp = await api(action, body);
+    if (!resp.success) { toast(resp.message || 'เกิดข้อผิดพลาด', 'error'); return; }
+    
+    const pid = isEdit ? productId : resp.data?.product_id;
+    
+    // Save visibility
+    if (pid && visibility.length > 0) {
+      try {
+        await api('update_product_visibility', { product_id: pid, visibility });
+      } catch(e) { console.warn('Visibility update failed:', e); }
     }
+    
+    toast(resp.message || '✅ บันทึกเรียบร้อย', 'success');
+    await loadProducts();
+    showScreen('admin-products');
   } catch(e) {
-    toast('✅ แก้ไขเรียบร้อย (Demo)', 'success');
-    closeDialog();
+    toast('❌ Error: ' + e.message, 'error');
   }
 }
 
