@@ -346,6 +346,7 @@ const S = {
   bcPrintDate: '',
   bcPrintTab: 'production', // 'production' | 'slip'
   bcPrintStore: '',         // for slip view
+  wasteDashDays: 30,       // waste dashboard period
 };
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
@@ -353,7 +354,8 @@ const HASH_SCREENS = new Set([
   'home','browse','cart','orders','stock','waste','returns',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
-  'admin-config','admin-notif-settings','admin-cutoff','admin-audit'
+  'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
+  'admin-waste-dashboard'
 ]);
 let _skipHashChange = false;
 
@@ -935,6 +937,14 @@ function renderApp() {
       </div>
       <div class="content" id="adminAuditContent"></div>
     </div>
+    
+    <div class="screen" id="scr-admin-waste-dashboard">
+      <div class="topbar" style="background:var(--gold-bg)">
+        <div class="topbar-back" onclick="showScreen('admin-dashboard')">←</div>
+        <div class="topbar-title" style="color:var(--gold)">🗑️ Waste Dashboard</div>
+      </div>
+      <div class="content" id="adminWasteDbContent"></div>
+    </div>
   `;
 }
 
@@ -976,6 +986,7 @@ function showScreen(name) {
       case 'admin-notif-settings': renderAdminNotifSettings(); break;
       case 'admin-cutoff': renderAdminCutoff(); break;
       case 'admin-audit': renderAdminAudit(); break;
+      case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
     }
     // Render BC bottom nav on all BC sub-screens
     if (name.startsWith('bc-') && name !== 'bc-home') {
@@ -2116,6 +2127,11 @@ function getBcAdminMenus() {
         <div class="card-body"><div class="card-title">Audit Trail</div><div class="card-desc">ประวัติเปลี่ยนสิทธิ์ + mapping</div></div>
         <div class="card-right">→</div></div>
       </div>
+      <div class="card" onclick="showScreen('admin-waste-dashboard')">
+        <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">🗑️</div>
+        <div class="card-body"><div class="card-title">Waste Dashboard</div><div class="card-desc">สรุปของเสีย วิเคราะห์ Top waste + แนวโน้ม</div></div>
+        <div class="card-right">→</div></div>
+      </div>
     </div>`;
 }
 
@@ -2152,8 +2168,17 @@ function renderAdminDashboard() {
     </div>
     <div class="sec-hd">🏪 Orders by Store</div>
     <div class="pad">${renderStoreBreakdown()}</div>
-    <div style="text-align:center;padding:20px;color:var(--tm);font-size:11px">
-      Phase 2: Top Products, Top Stores ranking, Trend chart
+    <div class="sec-hd">🔗 Quick Links</div>
+    <div class="pad" style="padding-top:0;display:flex;gap:8px">
+      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-waste-dashboard')">
+        <div style="font-size:22px">🗑️</div>
+        <div style="font-size:11px;font-weight:600;margin-top:4px">Waste Dashboard</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer;opacity:0.5">
+        <div style="font-size:22px">🏆</div>
+        <div style="font-size:11px;font-weight:600;margin-top:4px">Top Products</div>
+        <div style="font-size:8px;color:var(--td)">เร็วๆ นี้</div>
+      </div>
     </div>`;
 }
 
@@ -2724,6 +2749,152 @@ async function renderAdminAudit() {
 }
 
 function truncate(s, n) { return s && s.length > n ? s.substring(0, n) + '...' : s; }
+
+// ─── B-04: WASTE DASHBOARD ──────────────────────────────────
+async function renderAdminWasteDashboard() {
+  const el = document.getElementById('adminWasteDbContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+  
+  if (!S.wasteDashDays) S.wasteDashDays = 30;
+  
+  try {
+    const resp = await api('get_waste_dashboard', null, { days: String(S.wasteDashDays) });
+    if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
+    
+    const d = resp.data;
+    const sm = d.summary;
+    const reasonColors = { Unsold:'#f59e0b', Expired:'#ef4444', Damaged:'#f97316', Return:'#8b5cf6', Other:'#6b7280' };
+    const reasonLabels = { Unsold:'ขายไม่หมด', Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
+    
+    // Period selector
+    let html = `
+      <div class="filter-bar">
+        <div class="filter-chip ${S.wasteDashDays===7?'active':''}" onclick="S.wasteDashDays=7;renderAdminWasteDashboard()">7 วัน</div>
+        <div class="filter-chip ${S.wasteDashDays===14?'active':''}" onclick="S.wasteDashDays=14;renderAdminWasteDashboard()">14 วัน</div>
+        <div class="filter-chip ${S.wasteDashDays===30?'active':''}" onclick="S.wasteDashDays=30;renderAdminWasteDashboard()">30 วัน</div>
+      </div>`;
+    
+    // Summary cards
+    html += `
+      <div class="sec-hd">📊 สรุปภาพรวม (${S.wasteDashDays} วัน)</div>
+      <div class="sum-grid">
+        <div class="sum-card" style="border-left:3px solid var(--red)">
+          <div class="sum-val" style="color:var(--red)">${sm.today_qty}</div>
+          <div class="sum-lbl">ทิ้งวันนี้</div>
+          <div style="font-size:9px;color:var(--td)">${sm.today_records} รายการ</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--orange)">
+          <div class="sum-val" style="color:var(--orange)">${sm.week_qty}</div>
+          <div class="sum-lbl">7 วันล่าสุด</div>
+          <div style="font-size:9px;color:var(--td)">${sm.week_records} รายการ</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--blue)">
+          <div class="sum-val">${sm.total_qty}</div>
+          <div class="sum-lbl">ทั้งหมด ${S.wasteDashDays} วัน</div>
+          <div style="font-size:9px;color:var(--td)">${sm.total_records} รายการ</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--gold)">
+          <div class="sum-val">${sm.total_records > 0 ? Math.round(sm.total_qty / S.wasteDashDays) : 0}</div>
+          <div class="sum-lbl">เฉลี่ย/วัน</div>
+        </div>
+      </div>`;
+    
+    // By Reason
+    const reasons = Object.entries(d.byReason).sort((a,b) => b[1].qty - a[1].qty);
+    const maxReasonQty = reasons.length ? reasons[0][1].qty : 1;
+    html += `<div class="sec-hd">📋 แยกตามสาเหตุ</div><div class="pad" style="padding-top:0">`;
+    reasons.forEach(([reason, v]) => {
+      const pct = Math.round((v.qty / maxReasonQty) * 100);
+      const color = reasonColors[reason] || '#6b7280';
+      const label = reasonLabels[reason] || reason;
+      html += `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span style="font-weight:600">${label}</span>
+            <span style="color:var(--td)">${v.qty} ชิ้น (${v.count} ครั้ง)</span>
+          </div>
+          <div style="background:var(--s2);border-radius:4px;height:14px;overflow:hidden">
+            <div style="background:${color};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s"></div>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+    
+    // Top Products
+    const topP = d.topProducts || [];
+    const maxProdQty = topP.length ? topP[0].qty : 1;
+    html += `<div class="sec-hd">🏆 Top Waste สินค้า</div><div class="pad" style="padding-top:0">`;
+    topP.forEach((p, idx) => {
+      const pct = Math.round((p.qty / maxProdQty) * 100);
+      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
+      html += `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span>${medal} <strong>${p.name}</strong> <span style="color:var(--td);font-size:9px">${p.section}</span></span>
+            <span style="color:var(--red);font-weight:600">${p.qty} ชิ้น</span>
+          </div>
+          <div style="background:var(--s2);border-radius:4px;height:10px;overflow:hidden">
+            <div style="background:var(--red);opacity:${1 - idx*0.08};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s"></div>
+          </div>
+        </div>`;
+    });
+    if (!topP.length) html += '<div style="text-align:center;color:var(--td);font-size:12px;padding:16px">ไม่มีข้อมูล</div>';
+    html += '</div>';
+    
+    // By Source
+    const sources = Object.entries(d.bySource).sort((a,b) => b[1].qty - a[1].qty);
+    if (sources.length > 1) {
+      const maxSrcQty = sources[0][1].qty || 1;
+      const srcIcons = { bakery:'🏭', MC:'🥭', ISH:'🍣', GB:'🥞', RW:'🍜', TM:'🧀' };
+      html += `<div class="sec-hd">🏬 แยกตามแหล่ง</div><div class="pad" style="padding-top:0">`;
+      sources.forEach(([src, v]) => {
+        const pct = Math.round((v.qty / maxSrcQty) * 100);
+        const icon = srcIcons[src] || '📍';
+        html += `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:16px">${icon}</span>
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                <span style="font-weight:600">${src === 'bakery' ? 'Bakery Centre' : getStoreName(src) || src}</span>
+                <span style="color:var(--td)">${v.qty} (${v.count})</span>
+              </div>
+              <div style="background:var(--s2);border-radius:3px;height:8px;overflow:hidden">
+                <div style="background:var(--blue);height:100%;width:${pct}%;border-radius:3px"></div>
+              </div>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+    }
+    
+    // Daily Trend (bar chart)
+    const trend = d.dailyTrend || [];
+    const maxDay = Math.max(...trend.map(t => t.qty), 1);
+    const recentTrend = trend.slice(-Math.min(S.wasteDashDays, 14));
+    html += `<div class="sec-hd">📈 แนวโน้มรายวัน</div>
+      <div class="pad" style="padding-top:0;overflow-x:auto">
+        <div style="display:flex;align-items:flex-end;gap:3px;height:120px;min-width:${recentTrend.length * 24}px">`;
+    recentTrend.forEach(t => {
+      const h = t.qty > 0 ? Math.max(Math.round((t.qty / maxDay) * 100), 4) : 0;
+      const isToday = t.date === todaySydney();
+      const dayLabel = t.date.slice(8);
+      html += `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:20px">
+          <div style="font-size:8px;color:var(--td);margin-bottom:2px">${t.qty || ''}</div>
+          <div style="width:100%;max-width:24px;height:${h}px;background:${isToday ? 'var(--red)' : 'var(--blue)'};border-radius:3px 3px 0 0;transition:height 0.5s"></div>
+          <div style="font-size:7px;color:var(--td);margin-top:2px;${isToday?'font-weight:700;color:var(--red)':''}">${dayLabel}</div>
+        </div>`;
+    });
+    html += `</div>
+      <div style="font-size:8px;color:var(--td);text-align:center;margin-top:6px">← เก่ากว่า · ล่าสุด →</div>
+    </div>`;
+    
+    el.innerHTML = html;
+    
+  } catch(e) {
+    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
+  }
+}
 
 // ─── B2: BC ORDER LIST ──────────────────────────────────────
 async function renderBcOrders() {
