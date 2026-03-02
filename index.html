@@ -344,7 +344,6 @@ const S = {
   returns: [],
   notifications: [],
   dashboard: null,
-  dashboard_delivery_today: null,   // ✅ เพิ่มบรรทัดนี้  
   currentScreen: 'loading',
   productSearch: '',
   productFilter: 'all',
@@ -424,8 +423,6 @@ async function init() {
       await Promise.all([
         loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(),
       ]);
-      // ✅ คำนวณ dashboard สำหรับ "ส่งวันนี้"
-      S.dashboard_delivery_today = computeDeliveryTodayDashboard();
       await loadDashboard();  // after orders so fallback can compute from S.orders
       routeToHome();
     } else {
@@ -561,25 +558,6 @@ async function loadDashboard() {
     urgent_items: 0,
   };
 }
-
-function computeDeliveryTodayDashboard() {
-  const today = todaySydney();
-  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
-
-  return {
-    today_total: todayOrders.length,
-    by_status: {
-      Pending: todayOrders.filter(o => o.status === 'Pending').length,
-      Ordered: todayOrders.filter(o => o.status === 'Ordered').length,
-      InProgress: todayOrders.filter(o => o.status === 'InProgress').length,
-      Fulfilled: todayOrders.filter(o => o.status === 'Fulfilled').length,
-      Delivered: todayOrders.filter(o => o.status === 'Delivered').length,
-    },
-    cutoff_violations_today: todayOrders.filter(o => o.is_cutoff_violation).length,
-    urgent_items: 0,
-  };
-}
-  
 
 async function loadOrders(status = '') {
   const params = { limit: '100' };
@@ -1172,7 +1150,7 @@ function renderHomeDashboard() {
     </div>` : '';
   
   document.getElementById('homeContent').innerHTML = `
-    <div class="sec-hd">📊 Today Delivery</div>
+    <div class="sec-hd">📊 วันนี้</div>
     <div class="sum-grid">
       <div class="sum-card sum-gold"><div class="sum-num">${d.today_total}</div><div class="sum-label">ออเดอร์ทั้งหมด</div></div>
       <div class="sum-card sum-green"><div class="sum-num">${(bs.Fulfilled||0)+(bs.Delivered||0)}</div><div class="sum-label">เสร็จแล้ว</div></div>
@@ -1186,7 +1164,7 @@ function renderHomeDashboard() {
     <div class="sec-hd">⚡ Quick Menu</div>
     <div class="pad" style="padding-top:0">
       ${hasPerm('fn_create_order') ? `<div class="card" onclick="startOrder()">
-        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📝</div><div class="card-body"><div class="card-title">New Order</div><div class="card-desc">สั่ง Cake / Sauce ไปร้าน</div></div><div class="card-right">→</div></div>
+        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📝</div><div class="card-body"><div class="card-title">Order Items</div><div class="card-desc">สั่ง Cake / Sauce ไปร้าน</div></div><div class="card-right">→</div></div>
       </div>` : ''}
       ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')">
         <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div><div class="card-body"><div class="card-title">View Orders</div><div class="card-desc">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right">→</div></div>
@@ -1619,7 +1597,7 @@ function filterOrders() {
         <span style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</span>
         <span class="status ${statusClass(o.status)}">${o.status}</span>
       </div>
-      <div style="font-size:11px;color:var(--td)">📅 Order Date : ${formatDateAU(o.order_date)} · Delivery By : ${formatDateAU(o.delivery_date)}</div>
+      <div style="font-size:11px;color:var(--td)">📅 ส่ง ${formatDateThai(o.delivery_date)} · สั่ง ${formatDateThai(o.order_date)}</div>
       ${o.is_cutoff_violation ? '<div class="tag tag-orange" style="margin-top:4px;font-size:9px">⚠️ Cutoff Violation</div>' : ''}
       ${o.header_note ? `<div style="font-size:10px;color:var(--td);margin-top:4px">📝 ${o.header_note}</div>` : ''}
     </div>
@@ -2135,12 +2113,12 @@ function renderBcHome() {
     <div class="nav-item" onclick="showScreen('waste')"><span class="ni">🗑️</span>Waste</div>`;
 
   // Dashboard + Menu
-  const d = S.dashboard_delivery_today || { today_total:0, by_status:{}, cutoff_violations_today:0, urgent_items:0 };
+  const d = S.dashboard || { today_total:0, by_status:{}, cutoff_violations_today:0, urgent_items:0 };
   const bs = d.by_status || {};
   const bcAdminMenus = getBcAdminMenus();
 
   document.getElementById('bcHomeContent').innerHTML = `
-    <div class="sec-hd">📊 Today Delivery</div>
+    <div class="sec-hd">📊 วันนี้</div>
     <div class="sum-grid">
       <div class="sum-card ${bs.Pending>0?'sum-red':''}"><div class="sum-num">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
       <div class="sum-card sum-blue"><div class="sum-num">${bs.Ordered||0}</div><div class="sum-label">Ordered</div></div>
@@ -4408,25 +4386,17 @@ function showNotifPanel() {
 // B-01: Auto-poll notifications + dashboard every 60s
 let _pollInterval = null;
 function startPolling() {
-
-if (_pollInterval) clearInterval(_pollInterval);
-_pollInterval = setInterval(async () => {
-try {
-await loadNotifications();
-checkNotifications();
-if (S.currentScreen === 'home' || S.currentScreen === 'bc-home') {
-  // ✅ โหลด orders ใหม่ก่อน
-  try { await loadOrders(); } catch(e) {}
-  // ✅ คำนวณ dashboard สำหรับ "ส่งวันนี้"
-  S.dashboard_delivery_today = computeDeliveryTodayDashboard();
-  // ยังโหลด dashboard เดิมไว้ (กันพังจุดอื่น)
-  await loadDashboard();
-  // re-render หน้าที่กำลังดู
-  if (S.currentScreen === 'home') renderHomeDashboard();
-  if (S.currentScreen === 'bc-home') renderBcHome();
-}
-} catch(e) { /* silent fail */ }
-}, 60000);
+  if (_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(async () => {
+    try {
+      await loadNotifications();
+      checkNotifications();
+      if (S.currentScreen === 'home' || S.currentScreen === 'bc-home') {
+        await loadDashboard();
+        if (S.currentScreen === 'home') renderHomeDashboard();
+      }
+    } catch(e) { /* silent fail */ }
+  }, 60000);
 }
 
 function stopPolling() {
@@ -4563,16 +4533,6 @@ function formatDateThai(str) {
   const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
-
-function formatDateAU(str) {
-  if (!str) return '';
-  const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-AU', {
-    day: '2-digit',
-    month: 'short'
-  });
-}
-  
 
 function getStoreName(id) {
   const map = { MNG:'Mango Coco', ISH:'Issho Cafe', GB:'Golden Brown', TMC:'The Melting Cheese', BC:'Bakery Centre', ALL:'ทุกร้าน' };
