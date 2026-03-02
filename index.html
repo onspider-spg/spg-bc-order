@@ -1463,18 +1463,8 @@ function renderCart() {
 function adjustQty(idx, delta) {
   const item = S.cart[idx];
   const step = item.order_step || 1;
-
-  const newQty = item.qty + (delta * step);
-
-  if (newQty <= 0) {
-    // ลบออกจาก cart เลย
-    S.cart.splice(idx, 1);
-  } else {
-    item.qty = newQty;
-  }
-
+  item.qty = Math.max(item.min_order, item.qty + (delta * step));
   renderCart();
-  updateCartBadge();
 }
 
 function removeFromCart(idx) {
