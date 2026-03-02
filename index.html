@@ -280,7 +280,7 @@ textarea.form-input{resize:none;min-height:72px}
 .slip-dept{font-weight:600;color:#888;margin:6px 0 2px;font-size:9px}
 .slip-row{display:flex;justify-content:space-between;padding:1px 0}
 .slip-foot{border-top:1px dashed #ccc;padding-top:8px;margin-top:10px;font-size:9px}
-@media print{body{background:#fff!important}.screen{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}}
+@media print{body{background:#fff!important}.screen{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}}
 </style>
 </head>
 <body>
@@ -813,6 +813,7 @@ function renderApp() {
       </div>
       <div class="filter-bar" id="bcOrderFilters"></div>
       <div class="content" id="bcOrderList"></div>
+      <div class="bottomnav bc-nav" id="bcOrdersNav"></div>
     </div>
     
     <!-- ══════ BAKERY CENTRE: B3 ACCEPT PENDING ══════ -->
@@ -840,6 +841,7 @@ function renderApp() {
         <div class="topbar-title">📦 จัดการสต็อก<div class="topbar-sub" id="bcStockSub"></div></div>
       </div>
       <div class="content" id="bcStockContent"></div>
+      <div class="bottomnav bc-nav" id="bcStockNav"></div>
     </div>
     
     <!-- ══════ BAKERY CENTRE: B7 RETURNS ══════ -->
@@ -850,6 +852,7 @@ function renderApp() {
       </div>
       <div class="filter-bar" id="bcReturnFilters"></div>
       <div class="content" id="bcReturnList"></div>
+      <div class="bottomnav bc-nav" id="bcReturnsNav"></div>
     </div>
     
     <!-- ══════ BAKERY CENTRE: B8 PRINT CENTRE ══════ -->
@@ -865,6 +868,7 @@ function renderApp() {
       </div>
       <div class="filter-bar" id="bcPrintTabs"></div>
       <div class="content" id="bcPrintContent"></div>
+      <div class="bottomnav bc-nav" id="bcPrintNav"></div>
     </div>
     
     <!-- ══════ ADMIN SCREENS ══════ -->
@@ -973,7 +977,36 @@ function showScreen(name) {
       case 'admin-cutoff': renderAdminCutoff(); break;
       case 'admin-audit': renderAdminAudit(); break;
     }
+    // Render BC bottom nav on all BC sub-screens
+    if (name.startsWith('bc-') && name !== 'bc-home') {
+      renderBcSubNav(name);
+    }
   }
+}
+
+// ─── BC SUB-SCREEN BOTTOM NAV ────────────────────────────────
+function renderBcSubNav(currentScreen) {
+  const navMap = {
+    'bc-orders': 'bcOrdersNav',
+    'bc-stock': 'bcStockNav',
+    'bc-returns': 'bcReturnsNav',
+    'bc-print': 'bcPrintNav',
+  };
+  const navId = navMap[currentScreen];
+  if (!navId) return;
+  const el = document.getElementById(navId);
+  if (!el) return;
+  
+  const items = [
+    { screen: 'bc-home', icon: '🏠', label: 'Home' },
+    { screen: 'bc-orders', icon: '📋', label: 'Orders' },
+    { screen: 'bc-stock', icon: '📦', label: 'Stock' },
+    { screen: 'bc-print', icon: '🖨️', label: 'Print' },
+    { screen: 'waste', icon: '🗑️', label: 'Waste' },
+  ];
+  el.innerHTML = items.map(it => 
+    `<div class="nav-item${it.screen === currentScreen ? ' active' : ''}" onclick="showScreen('${it.screen}')"><span class="ni">${it.icon}</span>${it.label}</div>`
+  ).join('');
 }
 
 // ─── RENDER: HOME ────────────────────────────────────────────
@@ -1418,7 +1451,11 @@ async function submitOrder() {
         toast(resp.message || '✅ สั่งเรียบร้อย!', 'success');
         S.cart = [];
         S.headerNote = '';
-        setTimeout(() => showScreen('home'), 1500);
+        // Reload data so Home counter updates immediately
+        setTimeout(async () => {
+          await Promise.all([loadOrders(), loadDashboard()]);
+          showScreen('home');
+        }, 1200);
       } else {
         toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
         submitBtn.disabled = false;
@@ -3435,6 +3472,9 @@ function renderProductionSheet() {
       * = URGENT ⚡${notes.map(n => ` | (${n.label}) ${n.text}`).join('')}</div>`;
   }
   html += '</div>';
+  html += `<div style="text-align:center;padding:12px" class="no-print">
+    <button class="btn btn-primary" onclick="window.print()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Production Sheet</button>
+  </div>`;
 
   document.getElementById('bcPrintContent').innerHTML = html;
 }
@@ -3533,6 +3573,9 @@ function renderDeliverySlip() {
     Checked by: ___________<br>
     <div style="font-size:7px;color:#aaa;margin-top:4px;text-align:center">Printed: ${now}</div>
   </div></div>`;
+  html += `<div style="text-align:center;padding:12px" class="no-print">
+    <button class="btn btn-primary" onclick="window.print()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Delivery Slip</button>
+  </div>`;
 
   document.getElementById('bcPrintContent').innerHTML = html;
 }
