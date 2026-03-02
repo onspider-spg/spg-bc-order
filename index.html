@@ -378,10 +378,6 @@ const HASH_SCREENS = new Set([
 ]);
 let _skipHashChange = false;
 
-function isBcModuleRole(moduleRole) {
-  return typeof moduleRole === 'string' && moduleRole.startsWith('bc_');
-}
-  
 // ─── ENTRY FLOW ──────────────────────────────────────────────
 async function init() {
   renderApp();
@@ -455,7 +451,7 @@ function routeToHome() {
   }
   
   // Determine role from deptMapping
-  if (dm && isBcModuleRole(dm.module_role)) {
+  if (dm && (dm.module_role === 'bc_production' || dm.module_role === 'bc_management')) {
     S.role = 'bc';
   } else {
     S.role = 'store';
@@ -1852,7 +1848,7 @@ function showWasteForm(editData) {
   // W-01 fix: Filter products by dept scope (not category)
   let wasteProducts = (S.products || []).filter(p => p.is_active === true || p.is_active === 'TRUE');
   const dm = S.deptMapping || {};
- if (isBcModuleRole(dm.module_role)) {
+  if (dm.module_role === 'bc_production' || dm.module_role === 'bc_management') {
     // BC role: filter by section_scope
     const scope = dm.section_scope || [];
     if (scope.length > 0) {
@@ -3473,39 +3469,15 @@ function setBcDate(mode) {
   renderBcOrderList();
 }
 
-function normalizeDateOnly(value) {
-  if (!value) return '';
-  const s = String(value);
-  return s.length >= 10 ? s.slice(0, 10) : s;
-}
-
-function getItemScopeKey(item) {
-  return (item?.section_id || item?.section || item?.category_id || item?.dept_id || '').toString().trim().toLowerCase();
-}
-  
 function filterOrdersByDateAndScope(date, scope) {
-  const normalizedDate = normalizeDateOnly(date);
-  let orders = date === 'all'
-    ? [...S.orders]
-    : S.orders.filter(o => {
-        const deliveryDate = normalizeDateOnly(o.delivery_date);
-        const orderDate = normalizeDateOnly(o.order_date);
-        // F-07: BC view should find the order by either "วันที่สั่ง" or "วันที่ส่ง"
-        // so staff can still locate newly placed next-day orders from today's queue.
-        return deliveryDate === normalizedDate || orderDate === normalizedDate;
-      });
-  
+  let orders = date === 'all' ? [...S.orders] : S.orders.filter(o => o.delivery_date === date);
   // BC section_scope filter: only show orders that have items in our scope
   if (scope && scope.length > 0) {
-const scopeSet = new Set(scope.map(s => String(s).trim().toLowerCase()));    
     orders = orders.filter(o => {
       // B-02 fix: if items not loaded yet (undefined or null), keep the order visible
       if (!o.items) return true;
       if (o.items.length === 0) return true;  // items loaded but empty → still show
-            const itemScopeKeys = o.items.map(getItemScopeKey).filter(Boolean);
-      if (itemScopeKeys.length === 0) return true; // cannot determine scope from payload, keep visible
-
-      return itemScopeKeys.some(k => scopeSet.has(k));
+      return o.items.some(it => scope.includes(it.section_id));
     });
   }
   return orders;
@@ -3549,10 +3521,7 @@ function renderBcOrderList() {
       // Filter items by section_scope for display
       let items = o.items || [];
       if (scope.length > 0) items = items.filter(it => scope.includes(it.section_id));
- if (scope.length > 0) {
-        const scopeSet = new Set(scope.map(s => String(s).trim().toLowerCase()));
-        items = items.filter(it => scopeSet.has(getItemScopeKey(it)));
-      }
+
       // Tap → Pending goes to accept, Ordered/InProgress to fulfilment, Done to detail
       let tapAction;
       if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
@@ -4477,21 +4446,20 @@ function openHamburger() {
   document.getElementById('hmBody').innerHTML = `
     <div class="hm-item" onclick="location.href='${HOME_URL}'">
       <div class="hm-item-icon">🏠</div>
-      <div>Home</div>
+      <div>กลับหน้า Home</div>
     </div>
     <div class="hm-item" onclick="showProfileInfo()">
       <div class="hm-item-icon">👤</div>
-      <div>Profile</div>
+      <div>ข้อมูลโปรไฟล์</div>
     </div>
     <div class="hm-item" onclick="showNotifPanel();closeHamburger()">
       <div class="hm-item-icon">🔔</div>
-      <div>Notifications</div>
-      </div>
+      <div>แจ้งเตือน</div>
     </div>
-      <div style="height:1px;background:var(--b2);margin:8px 0"></div>
-        <div class="hm-item hm-item-danger" onclick="doLogout()">
+    <div style="height:1px;background:var(--b2);margin:8px 0"></div>
+    <div class="hm-item hm-item-danger" onclick="doLogout()">
       <div class="hm-item-icon">🚪</div>
-      <div>Logout</div>
+      <div>ออกจากระบบ</div>
     </div>
     <div style="padding:16px;font-size:9px;color:var(--td);text-align:center">BC Order v5 · SPG © 2026</div>
   `;
@@ -4618,3 +4586,6 @@ init();
 </script>
 </body>
 </html>
+
+
+
