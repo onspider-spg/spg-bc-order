@@ -347,6 +347,7 @@ const S = {
   bcPrintTab: 'production', // 'production' | 'slip'
   bcPrintStore: '',         // for slip view
   wasteDashDays: 30,       // waste dashboard period
+  topProdDays: 30,         // top products period
 };
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
@@ -355,7 +356,7 @@ const HASH_SCREENS = new Set([
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
   'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
-  'admin-waste-dashboard'
+  'admin-waste-dashboard','admin-top-products'
 ]);
 let _skipHashChange = false;
 
@@ -945,6 +946,14 @@ function renderApp() {
       </div>
       <div class="content" id="adminWasteDbContent"></div>
     </div>
+    
+    <div class="screen" id="scr-admin-top-products">
+      <div class="topbar" style="background:var(--gold-bg)">
+        <div class="topbar-back" onclick="showScreen('admin-dashboard')">←</div>
+        <div class="topbar-title" style="color:var(--gold)">🏆 Top Products</div>
+      </div>
+      <div class="content" id="adminTopProdContent"></div>
+    </div>
   `;
 }
 
@@ -987,6 +996,7 @@ function showScreen(name) {
       case 'admin-cutoff': renderAdminCutoff(); break;
       case 'admin-audit': renderAdminAudit(); break;
       case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
+      case 'admin-top-products': renderAdminTopProducts(); break;
     }
     // Render BC bottom nav on all BC sub-screens
     if (name.startsWith('bc-') && name !== 'bc-home') {
@@ -2135,6 +2145,11 @@ function getBcAdminMenus() {
         <div class="card-body"><div class="card-title">Waste Dashboard</div><div class="card-desc">สรุปของเสีย วิเคราะห์ Top waste + แนวโน้ม</div></div>
         <div class="card-right">→</div></div>
       </div>
+      <div class="card" onclick="showScreen('admin-top-products')">
+        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">🏆</div>
+        <div class="card-body"><div class="card-title">Top Products</div><div class="card-desc">สินค้ายอดนิยม แยกร้าน + section + แนวโน้ม</div></div>
+        <div class="card-right">→</div></div>
+      </div>
     </div>`;
 }
 
@@ -2177,10 +2192,9 @@ function renderAdminDashboard() {
         <div style="font-size:22px">🗑️</div>
         <div style="font-size:11px;font-weight:600;margin-top:4px">Waste Dashboard</div>
       </div>
-      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer;opacity:0.5">
+      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-top-products')">
         <div style="font-size:22px">🏆</div>
         <div style="font-size:11px;font-weight:600;margin-top:4px">Top Products</div>
-        <div style="font-size:8px;color:var(--td)">เร็วๆ นี้</div>
       </div>
     </div>`;
 }
@@ -2891,6 +2905,169 @@ async function renderAdminWasteDashboard() {
     html += `</div>
       <div style="font-size:8px;color:var(--td);text-align:center;margin-top:6px">← เก่ากว่า · ล่าสุด →</div>
     </div>`;
+    
+    el.innerHTML = html;
+    
+  } catch(e) {
+    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
+  }
+}
+
+// ─── B-05: TOP PRODUCTS DASHBOARD ───────────────────────────
+async function renderAdminTopProducts() {
+  const el = document.getElementById('adminTopProdContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+  
+  if (!S.topProdDays) S.topProdDays = 30;
+  
+  try {
+    const resp = await api('get_top_products', null, { days: String(S.topProdDays) });
+    if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
+    
+    const d = resp.data;
+    const sectionIcons = { cake:'🎂', sauce:'🫕', baked:'🍞', other:'📦' };
+    const sectionColors = { cake:'#f59e0b', sauce:'#8b5cf6', baked:'#f97316', other:'#6b7280' };
+    
+    // Period selector
+    let html = `
+      <div class="filter-bar">
+        <div class="filter-chip ${S.topProdDays===7?'active':''}" onclick="S.topProdDays=7;renderAdminTopProducts()">7 วัน</div>
+        <div class="filter-chip ${S.topProdDays===14?'active':''}" onclick="S.topProdDays=14;renderAdminTopProducts()">14 วัน</div>
+        <div class="filter-chip ${S.topProdDays===30?'active':''}" onclick="S.topProdDays=30;renderAdminTopProducts()">30 วัน</div>
+      </div>`;
+    
+    // Summary cards
+    html += `
+      <div class="sec-hd">📊 สรุปภาพรวม (${S.topProdDays} วัน)</div>
+      <div class="sum-grid">
+        <div class="sum-card" style="border-left:3px solid var(--blue)">
+          <div class="sum-val" style="color:var(--blue)">${d.total_orders}</div>
+          <div class="sum-lbl">ออเดอร์ทั้งหมด</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--green)">
+          <div class="sum-val" style="color:var(--green)">${d.total_qty}</div>
+          <div class="sum-lbl">จำนวนสั่งรวม</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--gold)">
+          <div class="sum-val">${d.products.length}</div>
+          <div class="sum-lbl">สินค้าที่มีการสั่ง</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--orange)">
+          <div class="sum-val">${d.total_orders > 0 ? Math.round(d.total_qty / d.total_orders) : 0}</div>
+          <div class="sum-lbl">เฉลี่ย/ออเดอร์</div>
+        </div>
+      </div>`;
+    
+    // Top Products Ranked
+    const topP = d.products || [];
+    const maxQty = topP.length ? topP[0].qty_ordered : 1;
+    html += `<div class="sec-hd">🏆 สินค้ายอดนิยม (Top 20)</div><div class="pad" style="padding-top:0">`;
+    if (!topP.length) {
+      html += '<div style="text-align:center;color:var(--td);font-size:12px;padding:16px">ไม่มีข้อมูล</div>';
+    } else {
+      topP.forEach((p, idx) => {
+        const pct = Math.round((p.qty_ordered / maxQty) * 100);
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
+        const secIcon = sectionIcons[p.section] || '📦';
+        const secColor = sectionColors[p.section] || '#6b7280';
+        const fulfilPct = p.qty_ordered > 0 ? Math.round((p.qty_sent / p.qty_ordered) * 100) : 0;
+        html += `
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+              <span style="font-size:12px">${medal} <strong>${p.name}</strong></span>
+              <span style="font-size:11px;color:var(--green);font-weight:600">${p.qty_ordered} ${p.unit}</span>
+            </div>
+            <div style="background:var(--s2);border-radius:4px;height:14px;overflow:hidden;margin-bottom:3px">
+              <div style="background:${secColor};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s"></div>
+            </div>
+            <div style="display:flex;gap:8px;font-size:9px;color:var(--td)">
+              <span>${secIcon} ${p.section}</span>
+              <span>📋 ${p.order_count} orders</span>
+              <span>🏪 ${p.store_count} stores</span>
+              <span>📤 ส่ง ${fulfilPct}%</span>
+              ${p.urgent_count > 0 ? `<span style="color:var(--red)">⚡ ${p.urgent_count} urgent</span>` : ''}
+            </div>
+          </div>`;
+      });
+    }
+    html += '</div>';
+    
+    // By Section
+    const sections = d.bySection || [];
+    if (sections.length > 0) {
+      const maxSecQty = sections[0].qty_ordered || 1;
+      html += `<div class="sec-hd">📦 แยกตาม Section</div><div class="pad" style="padding-top:0">`;
+      sections.forEach(s => {
+        const pct = Math.round((s.qty_ordered / maxSecQty) * 100);
+        const icon = sectionIcons[s.section_id] || '📦';
+        const color = sectionColors[s.section_id] || '#6b7280';
+        html += `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span style="font-size:20px">${icon}</span>
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                <span style="font-weight:600">${s.section_id.toUpperCase()}</span>
+                <span style="color:var(--td)">${s.qty_ordered} ชิ้น · ${s.product_count} สินค้า</span>
+              </div>
+              <div style="background:var(--s2);border-radius:4px;height:10px;overflow:hidden">
+                <div style="background:${color};height:100%;width:${pct}%;border-radius:4px"></div>
+              </div>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+    }
+    
+    // By Store
+    const stores = d.byStore || [];
+    if (stores.length > 0) {
+      const maxStoreQty = stores[0].qty_ordered || 1;
+      const storeIcons = { MC:'🥭', ISH:'🍣', GB:'🥞', RW:'🍜', TM:'🧀' };
+      html += `<div class="sec-hd">🏬 แยกตามร้าน</div><div class="pad" style="padding-top:0">`;
+      stores.forEach((s, idx) => {
+        const pct = Math.round((s.qty_ordered / maxStoreQty) * 100);
+        const icon = storeIcons[s.store_id] || '🏪';
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
+        html += `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span style="font-size:16px">${icon}</span>
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                <span>${medal} <strong>${getStoreName(s.store_id) || s.store_id}</strong></span>
+                <span style="color:var(--td)">${s.qty_ordered} ชิ้น · ${s.order_count} orders</span>
+              </div>
+              <div style="background:var(--s2);border-radius:3px;height:10px;overflow:hidden">
+                <div style="background:var(--blue);opacity:${1 - idx*0.12};height:100%;width:${pct}%;border-radius:3px"></div>
+              </div>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+    }
+    
+    // Daily Trend
+    const trend = d.dailyTrend || [];
+    if (trend.length > 0) {
+      const maxDay = Math.max(...trend.map(t => t.qty), 1);
+      const recentTrend = trend.slice(-Math.min(S.topProdDays, 14));
+      html += `<div class="sec-hd">📈 แนวโน้มการสั่งรายวัน</div>
+        <div class="pad" style="padding-top:0;overflow-x:auto">
+          <div style="display:flex;align-items:flex-end;gap:3px;height:120px;min-width:${recentTrend.length * 24}px">`;
+      recentTrend.forEach(t => {
+        const h = t.qty > 0 ? Math.max(Math.round((t.qty / maxDay) * 100), 4) : 0;
+        const isToday = t.date === todaySydney();
+        const dayLabel = t.date.slice(8);
+        html += `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:20px">
+            <div style="font-size:8px;color:var(--td);margin-bottom:2px">${t.qty || ''}</div>
+            <div style="width:100%;max-width:24px;height:${h}px;background:${isToday ? 'var(--green)' : 'var(--blue)'};border-radius:3px 3px 0 0;transition:height 0.5s"></div>
+            <div style="font-size:7px;color:var(--td);margin-top:2px;${isToday?'font-weight:700;color:var(--green)':''}">${dayLabel}</div>
+          </div>`;
+      });
+      html += `</div>
+        <div style="font-size:8px;color:var(--td);text-align:center;margin-top:6px">← เก่ากว่า · ล่าสุด →</div>
+      </div>`;
+    }
     
     el.innerHTML = html;
     
