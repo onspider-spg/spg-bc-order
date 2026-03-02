@@ -349,6 +349,7 @@ const S = {
   wasteDashDays: 30,       // waste dashboard period
   topProdDays: 30,         // top products period
   _announcements: [],      // cached for admin edit
+  myPerms: [],             // user's allowed function_ids
 };
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
@@ -404,7 +405,7 @@ async function init() {
       }
       
       await Promise.all([
-        loadCategories(), loadProducts(), loadOrders(), loadNotifications(),
+        loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(),
       ]);
       await loadDashboard();  // after orders so fallback can compute from S.orders
       routeToHome();
@@ -583,6 +584,20 @@ async function loadReturns() {
 async function loadNotifications() {
   const resp = await api('get_notifications');
   if (resp.success) S.notifications = resp.data;
+}
+
+async function loadMyPermissions() {
+  try {
+    const resp = await api('get_my_permissions');
+    if (resp.success) S.myPerms = resp.data || [];
+  } catch(e) { S.myPerms = []; }
+}
+
+function hasPerm(fnId) {
+  // T1/T2 always have access (super admin)
+  const tierLevel = parseInt((S.session?.tier_id || 'T9').replace('T',''));
+  if (tierLevel <= 2) return true;
+  return S.myPerms.includes(fnId);
 }
 
 // ─── MOCK DATA (for demo without backend) ────────────────────
@@ -1089,19 +1104,20 @@ function renderHomeDashboard() {
   const s = S.session || {};
   const tierLevel = s.tier_level || 99;
   
-  // Admin menus for T1/T2
-  const adminMenus = tierLevel <= 2 ? `
+  // Admin menus based on permissions
+  const storeAdminItems = [
+    { screen:'bc-orders', icon:'📋', bg:'var(--blue-bg)', title:'All Orders', desc:'ออเดอร์ทุกร้าน ทุก section', perm:'fn_view_all_orders' },
+    { screen:'bc-stock', icon:'📦', bg:'var(--green-bg)', title:'Manage Stock', desc:'เพิ่ม/ลดสต็อก ทุก section', perm:'fn_add_stock' },
+    { screen:'bc-print', icon:'🖨️', bg:'var(--orange-bg)', title:'Print Centre', desc:'Production Sheet / Delivery Slip', perm:'fn_view_production_sheet' },
+  ];
+  const allowedStoreAdmin = storeAdminItems.filter(m => hasPerm(m.perm));
+  const adminMenus = allowedStoreAdmin.length > 0 ? `
     <div class="sec-hd">👑 Admin</div>
     <div class="pad" style="padding-top:0">
-      <div class="card" onclick="showScreen('bc-orders')">
-        <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div><div class="card-body"><div class="card-title">All Orders</div><div class="card-desc">ออเดอร์ทุกร้าน ทุก section</div></div><div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('bc-stock')">
-        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">📦</div><div class="card-body"><div class="card-title">Manage Stock</div><div class="card-desc">เพิ่ม/ลดสต็อก ทุก section</div></div><div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('bc-print')">
-        <div class="card-row"><div class="card-icon" style="background:var(--orange-bg)">🖨️</div><div class="card-body"><div class="card-title">Print Centre</div><div class="card-desc">Production Sheet / Delivery Slip</div></div><div class="card-right">→</div></div>
-      </div>
+      ${allowedStoreAdmin.map(m => `
+      <div class="card" onclick="showScreen('${m.screen}')">
+        <div class="card-row"><div class="card-icon" style="background:${m.bg}">${m.icon}</div><div class="card-body"><div class="card-title">${m.title}</div><div class="card-desc">${m.desc}</div></div><div class="card-right">→</div></div>
+      </div>`).join('')}
     </div>` : '';
   
   document.getElementById('homeContent').innerHTML = `
@@ -2114,66 +2130,33 @@ function renderBcHome() {
 }
 
 function getBcAdminMenus() {
-  const tierLevel = parseInt((S.session.tier_id || 'T9').replace('T',''));
-  if (tierLevel > 2) return '';
+  // Build admin menu based on actual permissions
+  const menus = [
+    { screen:'admin-dashboard', icon:'📊', bg:'var(--gold-bg)', title:'Admin Dashboard', desc:'ภาพรวมทุกร้าน สถิติ Performance', perm:'fn_view_all_orders' },
+    { screen:'admin-products', icon:'📦', bg:'var(--blue-bg)', title:'Manage Products', desc:'เพิ่ม/แก้/ปิด สินค้า ทุก section', perm:'fn_manage_products' },
+    { screen:'admin-access', icon:'👥', bg:'var(--purple-bg)', title:'User Access', desc:'จัดการสิทธิ์ Function × Tier', perm:'fn_manage_user_access' },
+    { screen:'admin-dept-mapping', icon:'🏢', bg:'var(--green-bg)', title:'Department Mapping', desc:'Dept → Role + Section scope', perm:'fn_manage_dept_mapping' },
+    { screen:'admin-config', icon:'⚙️', bg:'var(--s2)', title:'System Config', desc:'Cutoff, Delivery, Auto Refresh', perm:'fn_manage_config' },
+    { screen:'admin-notif-settings', icon:'🔔', bg:'var(--orange-bg)', title:'Notification Settings', desc:'เปิด/ปิดแจ้งเตือนตาม role', perm:'fn_manage_notifications' },
+    { screen:'admin-cutoff', icon:'⏰', bg:'var(--red-bg)', title:'Cutoff Violations', desc:'สั่งหลัง cutoff — ใคร เมื่อไหร่', perm:'fn_view_all_orders' },
+    { screen:'admin-audit', icon:'📝', bg:'rgba(8,145,178,0.1)', title:'Audit Trail', desc:'ประวัติเปลี่ยนสิทธิ์ + mapping', perm:'fn_view_all_orders' },
+    { screen:'admin-waste-dashboard', icon:'🗑️', bg:'var(--red-bg)', title:'Waste Dashboard', desc:'สรุปของเสีย วิเคราะห์ Top waste + แนวโน้ม', perm:'fn_view_waste_log' },
+    { screen:'admin-top-products', icon:'🏆', bg:'var(--green-bg)', title:'Top Products', desc:'สินค้ายอดนิยม แยกร้าน + section + แนวโน้ม', perm:'fn_view_all_orders' },
+    { screen:'admin-announcements', icon:'📢', bg:'var(--gold-bg)', title:'Announcements', desc:'ตั้งประกาศ แจ้งเตือน กำหนด auto-expire', perm:'fn_manage_notifications' },
+  ];
+  
+  const allowed = menus.filter(m => hasPerm(m.perm));
+  if (allowed.length === 0) return '';
+  
   return `
     <div class="sec-hd">👑 Admin</div>
     <div class="pad" style="padding-top:0">
-      <div class="card" onclick="showScreen('admin-dashboard')">
-        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📊</div>
-        <div class="card-body"><div class="card-title">Admin Dashboard</div><div class="card-desc">ภาพรวมทุกร้าน สถิติ Performance</div></div>
+      ${allowed.map(m => `
+      <div class="card" onclick="showScreen('${m.screen}')">
+        <div class="card-row"><div class="card-icon" style="background:${m.bg}">${m.icon}</div>
+        <div class="card-body"><div class="card-title">${m.title}</div><div class="card-desc">${m.desc}</div></div>
         <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-products')">
-        <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📦</div>
-        <div class="card-body"><div class="card-title">Manage Products</div><div class="card-desc">เพิ่ม/แก้/ปิด สินค้า ทุก section</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-access')">
-        <div class="card-row"><div class="card-icon" style="background:var(--purple-bg)">👥</div>
-        <div class="card-body"><div class="card-title">User Access</div><div class="card-desc">จัดการสิทธิ์ Function × Tier</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-dept-mapping')">
-        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">🏢</div>
-        <div class="card-body"><div class="card-title">Department Mapping</div><div class="card-desc">Dept → Role + Section scope</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-config')">
-        <div class="card-row"><div class="card-icon" style="background:var(--s2)">⚙️</div>
-        <div class="card-body"><div class="card-title">System Config</div><div class="card-desc">Cutoff, Delivery, Auto Refresh</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-notif-settings')">
-        <div class="card-row"><div class="card-icon" style="background:var(--orange-bg)">🔔</div>
-        <div class="card-body"><div class="card-title">Notification Settings</div><div class="card-desc">เปิด/ปิดแจ้งเตือนตาม role</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-cutoff')">
-        <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">⏰</div>
-        <div class="card-body"><div class="card-title">Cutoff Violations</div><div class="card-desc">สั่งหลัง cutoff — ใคร เมื่อไหร่</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-audit')">
-        <div class="card-row"><div class="card-icon" style="background:var(--cyan);background:rgba(8,145,178,0.1)">📝</div>
-        <div class="card-body"><div class="card-title">Audit Trail</div><div class="card-desc">ประวัติเปลี่ยนสิทธิ์ + mapping</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-waste-dashboard')">
-        <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">🗑️</div>
-        <div class="card-body"><div class="card-title">Waste Dashboard</div><div class="card-desc">สรุปของเสีย วิเคราะห์ Top waste + แนวโน้ม</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-top-products')">
-        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">🏆</div>
-        <div class="card-body"><div class="card-title">Top Products</div><div class="card-desc">สินค้ายอดนิยม แยกร้าน + section + แนวโน้ม</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('admin-announcements')">
-        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📢</div>
-        <div class="card-body"><div class="card-title">Announcements</div><div class="card-desc">ตั้งประกาศ แจ้งเตือน กำหนด auto-expire</div></div>
-        <div class="card-right">→</div></div>
-      </div>
+      </div>`).join('')}
     </div>`;
 }
 
