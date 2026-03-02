@@ -348,6 +348,7 @@ const S = {
   bcPrintStore: '',         // for slip view
   wasteDashDays: 30,       // waste dashboard period
   topProdDays: 30,         // top products period
+  _announcements: [],      // cached for admin edit
 };
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
@@ -356,7 +357,7 @@ const HASH_SCREENS = new Set([
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
   'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
-  'admin-waste-dashboard','admin-top-products'
+  'admin-waste-dashboard','admin-top-products','admin-announcements'
 ]);
 let _skipHashChange = false;
 
@@ -954,6 +955,14 @@ function renderApp() {
       </div>
       <div class="content" id="adminTopProdContent"></div>
     </div>
+    
+    <div class="screen" id="scr-admin-announcements">
+      <div class="topbar" style="background:var(--gold-bg)">
+        <div class="topbar-back" onclick="showScreen('admin-dashboard')">←</div>
+        <div class="topbar-title" style="color:var(--gold)">📢 Announcements</div>
+      </div>
+      <div class="content" id="adminAnnouncementsContent"></div>
+    </div>
   `;
 }
 
@@ -997,6 +1006,7 @@ function showScreen(name) {
       case 'admin-audit': renderAdminAudit(); break;
       case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
       case 'admin-top-products': renderAdminTopProducts(); break;
+      case 'admin-announcements': renderAdminAnnouncements(); break;
     }
     // Render BC bottom nav on all BC sub-screens
     if (name.startsWith('bc-') && name !== 'bc-home') {
@@ -2150,6 +2160,11 @@ function getBcAdminMenus() {
         <div class="card-body"><div class="card-title">Top Products</div><div class="card-desc">สินค้ายอดนิยม แยกร้าน + section + แนวโน้ม</div></div>
         <div class="card-right">→</div></div>
       </div>
+      <div class="card" onclick="showScreen('admin-announcements')">
+        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📢</div>
+        <div class="card-body"><div class="card-title">Announcements</div><div class="card-desc">ตั้งประกาศ แจ้งเตือน กำหนด auto-expire</div></div>
+        <div class="card-right">→</div></div>
+      </div>
     </div>`;
 }
 
@@ -2190,11 +2205,15 @@ function renderAdminDashboard() {
     <div class="pad" style="padding-top:0;display:flex;gap:8px">
       <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-waste-dashboard')">
         <div style="font-size:22px">🗑️</div>
-        <div style="font-size:11px;font-weight:600;margin-top:4px">Waste Dashboard</div>
+        <div style="font-size:11px;font-weight:600;margin-top:4px">Waste</div>
       </div>
       <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-top-products')">
         <div style="font-size:22px">🏆</div>
         <div style="font-size:11px;font-weight:600;margin-top:4px">Top Products</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-announcements')">
+        <div style="font-size:22px">📢</div>
+        <div style="font-size:11px;font-weight:600;margin-top:4px">Announcements</div>
       </div>
     </div>`;
 }
@@ -3076,6 +3095,235 @@ async function renderAdminTopProducts() {
   }
 }
 
+// ─── A-01: ANNOUNCEMENT MANAGEMENT ──────────────────────────
+async function renderAdminAnnouncements() {
+  const el = document.getElementById('adminAnnouncementsContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+  
+  try {
+    const resp = await api('get_announcements');
+    if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
+    
+    const today = todaySydney();
+    const notifs = resp.data || [];
+    S._announcements = notifs; // cache for edit lookups
+    const active = notifs.filter(n => n.is_active && (!n.start_date || n.start_date <= today) && (!n.end_date || n.end_date >= today));
+    const scheduled = notifs.filter(n => n.is_active && n.start_date && n.start_date > today);
+    const expired = notifs.filter(n => !n.is_active || (n.end_date && n.end_date < today));
+    
+    let html = `
+      <div class="pad">
+        <button class="btn btn-gold" style="width:100%" onclick="showAnnouncementForm()">➕ สร้างประกาศใหม่</button>
+      </div>`;
+    
+    // Active
+    html += `<div class="sec-hd">📢 กำลังแสดง (${active.length})</div>`;
+    if (active.length === 0) {
+      html += '<div style="text-align:center;padding:16px;color:var(--td);font-size:12px">ไม่มีประกาศที่แสดงอยู่</div>';
+    } else {
+      html += '<div class="pad" style="padding-top:0">';
+      active.forEach(n => { html += renderAnnouncementCard(n, 'active'); });
+      html += '</div>';
+    }
+    
+    // Scheduled
+    if (scheduled.length > 0) {
+      html += `<div class="sec-hd">⏰ ตั้งเวลาไว้ (${scheduled.length})</div><div class="pad" style="padding-top:0">`;
+      scheduled.forEach(n => { html += renderAnnouncementCard(n, 'scheduled'); });
+      html += '</div>';
+    }
+    
+    // Expired / Inactive
+    if (expired.length > 0) {
+      html += `<div class="sec-hd">🔇 หมดอายุ / ปิดแล้ว (${expired.length})</div><div class="pad" style="padding-top:0">`;
+      expired.forEach(n => { html += renderAnnouncementCard(n, 'expired'); });
+      html += '</div>';
+    }
+    
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
+  }
+}
+
+function renderAnnouncementCard(n, status) {
+  const audienceLabels = { all:'👥 ทุกคน', store:'🏪 ร้านค้าทั้งหมด', bakery:'🏭 Bakery เท่านั้น' };
+  const audienceLabel = audienceLabels[n.audience] || '🏪 ' + (getStoreName(n.audience) || n.audience);
+  const statusColor = status === 'active' ? 'var(--green)' : status === 'scheduled' ? 'var(--blue)' : 'var(--td)';
+  const statusIcon = status === 'active' ? '🟢' : status === 'scheduled' ? '🔵' : '⚫';
+  const opacity = status === 'expired' ? 'opacity:0.6;' : '';
+  
+  return `
+    <div class="card" style="margin-bottom:8px;${opacity}">
+      <div style="padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+          <div>
+            <div style="font-size:13px;font-weight:700">${statusIcon} ${n.title || 'ไม่มีหัวข้อ'}</div>
+            <div style="font-size:11px;color:var(--td);margin-top:2px">${n.message}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <div style="font-size:18px;cursor:pointer" onclick="showAnnouncementForm('${n.notif_id}')" title="แก้ไข">✏️</div>
+            <div style="font-size:18px;cursor:pointer" onclick="toggleAnnouncement('${n.notif_id}', ${!n.is_active})" title="${n.is_active ? 'ปิด' : 'เปิด'}">${n.is_active ? '🔇' : '🔔'}</div>
+            <div style="font-size:18px;cursor:pointer" onclick="deleteAnnouncement('${n.notif_id}')" title="ลบ">🗑️</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:9px;color:var(--td)">
+          <span>${audienceLabel}</span>
+          <span>📋 ${n.type || 'broadcast'}</span>
+          ${n.start_date ? `<span>🟢 เริ่ม ${n.start_date}</span>` : '<span>🟢 เริ่มทันที</span>'}
+          ${n.end_date ? `<span>🔴 หมด ${n.end_date}</span>` : '<span>♾️ ไม่หมดอายุ</span>'}
+          ${n.created_by ? `<span>👤 ${n.created_by}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function showAnnouncementForm(editId) {
+  const isEdit = !!editId;
+  const existing = isEdit ? (S._announcements || []).find(n => n.notif_id === editId) : null;
+  
+  // If editing, we need data — fetch first
+  if (isEdit && !existing) {
+    // Re-fetch then try again
+    api('get_announcements').then(resp => {
+      if (resp.success) {
+        S._announcements = resp.data;
+        showAnnouncementForm(editId);
+      }
+    });
+    return;
+  }
+  
+  const title = existing ? existing.title : '';
+  const message = existing ? existing.message : '';
+  const audience = existing ? existing.audience : 'all';
+  const type = existing ? (existing.type || 'broadcast') : 'broadcast';
+  const startDate = existing ? (existing.start_date || '') : '';
+  const endDate = existing ? (existing.end_date || '') : '';
+  
+  showDialog(`
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">${isEdit ? '✏️ แก้ไขประกาศ' : '📢 สร้างประกาศใหม่'}</div>
+    
+    <div class="form-group">
+      <label class="form-label">หัวข้อ *</label>
+      <input class="form-input" id="annTitle" value="${title}" placeholder="เช่น ระบบอัพเดตใหม่">
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">ข้อความ *</label>
+      <textarea class="form-input" id="annMessage" rows="3" placeholder="รายละเอียดประกาศ...">${message}</textarea>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">ผู้รับ</label>
+      <select class="form-input" id="annAudience">
+        <option value="all" ${audience==='all'?'selected':''}>👥 ทุกคน</option>
+        <option value="store" ${audience==='store'?'selected':''}>🏪 ร้านค้าทั้งหมด</option>
+        <option value="bakery" ${audience==='bakery'?'selected':''}>🏭 Bakery เท่านั้น</option>
+        <option value="MC" ${audience==='MC'?'selected':''}>🥭 Mango Coco</option>
+        <option value="ISH" ${audience==='ISH'?'selected':''}>🍣 Issho Cafe</option>
+        <option value="GB" ${audience==='GB'?'selected':''}>🥞 Golden Brown</option>
+        <option value="RW" ${audience==='RW'?'selected':''}>🍜 Red Wok</option>
+        <option value="TM" ${audience==='TM'?'selected':''}>🧀 Melting Cheese</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">ประเภท</label>
+      <select class="form-input" id="annType">
+        <option value="broadcast" ${type==='broadcast'?'selected':''}>📢 ประกาศทั่วไป</option>
+        <option value="info" ${type==='info'?'selected':''}>ℹ️ ข้อมูล</option>
+        <option value="warning" ${type==='warning'?'selected':''}>⚠️ เตือน</option>
+        <option value="urgent" ${type==='urgent'?'selected':''}>🔥 ด่วน</option>
+      </select>
+    </div>
+    
+    <div style="display:flex;gap:8px">
+      <div class="form-group" style="flex:1">
+        <label class="form-label">วันเริ่ม (ว่าง = ทันที)</label>
+        <input class="form-input" id="annStart" type="date" value="${startDate}">
+      </div>
+      <div class="form-group" style="flex:1">
+        <label class="form-label">วันหมดอายุ (ว่าง = ไม่หมด)</label>
+        <input class="form-input" id="annEnd" type="date" value="${endDate}">
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ยกเลิก</button>
+      <button class="btn btn-gold" style="flex:1" onclick="submitAnnouncement(${isEdit ? `'${editId}'` : 'null'})">${isEdit ? '💾 บันทึก' : '📢 สร้างเลย'}</button>
+    </div>
+  `, { wide: true });
+}
+
+async function submitAnnouncement(editId) {
+  const title = document.getElementById('annTitle').value.trim();
+  const message = document.getElementById('annMessage').value.trim();
+  if (!title || !message) { toast('กรุณากรอกหัวข้อและข้อความ', 'error'); return; }
+  
+  const body = {
+    title, message,
+    audience: document.getElementById('annAudience').value,
+    type: document.getElementById('annType').value,
+    start_date: document.getElementById('annStart').value || null,
+    end_date: document.getElementById('annEnd').value || null,
+  };
+  
+  const action = editId ? 'update_announcement' : 'create_announcement';
+  if (editId) body.notif_id = editId;
+  
+  const resp = await api(action, body);
+  if (resp.success) {
+    toast(resp.message, 'success');
+    closeDialog();
+    // Reload notifications globally so bell updates
+    await loadNotifications();
+    checkNotifications();
+    renderAdminAnnouncements();
+  } else {
+    toast('❌ ' + (resp.message || resp.error), 'error');
+  }
+}
+
+async function toggleAnnouncement(notifId, newState) {
+  const resp = await api('update_announcement', { notif_id: notifId, is_active: newState });
+  if (resp.success) {
+    toast(newState ? '🔔 เปิดประกาศแล้ว' : '🔇 ปิดประกาศแล้ว', 'success');
+    await loadNotifications();
+    checkNotifications();
+    renderAdminAnnouncements();
+  } else {
+    toast('❌ ' + (resp.message || resp.error), 'error');
+  }
+}
+
+function deleteAnnouncement(notifId) {
+  showDialog(`
+    <div style="text-align:center">
+      <div style="font-size:36px;margin-bottom:8px">🗑️</div>
+      <div style="font-size:14px;font-weight:700">ลบประกาศนี้?</div>
+      <div style="font-size:12px;color:var(--td);margin-top:4px">ลบแล้วกู้คืนไม่ได้</div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ยกเลิก</button>
+        <button class="btn" style="flex:1;background:var(--red);color:#fff" onclick="confirmDeleteAnnouncement('${notifId}')">🗑️ ลบเลย</button>
+      </div>
+    </div>
+  `);
+}
+
+async function confirmDeleteAnnouncement(notifId) {
+  const resp = await api('delete_announcement', { notif_id: notifId });
+  if (resp.success) {
+    toast(resp.message, 'success');
+    closeDialog();
+    await loadNotifications();
+    checkNotifications();
+    renderAdminAnnouncements();
+  } else {
+    toast('❌ ' + (resp.message || resp.error), 'error');
+  }
+}
+
 // ─── B2: BC ORDER LIST ──────────────────────────────────────
 async function renderBcOrders() {
   try { await loadOrders(); } catch(e) { console.warn('loadOrders failed:', e); }
@@ -3932,8 +4180,52 @@ function renderDeliverySlip() {
 }
 
 // ─── NOTIFICATIONS CHECK ─────────────────────────────────────
+// ─── NOTIFICATION DISMISS SYSTEM ─────────────────────────────
+function getDismissedIds() {
+  try {
+    const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
+    return JSON.parse(localStorage.getItem(key) || '[]');
+  } catch { return []; }
+}
+
+function saveDismissedIds(ids) {
+  try {
+    const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
+    localStorage.setItem(key, JSON.stringify(ids));
+  } catch {}
+}
+
+function dismissNotif(notifId) {
+  const ids = getDismissedIds();
+  if (!ids.includes(notifId)) ids.push(notifId);
+  saveDismissedIds(ids);
+  checkNotifications();
+  // Re-render panel if open
+  const dialogEl = document.getElementById('dialogOverlay');
+  if (dialogEl && dialogEl.style.display !== 'none') showNotifPanel();
+}
+
+function dismissAllNotifs() {
+  const ids = getDismissedIds();
+  S.notifications.forEach(n => {
+    if (n.notif_id && !ids.includes(n.notif_id)) ids.push(n.notif_id);
+  });
+  saveDismissedIds(ids);
+  checkNotifications();
+  closeDialog();
+}
+
+function getUnreadNotifs() {
+  const dismissed = getDismissedIds();
+  return S.notifications.filter(n => !dismissed.includes(n.notif_id));
+}
+
+let _toastShownIds = new Set(); // track per-session toast shown
+
 function checkNotifications() {
-  const count = S.notifications.length;
+  const unread = getUnreadNotifs();
+  const count = unread.length;
+  
   // Update bell badges on both home screens
   ['homeBellBadge','bcHomeBellBadge'].forEach(id => {
     const el = document.getElementById(id);
@@ -3942,12 +4234,59 @@ function checkNotifications() {
       else { el.style.display = 'none'; }
     }
   });
-  if (count > 0) {
-    const n = S.notifications[0];
-    if (n.type === 'broadcast') {
-      setTimeout(() => toast('📢 ' + n.message, 'warning'), 1000);
+  
+  // Show toast only for NEW unread broadcasts (once per session)
+  unread.forEach(n => {
+    if (n.type === 'broadcast' && n.notif_id && !_toastShownIds.has(n.notif_id)) {
+      _toastShownIds.add(n.notif_id);
+      setTimeout(() => toast('📢 ' + (n.title || n.message), 'warning'), 1000);
+    }
+  });
+}
+
+function showNotifPanel() {
+  const dismissed = getDismissedIds();
+  const allNotifs = S.notifications;
+  const unread = allNotifs.filter(n => !dismissed.includes(n.notif_id));
+  const read = allNotifs.filter(n => dismissed.includes(n.notif_id));
+  
+  let items = '';
+  
+  if (unread.length === 0 && read.length === 0) {
+    items = '<div style="text-align:center;padding:40px 20px;color:var(--td)"><div style="font-size:36px;margin-bottom:8px">🔔</div>ไม่มีแจ้งเตือน</div>';
+  } else {
+    // Unread
+    if (unread.length > 0) {
+      items += unread.map(n => `<div style="padding:12px 16px;border-bottom:1px solid var(--b1);background:var(--gold-bg)">
+          <div style="display:flex;justify-content:space-between;align-items:start">
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600">${n.type === 'broadcast' ? '📢' : '🔔'} ${n.title || n.type}</div>
+              <div style="font-size:11px;color:var(--td);margin-top:2px">${n.message}</div>
+              ${n.created_at ? `<div style="font-size:9px;color:var(--tm);margin-top:4px">${new Date(n.created_at).toLocaleString('th-TH')}</div>` : ''}
+            </div>
+            <div style="font-size:10px;color:var(--blue);cursor:pointer;white-space:nowrap;padding:4px 8px" onclick="dismissNotif('${n.notif_id}')">✓ อ่านแล้ว</div>
+          </div>
+        </div>`).join('');
+    }
+    // Read (collapsed)
+    if (read.length > 0) {
+      items += `<div style="padding:8px 16px;font-size:10px;color:var(--td);background:var(--s2)">อ่านแล้ว (${read.length})</div>`;
+      items += read.map(n => `<div style="padding:8px 16px;border-bottom:1px solid var(--b1);opacity:0.5">
+          <div style="font-size:11px">${n.type === 'broadcast' ? '📢' : '🔔'} ${n.title || n.type}</div>
+          <div style="font-size:10px;color:var(--td)">${n.message}</div>
+        </div>`).join('');
     }
   }
+  
+  const hasUnread = unread.length > 0;
+  showDialog(`
+    <div style="text-align:center;margin-bottom:12px"><span style="font-size:20px">🔔</span> <span style="font-size:16px;font-weight:700">แจ้งเตือน</span> ${hasUnread ? `<span style="background:var(--red);color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:4px">${unread.length} ใหม่</span>` : ''}</div>
+    <div style="max-height:60vh;overflow-y:auto;border-radius:8px;border:1px solid var(--b1)">${items}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      ${hasUnread ? `<button class="btn btn-gold" style="flex:1" onclick="dismissAllNotifs()">✓ อ่านทั้งหมด</button>` : ''}
+      <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ปิด</button>
+    </div>
+  `);
 }
 
 // B-01: Auto-poll notifications + dashboard every 60s
@@ -3958,42 +4297,16 @@ function startPolling() {
     try {
       await loadNotifications();
       checkNotifications();
-      // Also refresh dashboard data if on home screen
       if (S.currentScreen === 'home' || S.currentScreen === 'bc-home') {
         await loadDashboard();
         if (S.currentScreen === 'home') renderHomeDashboard();
-        else if (S.currentScreen === 'bc-home') {
-          const d = S.dashboard || { today_total:0, by_status:{}, cutoff_violations_today:0, urgent_items:0 };
-          const bs = d.by_status || {};
-          // Update summary cards only
-          document.querySelectorAll('.sum-num').forEach((el, i) => {
-            if (i === 0) el.textContent = bs.Pending||0;
-            if (i === 1) el.textContent = bs.Ordered||0;
-          });
-        }
       }
     } catch(e) { /* silent fail */ }
-  }, 60000); // 60 seconds
+  }, 60000);
 }
 
 function stopPolling() {
   if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
-}
-
-function showNotifPanel() {
-  const notifs = S.notifications;
-  const items = notifs.length === 0
-    ? '<div style="text-align:center;padding:40px 20px;color:var(--td)"><div style="font-size:36px;margin-bottom:8px">🔔</div>ไม่มีแจ้งเตือน</div>'
-    : notifs.map(n => `<div style="padding:12px 16px;border-bottom:1px solid var(--b1)">
-        <div style="font-size:12px;font-weight:600">${n.type === 'broadcast' ? '📢' : '🔔'} ${n.title || n.type}</div>
-        <div style="font-size:11px;color:var(--td);margin-top:2px">${n.message}</div>
-        ${n.created_at ? `<div style="font-size:9px;color:var(--tm);margin-top:4px">${new Date(n.created_at).toLocaleString('th-TH')}</div>` : ''}
-      </div>`).join('');
-  showDialog(`
-    <div style="text-align:center;margin-bottom:12px"><span style="font-size:20px">🔔</span> <span style="font-size:16px;font-weight:700">แจ้งเตือน</span></div>
-    <div style="max-height:60vh;overflow-y:auto">${items}</div>
-    <button class="btn btn-outline" style="margin-top:12px" onclick="closeDialog()">ปิด</button>
-  `);
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────
