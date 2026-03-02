@@ -1140,8 +1140,8 @@ function renderBrowse() {
   
   // Category filters with emoji
   document.getElementById('catFilters').innerHTML = `
-    <div class="filter-chip ${S.productFilter==='all'?'active':''}" onclick="S.productFilter='all';renderProducts()">ทั้งหมด</div>
-    ${S.categories.map(c => `<div class="filter-chip ${S.productFilter===c.cat_id?'active':''}" onclick="S.productFilter='${c.cat_id}';renderProducts()">${catEmoji(c.cat_name)} ${c.cat_name}</div>`).join('')}
+    <div class="filter-chip ${S.productFilter==='all'?'active':''}" onclick="S.productFilter='all';renderBrowse()">ทั้งหมด</div>
+    ${S.categories.map(c => `<div class="filter-chip ${S.productFilter===c.cat_id?'active':''}" onclick="S.productFilter='${c.cat_id}';renderBrowse()">${catEmoji(c.cat_name)} ${c.cat_name}</div>`).join('')}
   `;
   
   renderProducts();
@@ -1219,7 +1219,7 @@ function renderProducts() {
         <div class="plist-meta">min: ${p.min_order || 1} | step: ${p.order_step || 1}</div>
       </div>
       <div class="plist-ctrl">
-        <div class="plist-btn ${canMinus?'active':'disabled'}" onclick="removeFromCart('${p.product_id}')">−</div>
+        <div class="plist-btn ${canMinus?'active':'disabled'}" onclick="removeFromBrowse('${p.product_id}')">−</div>
         <div class="plist-qty">${qty}</div>
         <div class="plist-btn ${sa>0?'':'disabled'}" onclick="addToCart('${p.product_id}')">+</div>
         ${inCart ? `<div class="plist-urgent ${inCart.is_urgent?'on':''}" onclick="toggleUrgentBrowse('${p.product_id}')" title="ด่วน">⚡</div>` : ''}
@@ -1264,7 +1264,7 @@ function toggleUrgentBrowse(productId) {
   renderProducts();
 }
 
-function removeFromCart(productId) {
+function removeFromBrowse(productId) {
   const idx = S.cart.findIndex(c => c.product_id === productId);
   if (idx === -1) return;
   const item = S.cart[idx];
@@ -1317,9 +1317,11 @@ function renderCart() {
   if (S.cart.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">ตะกร้าว่าง</div><div class="empty-desc">กดสินค้าเพื่อเพิ่ม</div></div>';
     document.getElementById('submitOrderBtn').disabled = true;
+    document.getElementById('submitOrderBtn').style.display = 'none';
     return;
   }
   document.getElementById('submitOrderBtn').disabled = false;
+  document.getElementById('submitOrderBtn').style.display = '';
   
   content.innerHTML = `
     <div style="padding:12px 16px;display:flex;align-items:center;gap:8px">
@@ -1464,9 +1466,10 @@ async function submitOrder() {
         S.headerNote = '';
         // Reload data so Home counter updates immediately
         setTimeout(async () => {
-          await Promise.all([loadOrders(), loadDashboard()]);
+          try { await loadOrders(); } catch(e) {}
+          try { await loadDashboard(); } catch(e) {}
           showScreen('home');
-        }, 1200);
+        }, 1500);
       } else {
         toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
         submitBtn.disabled = false;
