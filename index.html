@@ -378,6 +378,10 @@ const HASH_SCREENS = new Set([
 ]);
 let _skipHashChange = false;
 
+function isBcModuleRole(moduleRole) {
+  return typeof moduleRole === 'string' && moduleRole.startsWith('bc_');
+}
+  
 // ─── ENTRY FLOW ──────────────────────────────────────────────
 async function init() {
   renderApp();
@@ -451,7 +455,7 @@ function routeToHome() {
   }
   
   // Determine role from deptMapping
-  if (dm && (dm.module_role === 'bc_production' || dm.module_role === 'bc_management')) {
+  if (dm && isBcModuleRole(dm.module_role)) {
     S.role = 'bc';
   } else {
     S.role = 'store';
@@ -1848,7 +1852,7 @@ function showWasteForm(editData) {
   // W-01 fix: Filter products by dept scope (not category)
   let wasteProducts = (S.products || []).filter(p => p.is_active === true || p.is_active === 'TRUE');
   const dm = S.deptMapping || {};
-  if (dm.module_role === 'bc_production' || dm.module_role === 'bc_management') {
+ if (isBcModuleRole(dm.module_role)) {
     // BC role: filter by section_scope
     const scope = dm.section_scope || [];
     if (scope.length > 0) {
@@ -3469,15 +3473,33 @@ function setBcDate(mode) {
   renderBcOrderList();
 }
 
+function normalizeDateOnly(value) {
+  if (!value) return '';
+  const s = String(value);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+function getItemScopeKey(item) {
+  return (item?.section_id || item?.section || item?.category_id || item?.dept_id || '').toString().trim().toLowerCase();
+}
+  
 function filterOrdersByDateAndScope(date, scope) {
-  let orders = date === 'all' ? [...S.orders] : S.orders.filter(o => o.delivery_date === date);
+    const normalizedDate = normalizeDateOnly(date);
+  let orders = date === 'all'
+    ? [...S.orders]
+    : S.orders.filter(o => normalizeDateOnly(o.delivery_date) === normalizedDate);
+  
   // BC section_scope filter: only show orders that have items in our scope
   if (scope && scope.length > 0) {
+const scopeSet = new Set(scope.map(s => String(s).trim().toLowerCase()));    
     orders = orders.filter(o => {
       // B-02 fix: if items not loaded yet (undefined or null), keep the order visible
       if (!o.items) return true;
       if (o.items.length === 0) return true;  // items loaded but empty → still show
-      return o.items.some(it => scope.includes(it.section_id));
+            const itemScopeKeys = o.items.map(getItemScopeKey).filter(Boolean);
+      if (itemScopeKeys.length === 0) return true; // cannot determine scope from payload, keep visible
+
+      return itemScopeKeys.some(k => scopeSet.has(k));
     });
   }
   return orders;
@@ -3521,7 +3543,10 @@ function renderBcOrderList() {
       // Filter items by section_scope for display
       let items = o.items || [];
       if (scope.length > 0) items = items.filter(it => scope.includes(it.section_id));
-
+ if (scope.length > 0) {
+        const scopeSet = new Set(scope.map(s => String(s).trim().toLowerCase()));
+        items = items.filter(it => scopeSet.has(getItemScopeKey(it)));
+      }
       // Tap → Pending goes to accept, Ordered/InProgress to fulfilment, Done to detail
       let tapAction;
       if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
