@@ -3484,10 +3484,16 @@ function getItemScopeKey(item) {
 }
   
 function filterOrdersByDateAndScope(date, scope) {
-    const normalizedDate = normalizeDateOnly(date);
+  const normalizedDate = normalizeDateOnly(date);
   let orders = date === 'all'
     ? [...S.orders]
-    : S.orders.filter(o => normalizeDateOnly(o.delivery_date) === normalizedDate);
+    : S.orders.filter(o => {
+        const deliveryDate = normalizeDateOnly(o.delivery_date);
+        const orderDate = normalizeDateOnly(o.order_date);
+        // F-07: BC view should find the order by either "วันที่สั่ง" or "วันที่ส่ง"
+        // so staff can still locate newly placed next-day orders from today's queue.
+        return deliveryDate === normalizedDate || orderDate === normalizedDate;
+      });
   
   // BC section_scope filter: only show orders that have items in our scope
   if (scope && scope.length > 0) {
