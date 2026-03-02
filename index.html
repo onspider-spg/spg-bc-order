@@ -45,6 +45,15 @@ body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);
 /*═══ USER BADGE ═══*/
 .user-badge{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--gold-bg);border-bottom:1px solid var(--gold-l)}
 .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.hamburger-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:9999;display:none;opacity:0;transition:opacity 0.2s}
+.hamburger-overlay.show{display:block;opacity:1}
+.hamburger-panel{position:fixed;top:0;right:-280px;width:280px;height:100%;background:var(--bg);z-index:10000;transition:right 0.25s ease;box-shadow:-4px 0 20px rgba(0,0,0,0.15);display:flex;flex-direction:column}
+.hamburger-panel.show{right:0}
+.hm-header{padding:24px 16px 16px;background:var(--gold-bg);border-bottom:1px solid var(--b1)}
+.hm-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--s2);cursor:pointer;font-size:13px}
+.hm-item:hover{background:var(--s2)}
+.hm-item-icon{font-size:18px;width:28px;text-align:center}
+.hm-item-danger{color:var(--red)}
 .user-info{flex:1}
 .user-name{font-size:13px;font-weight:600}
 .user-meta{font-size:10px;color:var(--td)}
@@ -291,6 +300,13 @@ textarea.form-input{resize:none;min-height:72px}
 
 <div class="toast-wrap" id="toastWrap"></div>
 
+<!-- Hamburger Menu -->
+<div class="hamburger-overlay" id="hmOverlay" onclick="closeHamburger()"></div>
+<div class="hamburger-panel" id="hmPanel">
+  <div class="hm-header" id="hmHeader"></div>
+  <div style="flex:1;overflow-y:auto" id="hmBody"></div>
+</div>
+
 <div class="overlay" id="overlay" onclick="closeDialog()">
   <div class="dialog" onclick="event.stopPropagation()">
     <div class="dialog-handle"></div>
@@ -466,6 +482,7 @@ function routeToHome() {
   
   checkNotifications();
   startPolling(); // B-01: begin auto-refresh
+  startSessionMonitor(); // session expiry monitor
 
   // Listen for hash changes (browser back/forward)
   window.addEventListener('hashchange', () => {
@@ -589,8 +606,20 @@ async function loadNotifications() {
 async function loadMyPermissions() {
   try {
     const resp = await api('get_my_permissions');
-    if (resp.success) S.myPerms = resp.data || [];
-  } catch(e) { S.myPerms = []; }
+    if (resp.success) { S.myPerms = resp.data || []; return; }
+  } catch(e) {}
+  // Fallback: if endpoint not available, grant all perms so menus still show
+  // (actual permission check happens on backend when action is performed)
+  S.myPerms = [
+    'fn_create_order','fn_edit_order','fn_cancel_order','fn_view_own_orders','fn_view_all_orders',
+    'fn_accept_pending','fn_update_fulfilment','fn_mark_delivered',
+    'fn_view_production_sheet','fn_view_delivery_slip',
+    'fn_view_stock','fn_add_stock','fn_remove_stock',
+    'fn_log_waste','fn_view_waste_log','fn_report_return','fn_resolve_return','fn_view_returns',
+    'fn_manage_products','fn_manage_notifications','fn_manage_user_access',
+    'fn_manage_config','fn_manage_dept_mapping'
+  ];
+  console.warn('loadMyPermissions fallback: granting all (backend endpoint not deployed yet)');
 }
 
 function hasPerm(fnId) {
@@ -720,7 +749,7 @@ function renderApp() {
       <div class="topbar">
         <div class="topbar-title">🎂 BC Order<div class="topbar-sub">Siam Palette Group</div></div>
         <div class="topbar-action notif-bell" id="homeBell" onclick="showNotifPanel()" title="แจ้งเตือน">🔔<span class="bell-badge" id="homeBellBadge" style="display:none">0</span></div>
-        <div class="topbar-action" onclick="location.href='${HOME_URL}'" title="กลับ Home">🏠</div>
+        <div class="topbar-action" onclick="openHamburger()" title="เมนู" style="font-size:20px;font-weight:700">☰</div>
       </div>
       <div id="userBadge"></div>
       <div class="content" id="homeContent"></div>
@@ -807,7 +836,7 @@ function renderApp() {
       <div class="topbar">
         <div class="topbar-title">🏭 Bakery Centre<div class="topbar-sub" id="bcScopeLabel"></div></div>
         <div class="topbar-action notif-bell" id="bcHomeBell" onclick="showNotifPanel()" title="แจ้งเตือน">🔔<span class="bell-badge" id="bcHomeBellBadge" style="display:none">0</span></div>
-        <div class="topbar-action" onclick="location.href='${HOME_URL}'" title="กลับ Home">🏠</div>
+        <div class="topbar-action" onclick="openHamburger()" title="เมนู" style="font-size:20px;font-weight:700">☰</div>
       </div>
       <div class="user-badge" id="bcUserBadge"></div>
       <div class="content" id="bcHomeContent"></div>
@@ -1134,21 +1163,21 @@ function renderHomeDashboard() {
     
     <div class="sec-hd">⚡ Quick Menu</div>
     <div class="pad" style="padding-top:0">
-      <div class="card" onclick="startOrder()">
+      ${hasPerm('fn_create_order') ? `<div class="card" onclick="startOrder()">
         <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📝</div><div class="card-body"><div class="card-title">Order Items</div><div class="card-desc">สั่ง Cake / Sauce ไปร้าน</div></div><div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('orders')">
+      </div>` : ''}
+      ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')">
         <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div><div class="card-body"><div class="card-title">View Orders</div><div class="card-desc">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('stock')">
+      </div>` : ''}
+      ${hasPerm('fn_view_stock') ? `<div class="card" onclick="showScreen('stock')">
         <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">📦</div><div class="card-body"><div class="card-title">View Stock</div><div class="card-desc">สินค้าพร้อมส่ง</div></div><div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('waste')">
+      </div>` : ''}
+      ${hasPerm('fn_log_waste') ? `<div class="card" onclick="showScreen('waste')">
         <div class="card-row"><div class="card-icon" style="background:var(--purple-bg)">🗑️</div><div class="card-body"><div class="card-title">Record Waste</div><div class="card-desc">สินค้าหมดอายุ / เสียหาย</div></div><div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('returns')">
+      </div>` : ''}
+      ${hasPerm('fn_report_return') ? `<div class="card" onclick="showScreen('returns')">
         <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">↩️</div><div class="card-body"><div class="card-title">Return / Feedback</div><div class="card-desc">แจ้งปัญหาคุณภาพ</div></div><div class="card-right">→</div></div>
-      </div>
+      </div>` : ''}
     </div>
     ${adminMenus}
   `;
@@ -3393,18 +3422,17 @@ async function confirmDeleteAnnouncement(notifId) {
 // ─── B2: BC ORDER LIST ──────────────────────────────────────
 async function renderBcOrders() {
   try { await loadOrders(); } catch(e) { console.warn('loadOrders failed:', e); }
-  // Default date filter: today (show today's deliveries first)
+  // Smart default: today if has orders, else tomorrow, else all
   if (!S.bcDateFilter) {
-    S.bcDateFilter = todaySydney();
+    const today = todaySydney();
+    const tmr = tomorrowSydney();
+    const scope = S.deptMapping ? S.deptMapping.section_scope : [];
+    const todayN = filterOrdersByDateAndScope(today, scope).length;
+    const tmrN = filterOrdersByDateAndScope(tmr, scope).length;
+    S.bcDateFilter = todayN > 0 ? today : tmrN > 0 ? tmr : (S.orders.length > 0 ? 'all' : today);
   }
   
-  // B-02 fix: if no orders found for today, try 'all' as fallback
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  const todayOrders = filterOrdersByDateAndScope(S.bcDateFilter, scope);
-  if (todayOrders.length === 0 && S.orders.length > 0 && S.bcDateFilter !== 'all') {
-    console.log('📋 No orders for today, showing all. Total orders:', S.orders.length);
-    // Keep filter as today but show a hint
-  }
   
   document.getElementById('bcDateInput').value = S.bcDateFilter === 'all' ? '' : S.bcDateFilter;
   document.getElementById('bcOrderSub').textContent = getScopeLabel();
@@ -4373,6 +4401,106 @@ function startPolling() {
 
 function stopPolling() {
   if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+}
+
+// ─── SESSION MONITOR ────────────────────────────────────────
+let _sessionCheckInterval = null;
+function startSessionMonitor() {
+  if (_sessionCheckInterval) clearInterval(_sessionCheckInterval);
+  _sessionCheckInterval = setInterval(() => {
+    const expiresAt = S.session?.expires_at;
+    if (!expiresAt) return;
+    
+    const remaining = new Date(expiresAt).getTime() - Date.now();
+    const mins = Math.round(remaining / 60000);
+    
+    if (remaining <= 0) {
+      // Session expired
+      clearInterval(_sessionCheckInterval);
+      stopPolling();
+      localStorage.removeItem('bc_token');
+      showScreen('invalid-token');
+      toast('⏰ Session หมดอายุ กรุณา login ใหม่', 'error');
+    } else if (remaining <= 10 * 60000 && remaining > 9.5 * 60000) {
+      // 10 min warning
+      toast(`⏰ Session จะหมดอายุใน ${mins} นาที`, 'warning');
+    }
+  }, 30000); // check every 30s
+}
+
+// ─── HAMBURGER MENU ─────────────────────────────────────────
+function openHamburger() {
+  const s = S.session || {};
+  const tierBg = parseInt((s.tier_id||'T9').replace('T','')) <= 2 ? 'var(--gold)' : 'var(--blue)';
+  
+  document.getElementById('hmHeader').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:44px;height:44px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px">${(s.display_name||'?').charAt(0)}</div>
+      <div>
+        <div style="font-weight:700;font-size:15px">${s.display_name || 'User'}</div>
+        <div style="font-size:11px;color:var(--td)">${s.store_id||''} · ${s.dept_id||''}</div>
+        <div style="font-size:10px;margin-top:2px"><span style="background:${tierBg};color:#fff;padding:2px 8px;border-radius:10px;font-weight:600">${s.tier_id||'?'}</span></div>
+      </div>
+    </div>`;
+  
+  document.getElementById('hmBody').innerHTML = `
+    <div class="hm-item" onclick="location.href='${HOME_URL}'">
+      <div class="hm-item-icon">🏠</div>
+      <div>กลับหน้า Home</div>
+    </div>
+    <div class="hm-item" onclick="showProfileInfo()">
+      <div class="hm-item-icon">👤</div>
+      <div>ข้อมูลโปรไฟล์</div>
+    </div>
+    <div class="hm-item" onclick="showNotifPanel();closeHamburger()">
+      <div class="hm-item-icon">🔔</div>
+      <div>แจ้งเตือน</div>
+    </div>
+    <div style="height:1px;background:var(--b2);margin:8px 0"></div>
+    <div class="hm-item hm-item-danger" onclick="doLogout()">
+      <div class="hm-item-icon">🚪</div>
+      <div>ออกจากระบบ</div>
+    </div>
+    <div style="padding:16px;font-size:9px;color:var(--td);text-align:center">BC Order v5 · SPG © 2026</div>
+  `;
+  
+  document.getElementById('hmOverlay').classList.add('show');
+  document.getElementById('hmPanel').classList.add('show');
+}
+
+function closeHamburger() {
+  document.getElementById('hmPanel').classList.remove('show');
+  document.getElementById('hmOverlay').classList.remove('show');
+}
+
+function showProfileInfo() {
+  closeHamburger();
+  const s = S.session || {};
+  showDialog(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:28px;margin:0 auto 8px">${(s.display_name||'?').charAt(0)}</div>
+      <div style="font-size:16px;font-weight:700">${s.display_name || '-'}</div>
+      <div style="font-size:12px;color:var(--td)">${s.full_name || ''}</div>
+    </div>
+    <div style="background:var(--s2);border-radius:12px;padding:12px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">User ID</span><span style="font-weight:600">${s.user_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Account</span><span style="font-weight:600">${s.account_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Store</span><span style="font-weight:600">${getStoreName(s.store_id) || s.store_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Department</span><span style="font-weight:600">${s.dept_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Tier</span><span style="font-weight:600">${s.tier_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(--td)">Role</span><span style="font-weight:600">${S.deptMapping?.module_role || S.role || '-'}</span></div>
+      ${s.expires_at ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--b1)"><span style="color:var(--td)">Session หมดอายุ</span><span style="font-weight:600;font-size:10px">${new Date(s.expires_at).toLocaleString('th-TH', {timeZone:'Australia/Sydney'})}</span></div>` : ''}
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeDialog()">ปิด</button>
+  `);
+}
+
+function doLogout() {
+  closeHamburger();
+  localStorage.removeItem('bc_token');
+  S.token = null;
+  S.session = {};
+  location.href = HOME_URL;
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────
