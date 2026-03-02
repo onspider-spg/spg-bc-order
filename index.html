@@ -344,6 +344,7 @@ const S = {
   returns: [],
   notifications: [],
   dashboard: null,
+  dashboard_delivery_today: null,   // ✅ เพิ่มบรรทัดนี้  
   currentScreen: 'loading',
   productSearch: '',
   productFilter: 'all',
@@ -423,6 +424,8 @@ async function init() {
       await Promise.all([
         loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(),
       ]);
+      // ✅ คำนวณ dashboard สำหรับ "ส่งวันนี้"
+      S.dashboard_delivery_today = computeDeliveryTodayDashboard();
       await loadDashboard();  // after orders so fallback can compute from S.orders
       routeToHome();
     } else {
@@ -544,7 +547,7 @@ async function loadDashboard() {
   
   // Fallback: compute from loaded orders
   const today = todaySydney();
-  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
+  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today || o.order_date === today);
   S.dashboard = {
     today_total: todayOrders.length,
     by_status: {
@@ -558,6 +561,25 @@ async function loadDashboard() {
     urgent_items: 0,
   };
 }
+
+function computeDeliveryTodayDashboard() {
+  const today = todaySydney();
+  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
+
+  return {
+    today_total: todayOrders.length,
+    by_status: {
+      Pending: todayOrders.filter(o => o.status === 'Pending').length,
+      Ordered: todayOrders.filter(o => o.status === 'Ordered').length,
+      InProgress: todayOrders.filter(o => o.status === 'InProgress').length,
+      Fulfilled: todayOrders.filter(o => o.status === 'Fulfilled').length,
+      Delivered: todayOrders.filter(o => o.status === 'Delivered').length,
+    },
+    cutoff_violations_today: todayOrders.filter(o => o.is_cutoff_violation).length,
+    urgent_items: 0,
+  };
+}
+  
 
 async function loadOrders(status = '') {
   const params = { limit: '100' };
