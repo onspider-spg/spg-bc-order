@@ -1597,7 +1597,7 @@ function filterOrders() {
         <span style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</span>
         <span class="status ${statusClass(o.status)}">${o.status}</span>
       </div>
-      <div style="font-size:11px;color:var(--td)">📅 ส่ง ${formatDateThai(o.delivery_date)} · สั่ง ${formatDateThai(o.order_date)}</div>
+      <div style="font-size:11px;color:var(--td)">📅 Delivery By : ${formatDateAU(o.delivery_date)} · Order Date : ${formatDateAU(o.order_date)}</div>
       ${o.is_cutoff_violation ? '<div class="tag tag-orange" style="margin-top:4px;font-size:9px">⚠️ Cutoff Violation</div>' : ''}
       ${o.header_note ? `<div style="font-size:10px;color:var(--td);margin-top:4px">📝 ${o.header_note}</div>` : ''}
     </div>
@@ -4533,6 +4533,16 @@ function formatDateThai(str) {
   const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
+
+function formatDateAU(str) {
+  if (!str) return '';
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-AU', {
+    day: '2-digit',
+    month: 'short'
+  });
+}
+  
 
 function getStoreName(id) {
   const map = { MNG:'Mango Coco', ISH:'Issho Cafe', GB:'Golden Brown', TMC:'The Melting Cheese', BC:'Bakery Centre', ALL:'ทุกร้าน' };
