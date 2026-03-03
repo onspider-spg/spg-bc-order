@@ -289,7 +289,7 @@ textarea.form-input{resize:none;min-height:72px}
 .slip-dept{font-weight:600;color:#888;margin:6px 0 2px;font-size:9px}
 .slip-row{display:flex;justify-content:space-between;padding:1px 0}
 .slip-foot{border-top:1px dashed #ccc;padding-top:8px;margin-top:10px;font-size:9px}
-@media print{body{background:#fff!important}.screen{display:none!important}#scr-bc-print{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print,.scr-hdr,.filter-chips{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}.ptbl thead{display:table-header-group}.ptbl tr{page-break-inside:avoid}}
+@media print{body{background:#fff!important}.screen{display:none!important}#scr-bc-print{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print,.scr-hdr,.filter-chips{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}.ptbl thead{display:table-header-group}.ptbl tr{page-break-inside:avoid}body.slip-mode #scr-bc-print{width:76mm;margin:0 auto;padding:0}body.slip-mode .slip-wrap{width:76mm;font-size:10px}body.slip-mode .slip-hd{font-size:11px}body.slip-mode .slip-row{font-size:10px}body.slip-mode .slip-sec{font-size:11px}body.slip-mode .slip-dept{font-size:9px}body.slip-mode .slip-foot{font-size:8px}}
 </style>
 </head>
 <body>
@@ -961,7 +961,7 @@ function renderApp() {
       <div class="topbar" style="background:var(--blue-bg)">
         <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
         <div class="topbar-title">🖨️ Print Centre<div class="topbar-sub" id="bcPrintSub"></div></div>
-        <div class="topbar-action" onclick="window.print()" title="Print">🖨️</div>
+        <div class="topbar-action" onclick="S.bcPrintTab==='slip'?printSlip80():window.print()" title="Print">🖨️</div>
       </div>
       <div style="padding:8px 16px;display:flex;gap:8px;align-items:center">
         <label style="font-size:11px;color:var(--td);white-space:nowrap">📅 ส่ง:</label>
@@ -2505,29 +2505,12 @@ function getBcAdminMenus() {
 
 // ─── ADMIN SCREEN RENDERERS (A1-A9) ────────────────────────
 function renderAdminDashboard() {
-  const STORES = ['MNG','ISH','GB','TMC'];
-  if (!S.dashStoreFilter) S.dashStoreFilter = 'ALL';
-  const sf = S.dashStoreFilter;
-
-  const allOrders = S.orders || [];
-  // Filter orders: exclude BC/HQ, then apply store filter
-  const storeOrders = allOrders.filter(o => STORES.includes(o.store_id));
-  const filtered = sf === 'ALL' ? storeOrders : storeOrders.filter(o => o.store_id === sf);
-
-  const total = filtered.length;
-  const bs = {};
-  filtered.forEach(o => { bs[o.status] = (bs[o.status]||0)+1; });
-  const fulfilRate = total > 0 ? Math.round(((bs.Delivered||0)/total)*100) : 0;
-
-  // Dashboard data recalc
   const d = S.dashboard || {};
-
+  const bs = d.by_status || {};
+  const total = d.today_total || 0;
+  const fulfilRate = total > 0 ? Math.round(((bs.Delivered||0)/(total))*100) : 0;
   document.getElementById('adminDashboardContent').innerHTML = `
-    <div class="filter-bar">
-      <div class="filter-chip ${sf==='ALL'?'active':''}" onclick="S.dashStoreFilter='ALL';renderAdminDashboard()">ทุกร้าน</div>
-      ${STORES.map(s => `<div class="filter-chip ${sf===s?'active':''}" onclick="S.dashStoreFilter='${s}';renderAdminDashboard()">${getStoreName(s)}</div>`).join('')}
-    </div>
-    <div class="sec-hd">📊 ภาพรวมวันนี้ — ${sf==='ALL'?'ทุกร้าน (4)':getStoreName(sf)}</div>
+    <div class="sec-hd">📊 ภาพรวมวันนี้ — ทุกร้าน</div>
     <div class="sum-grid">
       <div class="sum-card"><div class="sum-num">${total}</div><div class="sum-label">ออเดอร์</div></div>
       <div class="sum-card"><div class="sum-num" style="color:var(--orange)">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
@@ -2552,7 +2535,7 @@ function renderAdminDashboard() {
       </div>
     </div>
     <div class="sec-hd">🏪 Orders by Store</div>
-    <div class="pad">${renderStoreBreakdown(sf)}</div>
+    <div class="pad">${renderStoreBreakdown()}</div>
     <div class="sec-hd">🔗 Quick Links</div>
     <div class="pad" style="padding-top:0;display:flex;gap:8px">
       <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-waste-dashboard')">
@@ -2570,22 +2553,18 @@ function renderAdminDashboard() {
     </div>`;
 }
 
-function renderStoreBreakdown(storeFilter) {
-  const STORES = ['MNG','ISH','GB','TMC'];
+function renderStoreBreakdown() {
   const orders = S.orders || [];
   const stores = {};
-  STORES.forEach(sid => { stores[sid] = { total:0, pending:0, ordered:0, done:0 }; });
   orders.forEach(o => {
-    if (!STORES.includes(o.store_id)) return;
-    if (storeFilter && storeFilter !== 'ALL' && o.store_id !== storeFilter) return;
+    if (!stores[o.store_id]) stores[o.store_id] = { total:0, pending:0, ordered:0, done:0 };
     stores[o.store_id].total++;
     if (o.status === 'Pending') stores[o.store_id].pending++;
     else if (o.status === 'Ordered') stores[o.store_id].ordered++;
     else stores[o.store_id].done++;
   });
-  return Object.entries(stores)
-    .filter(([sid]) => !storeFilter || storeFilter === 'ALL' || sid === storeFilter)
-    .map(([sid, s]) => `
+  if (Object.keys(stores).length === 0) return '<div style="color:var(--td);font-size:12px;padding:12px">ยังไม่มีออเดอร์วันนี้</div>';
+  return Object.entries(stores).map(([sid, s]) => `
     <div class="card" style="margin-bottom:6px">
       <div class="card-row">
         <div class="card-body">
@@ -2595,7 +2574,6 @@ function renderStoreBreakdown(storeFilter) {
       </div>
     </div>`).join('');
 }
-
 
 // ─── A3: Product Management ──────────────────────────────────
 async function renderAdminProducts() {
@@ -3369,11 +3347,9 @@ async function renderAdminTopProducts() {
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
   if (!S.topProdDays) S.topProdDays = 30;
-  if (!S.topProdStore) S.topProdStore = "ALL";
   
   try {
-    const qp = { days: String(S.topProdDays) }; if (S.topProdStore !== 'ALL') qp.store = S.topProdStore;
-    const resp = await api('get_top_products', null, qp);
+    const resp = await api('get_top_products', null, { days: String(S.topProdDays) });
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
     
     const d = resp.data;
@@ -3386,14 +3362,7 @@ async function renderAdminTopProducts() {
         <div class="filter-chip ${S.topProdDays===7?'active':''}" onclick="S.topProdDays=7;renderAdminTopProducts()">7 วัน</div>
         <div class="filter-chip ${S.topProdDays===14?'active':''}" onclick="S.topProdDays=14;renderAdminTopProducts()">14 วัน</div>
         <div class="filter-chip ${S.topProdDays===30?'active':''}" onclick="S.topProdDays=30;renderAdminTopProducts()">30 วัน</div>
-      </div>
-      ${S.role === 'bc' ? `<div class="filter-bar" style="margin-top:0">
-        <div class="filter-chip ${S.topProdStore==='ALL'?'active':''}" onclick="S.topProdStore='ALL';renderAdminTopProducts()">All</div>
-        <div class="filter-chip ${S.topProdStore==='MNG'?'active':''}" onclick="S.topProdStore='MNG';renderAdminTopProducts()">MNG</div>
-        <div class="filter-chip ${S.topProdStore==='ISH'?'active':''}" onclick="S.topProdStore='ISH';renderAdminTopProducts()">ISH</div>
-        <div class="filter-chip ${S.topProdStore==='GB'?'active':''}" onclick="S.topProdStore='GB';renderAdminTopProducts()">GB</div>
-        <div class="filter-chip ${S.topProdStore==='TMC'?'active':''}" onclick="S.topProdStore='TMC';renderAdminTopProducts()">TMC</div>
-      </div>` : ''}`;
+      </div>`;
     
     // Summary cards
     html += `
@@ -4660,7 +4629,7 @@ function renderDeliverySlip() {
     <div style="font-size:7px;color:#aaa;margin-top:4px;text-align:center">Printed: ${now}</div>
   </div></div>`;
   html += `<div style="text-align:center;padding:12px" class="no-print">
-    <button class="btn btn-primary" onclick="printSlip80()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Delivery Slip (80×80mm)</button>
+    <button class="btn btn-primary" onclick="printSlip80()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Delivery Slip (80mm Thermal)</button>
   </div>`;
 
   document.getElementById('bcPrintContent').innerHTML = html;
@@ -4668,13 +4637,18 @@ function renderDeliverySlip() {
 
 // ─── PRINT SLIP 80x80mm ───
 function printSlip80() {
-  // Inject 80x80mm page style, print, then remove
+  // v6.4: 80mm thermal print - body class constrains width + @page hint
+  document.body.classList.add('slip-mode');
   const style = document.createElement('style');
   style.id = 'slip-page-style';
-  style.textContent = '@page{size:80mm 80mm;margin:2mm}';
+  style.textContent = '@page{size:80mm auto;margin:2mm}';
   document.head.appendChild(style);
   window.print();
-  setTimeout(() => { const el = document.getElementById('slip-page-style'); if(el) el.remove(); }, 1000);
+  setTimeout(() => {
+    document.body.classList.remove('slip-mode');
+    const el = document.getElementById('slip-page-style');
+    if (el) el.remove();
+  }, 1500);
 }
 
 // ─── NOTIFICATIONS CHECK ─────────────────────────────────────
