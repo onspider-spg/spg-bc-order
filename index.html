@@ -1157,7 +1157,7 @@ function renderHomeDashboard() {
     </div>` : '';
   
   document.getElementById('homeContent').innerHTML = `
-    <div class="sec-hd">📊 วันนี้</div>
+    <div class="sec-hd">📊 Today Delivery</div>
     <div class="sum-grid">
       <div class="sum-card sum-gold"><div class="sum-num">${d.today_total}</div><div class="sum-label">ออเดอร์ทั้งหมด</div></div>
       <div class="sum-card sum-green"><div class="sum-num">${(bs.Fulfilled||0)+(bs.Delivered||0)}</div><div class="sum-label">เสร็จแล้ว</div></div>
@@ -2125,7 +2125,7 @@ function renderBcHome() {
   const bcAdminMenus = getBcAdminMenus();
 
   document.getElementById('bcHomeContent').innerHTML = `
-    <div class="sec-hd">📊 วันนี้</div>
+    <div class="sec-hd">📊 Today Delivery</div>
     <div class="sum-grid">
       <div class="sum-card ${bs.Pending>0?'sum-red':''}"><div class="sum-num">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
       <div class="sum-card sum-blue"><div class="sum-num">${bs.Ordered||0}</div><div class="sum-label">Ordered</div></div>
