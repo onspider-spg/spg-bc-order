@@ -665,7 +665,13 @@ async function loadMyPermissions() {
 }
 
 function hasPerm(fnId) {
-  // v6.4.1: check real permission for ALL tiers
+  // T1/T2 always have access to operational functions
+  const tierLevel = parseInt((S.session?.tier_id || 'T9').replace('T',''));
+  if (tierLevel <= 2) return true;
+  return S.myPerms.includes(fnId);
+}
+function hasAdminPerm(fnId) {
+  // v6.4.3: strict check — ALL tiers must have real permission for admin menus
   return S.myPerms.includes(fnId);
 }
 
@@ -1202,7 +1208,7 @@ function renderHomeDashboard() {
     { screen:'bc-stock', icon:'📦', bg:'var(--green-bg)', title:'Manage Stock', desc:'เพิ่ม/ลดสต็อก ทุก section', perm:'fn_add_stock' },
     { screen:'bc-print', icon:'🖨️', bg:'var(--orange-bg)', title:'Print Centre', desc:'Production Sheet / Delivery Slip', perm:'fn_view_production' },
   ];
-  const allowedStoreAdmin = storeAdminItems.filter(m => hasPerm(m.perm));
+  const allowedStoreAdmin = storeAdminItems.filter(m => hasAdminPerm(m.perm));
   const adminMenus = allowedStoreAdmin.length > 0 ? `
     <div class="sec-hd">👑 Admin</div>
     <div class="pad" style="padding-top:0">
@@ -2480,7 +2486,7 @@ function getBcAdminMenus() {
     { screen:'admin-audit', icon:'📝', bg:'rgba(8,145,178,0.1)', title:'Audit Trail', desc:'ประวัติเปลี่ยนสิทธิ์ + mapping', perm:'fn_view_all_orders' },
     { screen:'admin-announcements', icon:'📢', bg:'var(--gold-bg)', title:'Announcements', desc:'ตั้งประกาศ แจ้งเตือน กำหนด auto-expire', perm:'fn_manage_notifications' },
   ];
-  const allowedAdmin = adminMenus.filter(m => hasPerm(m.perm));
+  const allowedAdmin = adminMenus.filter(m => hasAdminPerm(m.perm));
 
   const renderCard = (m) => `
     <div class="card" onclick="showScreen('${m.screen}')">
