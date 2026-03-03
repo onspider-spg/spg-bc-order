@@ -665,9 +665,7 @@ async function loadMyPermissions() {
 }
 
 function hasPerm(fnId) {
-  // T1/T2 always have access (super admin)
-  const tierLevel = parseInt((S.session?.tier_id || 'T9').replace('T',''));
-  if (tierLevel <= 2) return true;
+  // v6.4.1: check real permission for ALL tiers
   return S.myPerms.includes(fnId);
 }
 
@@ -1143,13 +1141,13 @@ function renderBcSubNav(currentScreen) {
   // v6.0: BC gets 5 tabs (with Print), Store gets 4 tabs
   const isBcRole = S.role === 'bc';
   const items = isBcRole ? [
-    { screen: 'bc-home', icon: '🏠', label: 'Home' },
+    { screen: 'bc-home', icon: '🏠', label: 'Main Menu' },
     { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
     { screen: 'return-dashboard', icon: '↩️', label: 'Returns' },
     { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
     { screen: 'bc-print', icon: '🖨️', label: 'Print' },
   ] : [
-    { screen: 'home', icon: '🏠', label: 'Home' },
+    { screen: 'home', icon: '🏠', label: 'Main Menu' },
     { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
     { screen: 'return-dashboard', icon: '↩️', label: 'Returns' },
     { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
@@ -1177,7 +1175,7 @@ function renderHome() {
   
   // Bottom nav — v6.0: dashboard-focused tabs
   document.getElementById('bottomNav').innerHTML = `
-    <div class="nav-item active" onclick="navTo('dashboard')"><span class="ni">🏠</span>Home</div>
+    <div class="nav-item active" onclick="navTo('dashboard')"><span class="ni">🏠</span>Main Menu</div>
     <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
     <div class="nav-item" onclick="showScreen('return-dashboard')"><span class="ni">↩️</span>Returns</div>
     <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
@@ -2394,7 +2392,7 @@ function renderBcHome() {
 
   // Bottom nav (BC) — v6.0: 5 tabs with Print
   document.getElementById('bcBottomNav').innerHTML = `
-    <div class="nav-item active" onclick="showScreen('bc-home')"><span class="ni">🏠</span>Home</div>
+    <div class="nav-item active" onclick="showScreen('bc-home')"><span class="ni">🏠</span>Main Menu</div>
     <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
     <div class="nav-item" onclick="showScreen('return-dashboard')"><span class="ni">↩️</span>Returns</div>
     <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
@@ -2434,6 +2432,11 @@ function renderBcHome() {
       <div class="card" onclick="showScreen('bc-returns')">
         <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">↩️</div>
         <div class="card-body"><div class="card-title">Report Return / Feedback</div><div class="card-desc">แจ้งสินค้าส่งคืน / feedback ปัญหาสินค้า</div></div>
+        <div class="card-right">→</div></div>
+      </div>
+      <div class="card" onclick="showScreen('bc-print')">
+        <div class="card-row"><div class="card-icon" style="background:var(--orange-bg)">🖨️</div>
+        <div class="card-body"><div class="card-title">Print Centre</div><div class="card-desc">Production Sheet / Delivery Slip</div></div>
         <div class="card-right">→</div></div>
       </div>
     </div>
@@ -3393,6 +3396,13 @@ async function renderAdminTopProducts() {
     if (!topP.length) {
       html += '<div style="text-align:center;color:var(--td);font-size:12px;padding:16px">ไม่มีข้อมูล</div>';
     } else {
+      // v6.4.1: resolve product name from S.products if backend returned product_id as name
+      topP.forEach(p => {
+        if (!p.name || p.name === p.product_id) {
+          const lp = (S.products || []).find(x => x.product_id === p.product_id);
+          if (lp) p.name = lp.product_name || p.name;
+        }
+      });
       topP.forEach((p, idx) => {
         const pct = Math.round((p.qty_ordered / maxQty) * 100);
         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
