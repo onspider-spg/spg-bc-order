@@ -438,7 +438,7 @@ async function init() {
       }
       
       await Promise.all([
-        loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(),
+        loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(), loadReturns(),
       ]);
       await loadDashboard();  // after orders so fallback can compute from S.orders
       await routeToHome();
@@ -871,6 +871,7 @@ function renderApp() {
         <div class="topbar-title">Return / Feedback</div>
       </div>
       <div class="content" id="returnsContent"></div>
+      <div class="bottomnav bc-nav" id="storeReturnsNav"></div>
     </div>
     
     <!-- ══════ BAKERY CENTRE: B1 HOME ══════ -->
@@ -1028,7 +1029,7 @@ function renderApp() {
     
     <div class="screen" id="scr-admin-waste-dashboard">
       <div class="topbar" style="background:var(--gold-bg)">
-        <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
+        <div class="topbar-back" onclick="showScreen(S.role==='bc'?'bc-home':'home')">←</div>
         <div class="topbar-title" style="color:var(--gold)">🗑️ Waste Dashboard</div>
       </div>
       <div class="content" id="adminWasteDbContent"></div>
@@ -1037,7 +1038,7 @@ function renderApp() {
     
     <div class="screen" id="scr-admin-top-products">
       <div class="topbar" style="background:var(--gold-bg)">
-        <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
+        <div class="topbar-back" onclick="showScreen(S.role==='bc'?'bc-home':'home')">←</div>
         <div class="topbar-title" style="color:var(--gold)">🏆 Top Products</div>
       </div>
       <div class="content" id="adminTopProdContent"></div>
@@ -1105,7 +1106,7 @@ function showScreen(name, param) {
       case 'admin-product-edit': renderProductEditScreen(); break;
     }
     // Render BC bottom nav on all BC sub-screens + dashboard screens in bottom nav
-    if ((name.startsWith('bc-') && name !== 'bc-home') || name === 'admin-top-products' || name === 'admin-waste-dashboard') {
+    if ((name.startsWith('bc-') && name !== 'bc-home') || name === 'admin-top-products' || name === 'admin-waste-dashboard' || name === 'returns') {
       renderBcSubNav(name);
     }
   }
@@ -1120,16 +1121,25 @@ function renderBcSubNav(currentScreen) {
     'bc-print': 'bcPrintNav',
     'admin-top-products': 'bcTopProductsNav',
     'admin-waste-dashboard': 'bcWasteDashNav',
+    'returns': 'storeReturnsNav',
   };
   const navId = navMap[currentScreen];
   if (!navId) return;
   const el = document.getElementById(navId);
   if (!el) return;
   
-  const items = [
+  // v6.0: BC gets 5 tabs (with Print), Store gets 4 tabs
+  const isBcRole = S.role === 'bc';
+  const items = isBcRole ? [
     { screen: 'bc-home', icon: '🏠', label: 'Home' },
     { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
     { screen: 'bc-returns', icon: '↩️', label: 'Returns' },
+    { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
+    { screen: 'bc-print', icon: '🖨️', label: 'Print' },
+  ] : [
+    { screen: 'home', icon: '🏠', label: 'Home' },
+    { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
+    { screen: 'returns', icon: '↩️', label: 'Returns' },
     { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
   ];
   el.innerHTML = items.map(it => 
@@ -1153,13 +1163,12 @@ function renderHome() {
       <span class="user-tier">${s.tier_id}</span>
     </div>`;
   
-  // Bottom nav
+  // Bottom nav — v6.0: dashboard-focused tabs
   document.getElementById('bottomNav').innerHTML = `
     <div class="nav-item active" onclick="navTo('dashboard')"><span class="ni">🏠</span>Home</div>
-    <div class="nav-item" onclick="startOrder()"><span class="ni">📝</span>Order</div>
-    <div class="nav-item" onclick="showScreen('orders')"><span class="ni">📋</span>History</div>
-    <div class="nav-item" onclick="showScreen('stock')"><span class="ni">📦</span>Stock</div>
-    <div class="nav-item" onclick="showScreen('waste')"><span class="ni">🗑️</span>Waste</div>
+    <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
+    <div class="nav-item" onclick="showScreen('returns')"><span class="ni">↩️</span>Returns</div>
+    <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
   `;
   
   renderHomeDashboard();
@@ -2057,10 +2066,6 @@ function showReturnForm() {
   showDialog(`
     <div class="dialog-title">↩️ แจ้ง Return / Feedback</div>
     <div class="form-group">
-      <label class="form-label">Order ID</label>
-      <input class="form-input" id="rtnOrderId" placeholder="ORD-20260301-001">
-    </div>
-    <div class="form-group">
       <label class="form-label">สินค้า</label>
       <select class="form-input" id="rtnProduct">
         <option value="">-- เลือก --</option>
@@ -2100,7 +2105,6 @@ function showReturnForm() {
 
 async function submitReturn() {
   const data = {
-    order_id: document.getElementById('rtnOrderId').value,
     item_id: 'ITM-000000', // simplified
     product_id: document.getElementById('rtnProduct').value,
     quantity: parseInt(document.getElementById('rtnQty').value),
@@ -2110,7 +2114,7 @@ async function submitReturn() {
     action: document.getElementById('rtnAction').value,
   };
   
-  if (!data.order_id || !data.product_id || !data.quantity) {
+  if (!data.product_id || !data.quantity) {
     toast('กรุณากรอกข้อมูลให้ครบ', 'error');
     return;
   }
@@ -2118,6 +2122,7 @@ async function submitReturn() {
   try {
     const resp = await api('report_return', data);
     toast(resp.message || '✅ แจ้งแล้ว', resp.success ? 'success' : 'error');
+    if (resp.success) await loadReturns();
   } catch(e) {
     toast('✅ แจ้งแล้ว (Demo)', 'success');
   }
@@ -2148,13 +2153,13 @@ function renderBcHome() {
     </div>
     <span class="user-tier">${s.tier_id}</span>`;
 
-  // Bottom nav (BC) — 4 tabs: Home, Top Products, Returns, Waste Dashboard
+  // Bottom nav (BC) — v6.0: 5 tabs with Print
   document.getElementById('bcBottomNav').innerHTML = `
     <div class="nav-item active" onclick="showScreen('bc-home')"><span class="ni">🏠</span>Home</div>
     <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
     <div class="nav-item" onclick="showScreen('bc-returns')"><span class="ni">↩️</span>Returns</div>
-    <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>`;
-
+    <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
+    <div class="nav-item" onclick="showScreen('bc-print')"><span class="ni">🖨️</span>Print</div>`;
   // Dashboard + Menu
   const d = S.dashboard || { today_total:0, by_status:{}, cutoff_violations_today:0, urgent_items:0 };
   const bs = d.by_status || {};
@@ -2170,37 +2175,8 @@ function renderBcHome() {
     </div>
     ${d.urgent_items > 0 ? `<div style="padding:0 16px 8px"><div class="tag tag-red" style="font-size:12px;padding:6px 14px">⚡ URGENT: ${d.urgent_items} รายการ</div></div>` : ''}
     
-    <div class="sec-hd">⚡ Quick Menu</div>
-    <div class="pad" style="padding-top:0">
-      <div class="card" onclick="showScreen('bc-orders')">
-        <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div>
-        <div class="card-body"><div class="card-title">View Orders</div><div class="card-desc">ออเดอร์ ${scope} ทั้งหมด</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('bc-stock')">
-        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">📦</div>
-        <div class="card-body"><div class="card-title">Manage Stock</div><div class="card-desc">เพิ่ม/ลดสต็อก ${scope}</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('waste')">
-        <div class="card-row"><div class="card-icon" style="background:var(--purple-bg)">🗑️</div>
-        <div class="card-body"><div class="card-title">Record Waste</div><div class="card-desc">ผลิตเสีย / เสียหาย / หมดอายุ</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('bc-returns')">
-        <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">↩️</div>
-        <div class="card-body"><div class="card-title">Report Return / Feedback</div><div class="card-desc">แจ้งสินค้าส่งคืน / feedback ปัญหาสินค้า</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-      <div class="card" onclick="showScreen('bc-print')">
-        <div class="card-row"><div class="card-icon" style="background:var(--orange-bg)">🖨️</div>
-        <div class="card-body"><div class="card-title">Print Centre</div><div class="card-desc">Production Sheet / Delivery Slip</div></div>
-        <div class="card-right">→</div></div>
-      </div>
-    </div>
     ${bcAdminMenus}`;
 }
-
 function getBcAdminMenus() {
   const s = S.session || {};
   const dm = S.deptMapping || {};
