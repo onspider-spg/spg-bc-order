@@ -289,7 +289,7 @@ textarea.form-input{resize:none;min-height:72px}
 .slip-dept{font-weight:600;color:#888;margin:6px 0 2px;font-size:9px}
 .slip-row{display:flex;justify-content:space-between;padding:1px 0}
 .slip-foot{border-top:1px dashed #ccc;padding-top:8px;margin-top:10px;font-size:9px}
-@media print{body{background:#fff!important}.screen{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}}
+@media print{body{background:#fff!important}.screen{display:none!important}#scr-bc-print{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print,.scr-hdr,.filter-chips{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}}
 </style>
 </head>
 <body>
@@ -4092,7 +4092,7 @@ function renderProductionSheet() {
   orders.forEach(o => {
     (o.items || []).forEach(it => {
       if (scope.length === 0 || scope.includes(it.section_id)) {
-        allItems.push({ ...it, store_id: o.store_id, order_id: o.order_id });
+        allItems.push({ ...it, store_id: o.store_id, order_id: o.order_id, dept_id: o.dept_id, header_note: o.header_note, display_name: o.display_name });
       }
     });
   });
@@ -4110,33 +4110,43 @@ function renderProductionSheet() {
     return;
   }
 
-  // Get unique stores + products
-  const storeSet = new Set(); const prodSet = new Set();
-  allItems.forEach(it => { storeSet.add(it.store_id); prodSet.add(it.product_name); });
-  const stores = [...storeSet].sort();
+  // Always show all 4 stores
+  const allStores = ['MNG','ISH','GB','TMC'];
+  const prodSet = new Set();
+  allItems.forEach(it => { prodSet.add(it.product_name); });
   const products = [...prodSet].sort();
 
-  // Build pivot: {product: {store: {qty, urgent, notes[]}}}
+  // Build pivot: {product: {store: {qty, urgent}}}
   const pivot = {};
-  const notes = []; // [{label, text}]
+  const itemNotes = []; // item-level notes: [{idx, product, store, text}]
+  const orderNotes = []; // order-level notes: [{order_id, store, dept, text}]
+  const seenOrderNotes = new Set();
   let noteIdx = 0;
-  const noteLabels = 'ABCDEFGHIJKLMNO'.split('');
 
   products.forEach(p => { pivot[p] = { total:0, urgent:false, stores:{} }; });
 
   allItems.forEach(it => {
     const row = pivot[it.product_name];
-    if (!row.stores[it.store_id]) row.stores[it.store_id] = { qty:0, urgent:false, noteRef:'' };
+    if (!row.stores[it.store_id]) row.stores[it.store_id] = { qty:0, urgent:false, noteIdx:[] };
     const cell = row.stores[it.store_id];
     cell.qty += it.qty_ordered;
     row.total += it.qty_ordered;
     if (it.is_urgent) { cell.urgent = true; row.urgent = true; }
-    if (it.note && noteIdx < noteLabels.length) {
-      const lbl = noteLabels[noteIdx++];
-      cell.noteRef += lbl;
-      notes.push({ label: lbl, text: `${it.store_id}-${it.product_name}: ${it.note}` });
+    // Item note
+    if (it.item_note) {
+      noteIdx++;
+      cell.noteIdx.push(noteIdx);
+      itemNotes.push({ idx: noteIdx, product: it.product_name, store: it.store_id, text: it.item_note });
+    }
+    // Order note (collect once per order)
+    if (it.header_note && !seenOrderNotes.has(it.order_id)) {
+      seenOrderNotes.add(it.order_id);
+      orderNotes.push({ order_id: it.order_id, store: it.store_id, dept: it.dept_id, name: it.display_name || '', text: it.header_note });
     }
   });
+
+  // Unique order IDs
+  const orderIds = [...new Set(allItems.map(it => it.order_id))].sort();
 
   // Render
   const now = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -4146,31 +4156,51 @@ function renderProductionSheet() {
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:14px;font-weight:700">PRODUCTION SHEET — ${sectionTitle}</div>
       <div style="font-size:9px;color:#888">Delivery Date: ${formatDateThai(S.bcPrintDate)} | Printed: ${now}</div>
+      <div style="font-size:9px;color:#555;margin-top:2px">Orders: ${orderIds.length} รายการ (${orderIds.join(', ')})</div>
     </div>
     <table class="ptbl">
-      <tr><th style="text-align:left">Product</th><th>Total</th>${stores.map(s => `<th>${s}</th>`).join('')}</tr>`;
+      <tr><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr>`;
 
   products.forEach(p => {
     const row = pivot[p];
     html += `<tr class="${row.urgent ? 'urg' : ''}">
       <td style="text-align:left"><strong>${p}</strong></td>
       <td><strong>${row.total}</strong></td>`;
-    stores.forEach(s => {
+    allStores.forEach(s => {
       const cell = row.stores[s];
-      if (!cell) { html += '<td style="color:#ccc">—</td>'; return; }
+      if (!cell || cell.qty === 0) { html += '<td style="color:#ccc">—</td>'; return; }
       let v = String(cell.qty);
       if (cell.urgent) v += '*';
-      if (cell.noteRef) v += `<sup>${cell.noteRef}</sup>`;
+      if (cell.noteIdx.length) v += `<sup>${cell.noteIdx.join(',')}</sup>`;
       html += `<td>${v}</td>`;
     });
     html += '</tr>';
   });
 
   html += '</table>';
-  if (notes.length) {
-    html += `<div style="margin-top:8px;font-size:8px;color:#888;border-top:1px dashed #ddd;padding-top:6px">
-      * = URGENT ⚡${notes.map(n => ` | (${n.label}) ${n.text}`).join('')}</div>`;
+
+  // Footnotes section
+  const hasNotes = itemNotes.length > 0 || orderNotes.length > 0;
+  if (hasNotes) {
+    html += `<div style="margin-top:8px;font-size:8px;color:#555;border-top:1px dashed #ddd;padding-top:6px">`;
+    html += `<div>* = URGENT ⚡</div>`;
+    // Item notes
+    if (itemNotes.length) {
+      html += `<div style="margin-top:4px;font-weight:600">Item Notes:</div>`;
+      itemNotes.forEach(n => {
+        html += `<div>(${n.idx}) ${n.store} — ${n.product}: ${n.text}</div>`;
+      });
+    }
+    // Order notes
+    if (orderNotes.length) {
+      html += `<div style="margin-top:4px;font-weight:600">Order Notes:</div>`;
+      orderNotes.forEach(n => {
+        html += `<div>${n.order_id} | ${n.store}/${n.dept}${n.name ? ' — '+n.name : ''}: ${n.text}</div>`;
+      });
+    }
+    html += `</div>`;
   }
+
   html += '</div>';
   html += `<div style="text-align:center;padding:12px" class="no-print">
     <button class="btn btn-primary" onclick="window.print()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Production Sheet</button>
