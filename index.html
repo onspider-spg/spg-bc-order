@@ -371,7 +371,7 @@ const S = {
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
 const HASH_SCREENS = new Set([
-  'home','browse','cart','orders','stock','waste','returns',
+  'home','browse','cart','orders','stock','waste','returns','return-dashboard',
   'order-detail',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
@@ -874,6 +874,16 @@ function renderApp() {
       <div class="bottomnav bc-nav" id="storeReturnsNav"></div>
     </div>
     
+        <!-- RETURN DASHBOARD -->
+    <div class="screen" id="scr-return-dashboard">
+      <div class="topbar" style="background:var(--red-bg)">
+        <div class="topbar-back" onclick="showScreen(S.role==='bc'?'bc-home':'home')">&#x2190;</div>
+        <div class="topbar-title" style="color:var(--red)">&#x21a9;&#xfe0f; Return Dashboard<div class="topbar-sub" id="returnDashSub"></div></div>
+      </div>
+      <div class="content" id="returnDashContent"></div>
+      <div class="bottomnav bc-nav" id="returnDashNav"></div>
+    </div>
+
     <!-- ══════ BAKERY CENTRE: B1 HOME ══════ -->
     <div class="screen ub-bc" id="scr-bc-home">
       <div class="topbar">
@@ -1102,11 +1112,12 @@ function showScreen(name, param) {
       case 'admin-audit': renderAdminAudit(); break;
       case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
       case 'admin-top-products': renderAdminTopProducts(); break;
+      case 'return-dashboard': renderReturnDashboard(); break;
       case 'admin-announcements': renderAdminAnnouncements(); break;
       case 'admin-product-edit': renderProductEditScreen(); break;
     }
     // Render BC bottom nav on all BC sub-screens + dashboard screens in bottom nav
-    if ((name.startsWith('bc-') && name !== 'bc-home') || name === 'admin-top-products' || name === 'admin-waste-dashboard' || name === 'returns') {
+    if ((name.startsWith('bc-') && name !== 'bc-home') || name === 'admin-top-products' || name === 'admin-waste-dashboard' || name === 'returns' || name === 'return-dashboard') {
       renderBcSubNav(name);
     }
   }
@@ -1122,6 +1133,7 @@ function renderBcSubNav(currentScreen) {
     'admin-top-products': 'bcTopProductsNav',
     'admin-waste-dashboard': 'bcWasteDashNav',
     'returns': 'storeReturnsNav',
+    'return-dashboard': 'returnDashNav',
   };
   const navId = navMap[currentScreen];
   if (!navId) return;
@@ -1133,13 +1145,13 @@ function renderBcSubNav(currentScreen) {
   const items = isBcRole ? [
     { screen: 'bc-home', icon: '🏠', label: 'Home' },
     { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
-    { screen: 'bc-returns', icon: '↩️', label: 'Returns' },
+    { screen: 'return-dashboard', icon: '↩️', label: 'Returns' },
     { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
     { screen: 'bc-print', icon: '🖨️', label: 'Print' },
   ] : [
     { screen: 'home', icon: '🏠', label: 'Home' },
     { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
-    { screen: 'returns', icon: '↩️', label: 'Returns' },
+    { screen: 'return-dashboard', icon: '↩️', label: 'Returns' },
     { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
   ];
   el.innerHTML = items.map(it => 
@@ -1167,7 +1179,7 @@ function renderHome() {
   document.getElementById('bottomNav').innerHTML = `
     <div class="nav-item active" onclick="navTo('dashboard')"><span class="ni">🏠</span>Home</div>
     <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
-    <div class="nav-item" onclick="showScreen('returns')"><span class="ni">↩️</span>Returns</div>
+    <div class="nav-item" onclick="showScreen('return-dashboard')"><span class="ni">↩️</span>Returns</div>
     <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
   `;
   
@@ -2039,24 +2051,34 @@ async function deleteWaste(wasteId) {
 }
 
 // ─── RENDER: RETURNS ─────────────────────────────────────────
+
+// v6.3.2: Store Returns — rich list with status tags + clickable detail
 function renderReturnsScreen() {
   const content = document.getElementById('returnsContent');
+  const items = S.returns || [];
+
   content.innerHTML = `
     <div class="pad">
       <button class="btn btn-gold" style="margin-bottom:16px" onclick="showReturnForm()">➕ แจ้ง Return ใหม่</button>
-      <div style="font-size:14px;font-weight:700;margin-bottom:12px">📋 รายการ Return ของฉัน</div>
-      ${S.returns.length === 0 ? 
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">📋 รายการ Return ของฉัน (${items.length})</div>
+      ${items.length === 0 ?
         '<div class="empty" style="padding:24px"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี Return</div></div>' :
-        S.returns.map(r => `
-          <div class="card">
+        items.map(r => {
+          const borderColor = r.status === 'Reported' ? 'var(--orange)' : r.status === 'Received' ? 'var(--blue)' : r.status === 'Reworked' ? 'var(--green)' : r.status === 'Wasted' ? 'var(--red)' : 'var(--b1)';
+          const statusTag = returnStatusTag(r.status || 'Reported');
+          const pName = r.product_name || r.product_id;
+          const canEdit = r.status === 'Reported';
+          return `<div class="card" style="border-left:3px solid ${borderColor};cursor:pointer" onclick="showReturnDetail('${r.return_id}')">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
               <span style="font-size:11px;font-weight:700;color:var(--gold)">${r.return_id}</span>
-              <span class="status st-${(r.status||'').toLowerCase()}">${r.status}</span>
+              ${statusTag}
             </div>
-            <div style="font-size:12px;font-weight:600">${r.product_id}</div>
-            <div style="font-size:10px;color:var(--td)">จำนวน: ${r.quantity} · ${r.issue_type} · ${r.action}</div>
-          </div>
-        `).join('')
+            <div style="font-size:12px;font-weight:600">${prodEmoji(pName)} ${pName} ×${r.quantity}</div>
+            <div style="font-size:10px;color:var(--td);margin-top:3px">${r.issue_type || ''} · ${r.description || r.detail || ''}</div>
+            ${r.failure_reason ? `<div style="font-size:9px;color:var(--td);margin-top:4px">📋 BC: ${r.failure_reason}</div>` : ''}
+            <div style="font-size:9px;color:var(--td);margin-top:4px">${formatDate(r.created_at)} ${canEdit ? '· <span style="color:var(--gold)">✏️ กดเพื่อแก้ไข</span>' : ''}</div>
+          </div>`;
+        }).join('')
       }
     </div>
   `;
@@ -2131,6 +2153,223 @@ async function submitReturn() {
   renderReturnsScreen();
 }
 
+
+// v6.3.2: Return detail dialog (Store)
+function showReturnDetail(returnId) {
+  const r = (S.returns || []).find(x => x.return_id === returnId);
+  if (!r) { toast('ไม่พบข้อมูล', 'error'); return; }
+
+  const canEdit = r.status === 'Reported';
+  const pName = r.product_name || r.product_id;
+  const statusTag = returnStatusTag(r.status || 'Reported');
+
+  const statusHistory = [
+    `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--orange)"></div>
+      <span style="font-size:11px"><strong>Reported</strong> — ${r.reported_by || 'Store'} · ${formatDate(r.created_at)}</span>
+    </div>`,
+    r.status !== 'Reported' ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
+      <span style="font-size:11px"><strong>Received</strong> — BC ${r.resolved_by||''} · ${formatDate(r.resolved_at||r.updated_at)}</span>
+    </div>` : '',
+    (r.status === 'Reworked' || r.status === 'Wasted') ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${r.status==='Wasted'?'var(--red)':'var(--green)'}"></div>
+      <span style="font-size:11px"><strong>${r.status}</strong> — ${r.resolved_by||'BC'} ${r.failure_reason ? '· '+r.failure_reason : ''}</span>
+    </div>` : '',
+  ].filter(Boolean).join('');
+
+  showDialog(`
+    <div class="dialog-title">↩️ ${r.return_id}</div>
+    <div style="margin-bottom:12px">${statusTag}</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">${prodEmoji(pName)} ${pName}</div>
+    <div style="font-size:11px;color:var(--td);margin-bottom:12px">
+      จำนวน: ${r.quantity} · ${r.issue_type || ''}<br>
+      ${r.description || r.detail || ''}<br>
+      ${r.action === 'return_to_bakery' ? '📦 ส่งคืน BC' : '🗑️ ทิ้งที่ร้าน'}<br>
+      ${r.production_date ? 'Production date: '+r.production_date : ''}
+    </div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:6px">📊 Status Timeline</div>
+    <div style="padding-left:4px;margin-bottom:16px">${statusHistory}</div>
+    ${canEdit ? `<button class="btn btn-gold" onclick="showEditReturnForm('${r.return_id}')">✏️ แก้ไข</button>` : '<div style="font-size:10px;color:var(--td);text-align:center">BC ดำเนินการแล้ว ไม่สามารถแก้ไขได้</div>'}
+  `);
+}
+
+// v6.3.2: Edit return form (Store)
+function showEditReturnForm(returnId) {
+  closeDialog();
+  const r = (S.returns || []).find(x => x.return_id === returnId);
+  if (!r) return;
+
+  showDialog(`
+    <div class="dialog-title">✏️ แก้ไข ${r.return_id}</div>
+    <div class="form-group">
+      <label class="form-label">สินค้า</label>
+      <select class="form-input" id="editRtnProduct">
+        ${S.products.map(p => `<option value="${p.product_id}" ${p.product_id===r.product_id?'selected':''}>${p.product_name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">จำนวน</label>
+      <input class="form-input" type="number" id="editRtnQty" value="${r.quantity}" min="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ประเภทปัญหา</label>
+      <select class="form-input" id="editRtnIssue">
+        <option value="quality" ${r.issue_type==='quality'?'selected':''}>Quality</option>
+        <option value="quantity" ${r.issue_type==='quantity'?'selected':''}>Wrong quantity</option>
+        <option value="wrong_product" ${r.issue_type==='wrong_product'?'selected':''}>Wrong product</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">รายละเอียด</label>
+      <textarea class="form-input" id="editRtnDesc">${r.description || r.detail || ''}</textarea>
+    </div>
+    <button class="btn btn-gold" onclick="submitEditReturn('${r.return_id}')">💾 บันทึก</button>
+  `);
+}
+
+async function submitEditReturn(returnId) {
+  const body = {
+    return_id: returnId,
+    product_id: document.getElementById('editRtnProduct').value,
+    quantity: parseInt(document.getElementById('editRtnQty').value),
+    issue_type: document.getElementById('editRtnIssue').value,
+    description: document.getElementById('editRtnDesc').value,
+  };
+  try {
+    const resp = await api('edit_return', body);
+    toast(resp.message || '✅ แก้ไขแล้ว', resp.success ? 'success' : 'error');
+    if (resp.success) await loadReturns();
+  } catch(e) {
+    toast('✅ แก้ไขแล้ว (Demo)', 'success');
+    // Update locally
+    const r = S.returns.find(x => x.return_id === returnId);
+    if (r) { Object.assign(r, body); }
+  }
+  closeDialog();
+  renderReturnsScreen();
+}
+
+// v6.3.2: Return Dashboard
+async function renderReturnDashboard() {
+  document.getElementById('returnDashSub').textContent = getScopeLabel();
+  const el = document.getElementById('returnDashContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+
+  if (!S.returnDashDays) S.returnDashDays = 30;
+
+  try {
+    const resp = await api('get_return_dashboard', null, { days: String(S.returnDashDays) });
+    if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
+
+    const d = resp.data;
+    const bs = d.byStatus || {};
+
+    let html = `
+      <div class="filter-bar">
+        <div class="filter-chip ${S.returnDashDays===7?'active':''}" onclick="S.returnDashDays=7;renderReturnDashboard()">7 วัน</div>
+        <div class="filter-chip ${S.returnDashDays===14?'active':''}" onclick="S.returnDashDays=14;renderReturnDashboard()">14 วัน</div>
+        <div class="filter-chip ${S.returnDashDays===30?'active':''}" onclick="S.returnDashDays=30;renderReturnDashboard()">30 วัน</div>
+      </div>`;
+
+    // Summary cards
+    html += `
+      <div class="sec-hd">📊 สรุปภาพรวม (${S.returnDashDays} วัน)</div>
+      <div class="sum-grid">
+        <div class="sum-card" style="border-left:3px solid var(--red)">
+          <div class="sum-val" style="color:var(--red)">${d.summary.total}</div>
+          <div class="sum-lbl">Returns ทั้งหมด</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--orange)">
+          <div class="sum-val" style="color:var(--orange)">${bs.Reported || 0}</div>
+          <div class="sum-lbl">Reported</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--blue)">
+          <div class="sum-val" style="color:var(--blue)">${bs.Received || 0}</div>
+          <div class="sum-lbl">Received</div>
+        </div>
+        <div class="sum-card" style="border-left:3px solid var(--green)">
+          <div class="sum-val" style="color:var(--green)">${(bs.Reworked||0)+(bs.Wasted||0)}</div>
+          <div class="sum-lbl">Resolved</div>
+        </div>
+      </div>`;
+
+    // By Store
+    const stores = d.byStore || [];
+    if (stores.length > 0) {
+      html += `<div class="sec-hd">🏪 แยกตามร้าน</div><div class="pad" style="padding-top:0">`;
+      stores.forEach(s => {
+        html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b1)">
+          <span style="font-size:12px;font-weight:600">${getStoreName(s.store_id)}</span>
+          <span style="font-size:12px"><strong>${s.count}</strong> รายการ · ${s.qty} ชิ้น</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // By Reason
+    const reasons = d.byReason || [];
+    if (reasons.length > 0) {
+      const maxR = reasons[0].count;
+      html += `<div class="sec-hd">⚠️ สาเหตุที่พบบ่อย</div><div class="pad" style="padding-top:0">`;
+      const reasonColors = { quality: 'var(--red)', quantity: 'var(--orange)', wrong_product: 'var(--purple)', Other: 'var(--td)' };
+      reasons.forEach(r => {
+        const pct = Math.round((r.count / maxR) * 100);
+        const color = reasonColors[r.reason] || 'var(--blue)';
+        html += `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span>${r.reason}</span><span style="font-weight:600">${r.count} · ${r.qty} ชิ้น</span>
+          </div>
+          <div style="background:var(--s2);border-radius:4px;height:10px;overflow:hidden">
+            <div style="background:${color};height:100%;width:${pct}%;border-radius:4px"></div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Top Returned Products
+    const topP = d.topProducts || [];
+    if (topP.length > 0) {
+      html += `<div class="sec-hd">🔄 สินค้าที่ถูก Return บ่อย</div><div class="pad" style="padding-top:0">`;
+      topP.forEach((p, idx) => {
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
+        html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b1)">
+          <span style="font-size:12px">${medal} <strong>${p.name}</strong> <span style="color:var(--td);font-size:9px">${p.section}</span></span>
+          <span style="font-size:12px;color:var(--red);font-weight:600">${p.qty} ชิ้น (${p.count}x)</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    // Fallback: build dashboard from local S.returns data
+    const items = S.returns || [];
+    el.innerHTML = `
+      <div class="pad">
+        <div class="sec-hd">📊 Return Dashboard</div>
+        <div class="sum-grid">
+          <div class="sum-card" style="border-left:3px solid var(--red)">
+            <div class="sum-val">${items.length}</div><div class="sum-lbl">Returns ทั้งหมด</div>
+          </div>
+          <div class="sum-card" style="border-left:3px solid var(--orange)">
+            <div class="sum-val">${items.filter(r=>r.status==='Reported').length}</div><div class="sum-lbl">Reported</div>
+          </div>
+          <div class="sum-card" style="border-left:3px solid var(--blue)">
+            <div class="sum-val">${items.filter(r=>r.status==='Received').length}</div><div class="sum-lbl">Received</div>
+          </div>
+          <div class="sum-card" style="border-left:3px solid var(--green)">
+            <div class="sum-val">${items.filter(r=>r.status==='Reworked'||r.status==='Wasted').length}</div><div class="sum-lbl">Resolved</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--td);text-align:center;padding:12px">⚠️ ข้อมูลจาก local cache · ใช้ API สำหรับรายงานแบบเต็ม</div>
+      </div>`;
+  }
+}
+
+
+
 // ═══════════════════════════════════════════════════════════════
 // BAKERY CENTRE SCREENS (Phase C)
 // ═══════════════════════════════════════════════════════════════
@@ -2157,7 +2396,7 @@ function renderBcHome() {
   document.getElementById('bcBottomNav').innerHTML = `
     <div class="nav-item active" onclick="showScreen('bc-home')"><span class="ni">🏠</span>Home</div>
     <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
-    <div class="nav-item" onclick="showScreen('bc-returns')"><span class="ni">↩️</span>Returns</div>
+    <div class="nav-item" onclick="showScreen('return-dashboard')"><span class="ni">↩️</span>Returns</div>
     <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
     <div class="nav-item" onclick="showScreen('bc-print')"><span class="ni">🖨️</span>Print</div>`;
   // Dashboard + Menu
@@ -2225,7 +2464,7 @@ function getBcAdminMenus() {
     { screen:'admin-top-products', icon:'🏆', bg:'var(--green-bg)', title:'Top Products', desc:`สินค้ายอดนิยม — ${scopeLabel}` },
     { screen:'admin-cutoff', icon:'⏰', bg:'var(--red-bg)', title:'Cutoff Violations', desc:`สั่งหลัง cutoff — ${scopeLabel}` },
     { screen:'admin-waste-dashboard', icon:'🗑️', bg:'var(--red-bg)', title:'Waste Dashboard', desc:`สรุปของเสีย — ${scopeLabel}` },
-    { screen:'bc-returns', icon:'↩️', bg:'var(--purple-bg)', title:'Return Dashboard', desc:`สินค้าส่งคืน — ${scopeLabel}` },
+    { screen:'return-dashboard', icon:'↩️', bg:'var(--purple-bg)', title:'Return Dashboard', desc:`สินค้าส่งคืน — ${scopeLabel}` },
   ];
 
   // ── Group 2: Admin functions → tier-gated (hide if no permission) ──
