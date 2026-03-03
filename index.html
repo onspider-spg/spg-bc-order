@@ -4694,56 +4694,90 @@ function saveDismissedIds(ids) {
 }
 
 // v6.4.4: Generate live notifications from pending orders & returns
+// v6.4.4.1: Personal notification preferences (localStorage per user)
+function getNotifPrefs() {
+  try {
+    const key = 'bc_notif_prefs_' + (S.session?.user_id || 'anon');
+    const stored = JSON.parse(localStorage.getItem(key) || '{}');
+    // Defaults: all ON
+    return {
+      pending_order: stored.pending_order !== false,
+      return_reported: stored.return_reported !== false,
+      return_received: stored.return_received !== false,
+      broadcast: stored.broadcast !== false,
+    };
+  } catch { return { pending_order:true, return_reported:true, return_received:true, broadcast:true }; }
+}
+
+function saveNotifPrefs(prefs) {
+  try {
+    const key = 'bc_notif_prefs_' + (S.session?.user_id || 'anon');
+    localStorage.setItem(key, JSON.stringify(prefs));
+  } catch {}
+}
+
 function buildLiveNotifs() {
   const notifs = [];
   const isBc = S.role === 'bc';
+  const prefs = getNotifPrefs();
 
-  // 1. Pending orders → notify BC (new orders to process) + Store (own order still pending)
-  (S.orders || []).forEach(o => {
-    if (o.status === 'Pending') {
-      const items = o.items ? o.items.length : (o.item_count || '?');
-      notifs.push({
-        notif_id: 'live-pending-' + o.order_id,
-        type: 'pending_order',
-        title: '📋 ออเดอร์รอดำเนินการ',
-        message: `${o.order_id} · ${getStoreName(o.store_id)} · ${items} รายการ`,
-        created_at: o.created_at,
-        _live: true
-      });
-    }
-  });
+  // 1. Pending orders
+  if (prefs.pending_order) {
+    (S.orders || []).forEach(o => {
+      if (o.status === 'Pending') {
+        const items = o.items ? o.items.length : (o.item_count || '?');
+        notifs.push({
+          notif_id: 'live-pending-' + o.order_id,
+          type: 'pending_order',
+          title: '📋 ออเดอร์รอดำเนินการ',
+          message: `${o.order_id} · ${getStoreName(o.store_id)} · ${items} รายการ`,
+          created_at: o.created_at,
+          _live: true
+        });
+      }
+    });
+  }
 
-  // 2. Returns status=Reported → notify immediately
-  (S.returns || []).forEach(r => {
-    if (r.status === 'Reported') {
-      notifs.push({
-        notif_id: 'live-return-rpt-' + r.return_id,
-        type: 'return_reported',
-        title: '↩️ Return ใหม่',
-        message: `${r.return_id} · ${r.product_name || r.product_id} ×${r.quantity} · ${getStoreName(r.store_id)}`,
-        created_at: r.created_at,
-        _live: true
-      });
-    }
-    // 3. Returns status=Received → notify BC (received, waiting resolve)
-    if (r.status === 'Received' && isBc) {
-      notifs.push({
-        notif_id: 'live-return-rcv-' + r.return_id,
-        type: 'return_received',
-        title: '📥 Return รอจัดการ',
-        message: `${r.return_id} · ${r.product_name || r.product_id} ×${r.quantity} · รับของแล้ว รอ Rework/Waste`,
-        created_at: r.created_at,
-        _live: true
-      });
-    }
-  });
+  // 2. Returns status=Reported
+  if (prefs.return_reported) {
+    (S.returns || []).forEach(r => {
+      if (r.status === 'Reported') {
+        notifs.push({
+          notif_id: 'live-return-rpt-' + r.return_id,
+          type: 'return_reported',
+          title: '↩️ Return ใหม่',
+          message: `${r.return_id} · ${r.product_name || r.product_id} ×${r.quantity} · ${getStoreName(r.store_id)}`,
+          created_at: r.created_at,
+          _live: true
+        });
+      }
+    });
+  }
+
+  // 3. Returns status=Received → BC only
+  if (prefs.return_received) {
+    (S.returns || []).forEach(r => {
+      if (r.status === 'Received' && isBc) {
+        notifs.push({
+          notif_id: 'live-return-rcv-' + r.return_id,
+          type: 'return_received',
+          title: '📥 Return รอจัดการ',
+          message: `${r.return_id} · ${r.product_name || r.product_id} ×${r.quantity} · รับของแล้ว รอ Rework/Waste`,
+          created_at: r.created_at,
+          _live: true
+        });
+      }
+    });
+  }
 
   return notifs;
 }
 
-// v6.4.4: Get all notifications (broadcast + live), split by read status
+// v6.4.4: Get all notifications (broadcast + live), respecting user prefs
 function getAllNotifs() {
-  return [...(S.notifications || []), ...buildLiveNotifs()];
+  const prefs = getNotifPrefs();
+  const broadcasts = prefs.broadcast ? (S.notifications || []) : [];
+  return [...broadcasts, ...buildLiveNotifs()];
 }
 
 function getUnreadNotifs() {
@@ -4839,13 +4873,60 @@ function showNotifPanel() {
   showDialog(`
     <div style="text-align:center;margin-bottom:12px"><span style="font-size:20px">🔔</span> <span style="font-size:16px;font-weight:700">แจ้งเตือน</span> ${unread.length > 0 ? `<span style="background:var(--red);color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:4px">${unread.length} ใหม่</span>` : ''}</div>
     <div style="max-height:60vh;overflow-y:auto;border-radius:8px;border:1px solid var(--b1)">${items}</div>
-    <div style="margin-top:12px">
-      <button class="btn btn-outline" style="width:100%" onclick="closeDialog()">ปิด</button>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="showNotifSettings()">⚙️ ตั้งค่า</button>
+      <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ปิด</button>
     </div>
   `);
   
   // Update badge to 0 since we just read everything
   checkNotifications();
+}
+
+// v6.4.4.1: Personal notification settings dialog
+function showNotifSettings() {
+  const prefs = getNotifPrefs();
+  const isBc = S.role === 'bc';
+
+  const items = [
+    { key:'pending_order', icon:'📋', label:'ออเดอร์ Pending', desc:'แจ้งเมื่อมีออเดอร์สถานะ Pending' },
+    { key:'return_reported', icon:'↩️', label:'Return ใหม่ (Reported)', desc:'แจ้งเมื่อมีสินค้า return เข้า' },
+  ];
+  if (isBc) {
+    items.push({ key:'return_received', icon:'📥', label:'Return รอจัดการ (Received)', desc:'แจ้งเมื่อ return รับของแล้ว รอ Rework/Waste' });
+  }
+  items.push({ key:'broadcast', icon:'📢', label:'ประกาศทั่วไป', desc:'แจ้งเตือนจากระบบ / Admin' });
+
+  const toggleHtml = items.map(i => {
+    const on = prefs[i.key];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--b1)">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600">${i.icon} ${i.label}</div>
+        <div style="font-size:10px;color:var(--td);margin-top:2px">${i.desc}</div>
+      </div>
+      <div onclick="toggleNotifPref('${i.key}',${!on})" style="cursor:pointer;width:48px;height:28px;border-radius:14px;position:relative;flex-shrink:0;margin-left:12px;
+        background:${on?'var(--green)':'var(--b2)'};transition:.2s">
+        <div style="position:absolute;top:2px;${on?'right:2px':'left:2px'};width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  showDialog(`
+    <div style="text-align:center;margin-bottom:12px"><span style="font-size:20px">⚙️</span> <span style="font-size:16px;font-weight:700">ตั้งค่าแจ้งเตือน</span></div>
+    <div style="padding:0 4px">${toggleHtml}</div>
+    <div style="margin-top:16px">
+      <button class="btn btn-gold" style="width:100%" onclick="showNotifPanel()">← กลับ</button>
+    </div>
+  `);
+}
+
+function toggleNotifPref(key, enabled) {
+  const prefs = getNotifPrefs();
+  prefs[key] = enabled;
+  saveNotifPrefs(prefs);
+  toast((enabled ? 'เปิด' : 'ปิด') + 'แจ้งเตือนแล้ว', 'success');
+  showNotifSettings(); // re-render toggle
+  checkNotifications(); // update badge
 }
 
 // B-01: Auto-poll notifications + dashboard every 60s
