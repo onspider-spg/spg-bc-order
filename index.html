@@ -2175,6 +2175,29 @@ function renderBcHome() {
     </div>
     ${d.urgent_items > 0 ? `<div style="padding:0 16px 8px"><div class="tag tag-red" style="font-size:12px;padding:6px 14px">⚡ URGENT: ${d.urgent_items} รายการ</div></div>` : ''}
     
+        <div class="sec-hd">⚡ Quick Menu</div>
+    <div class="pad" style="padding-top:0">
+      <div class="card" onclick="showScreen('bc-orders')">
+        <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div>
+        <div class="card-body"><div class="card-title">View Orders</div><div class="card-desc">ออเดอร์ ${scope} ทั้งหมด</div></div>
+        <div class="card-right">→</div></div>
+      </div>
+      <div class="card" onclick="showScreen('bc-stock')">
+        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">📦</div>
+        <div class="card-body"><div class="card-title">Manage Stock</div><div class="card-desc">เพิ่ม/ลดสต็อก ${scope}</div></div>
+        <div class="card-right">→</div></div>
+      </div>
+      <div class="card" onclick="showScreen('waste')">
+        <div class="card-row"><div class="card-icon" style="background:var(--purple-bg)">🗑️</div>
+        <div class="card-body"><div class="card-title">Record Waste</div><div class="card-desc">ผลิตเสีย / เสียหาย / หมดอายุ</div></div>
+        <div class="card-right">→</div></div>
+      </div>
+      <div class="card" onclick="showScreen('bc-returns')">
+        <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">↩️</div>
+        <div class="card-body"><div class="card-title">Report Return / Feedback</div><div class="card-desc">แจ้งสินค้าส่งคืน / feedback ปัญหาสินค้า</div></div>
+        <div class="card-right">→</div></div>
+      </div>
+    </div>
     ${bcAdminMenus}`;
 }
 function getBcAdminMenus() {
