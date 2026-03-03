@@ -540,11 +540,12 @@ async function loadDashboard() {
   try {
     const resp = await api('get_dashboard');
     if (resp.success) { S.dashboard = resp.data; return; }
-  } catch(e) { /* fallback below */ }
+    console.warn('[loadDashboard] FAILED:', resp.error, resp.message);
+  } catch(e) { console.warn('[loadDashboard] exception:', e); }
   
   // Fallback: compute from loaded orders
-const today = todaySydney();
-const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
+  const today = todaySydney();
+  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today || o.order_date === today);
   S.dashboard = {
     today_total: todayOrders.length,
     by_status: {
@@ -571,7 +572,13 @@ async function loadOrders(status = '') {
   }
   
   const resp = await api('get_orders', null, params);
-  if (resp.success) S.orders = resp.data;
+  if (resp.success) {
+    S.orders = resp.data;
+    console.log(`[loadOrders] loaded ${S.orders.length} orders`);
+  } else {
+    console.warn('[loadOrders] FAILED:', resp.error, resp.message);
+    S.orders = [];
+  }
 }
 
 async function loadOrderDetail(orderId) {
@@ -1150,7 +1157,7 @@ function renderHomeDashboard() {
     </div>` : '';
   
   document.getElementById('homeContent').innerHTML = `
-    <div class="sec-hd">📊 Today Delivery</div>
+    <div class="sec-hd">📊 วันนี้</div>
     <div class="sum-grid">
       <div class="sum-card sum-gold"><div class="sum-num">${d.today_total}</div><div class="sum-label">ออเดอร์ทั้งหมด</div></div>
       <div class="sum-card sum-green"><div class="sum-num">${(bs.Fulfilled||0)+(bs.Delivered||0)}</div><div class="sum-label">เสร็จแล้ว</div></div>
@@ -1164,7 +1171,7 @@ function renderHomeDashboard() {
     <div class="sec-hd">⚡ Quick Menu</div>
     <div class="pad" style="padding-top:0">
       ${hasPerm('fn_create_order') ? `<div class="card" onclick="startOrder()">
-        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📝</div><div class="card-body"><div class="card-title">Create Order</div><div class="card-desc">สั่ง Cake / Sauce ไปร้าน</div></div><div class="card-right">→</div></div>
+        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📝</div><div class="card-body"><div class="card-title">Order Items</div><div class="card-desc">สั่ง Cake / Sauce ไปร้าน</div></div><div class="card-right">→</div></div>
       </div>` : ''}
       ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')">
         <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div><div class="card-body"><div class="card-title">View Orders</div><div class="card-desc">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right">→</div></div>
@@ -1597,7 +1604,7 @@ function filterOrders() {
         <span style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</span>
         <span class="status ${statusClass(o.status)}">${o.status}</span>
       </div>
-      <div style="font-size:11px;color:var(--td)">📅 Order date ${formatDateAU(o.order_date)} · Delivery ${formatDateAU(o.delivery_date)}</div>
+      <div style="font-size:11px;color:var(--td)">📅 ส่ง ${formatDateThai(o.delivery_date)} · สั่ง ${formatDateThai(o.order_date)}</div>
       ${o.is_cutoff_violation ? '<div class="tag tag-orange" style="margin-top:4px;font-size:9px">⚠️ Cutoff Violation</div>' : ''}
       ${o.header_note ? `<div style="font-size:10px;color:var(--td);margin-top:4px">📝 ${o.header_note}</div>` : ''}
     </div>
@@ -2118,7 +2125,7 @@ function renderBcHome() {
   const bcAdminMenus = getBcAdminMenus();
 
   document.getElementById('bcHomeContent').innerHTML = `
-    <div class="sec-hd">📊 Today Delivery</div>
+    <div class="sec-hd">📊 วันนี้</div>
     <div class="sum-grid">
       <div class="sum-card ${bs.Pending>0?'sum-red':''}"><div class="sum-num">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
       <div class="sum-card sum-blue"><div class="sum-num">${bs.Ordered||0}</div><div class="sum-label">Ordered</div></div>
@@ -4534,15 +4541,6 @@ function formatDateThai(str) {
   return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
 
-  function formatDateAU(str) {
-  if (!str) return '';
-  const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-AU', {
-    day: '2-digit',
-    month: 'short'
-  });
-}
-
 function getStoreName(id) {
   const map = { MNG:'Mango Coco', ISH:'Issho Cafe', GB:'Golden Brown', TMC:'The Melting Cheese', BC:'Bakery Centre', ALL:'ทุกร้าน' };
   return map[id] || id;
@@ -4595,6 +4593,3 @@ init();
 </script>
 </body>
 </html>
-
-
-
