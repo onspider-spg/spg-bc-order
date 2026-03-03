@@ -3749,7 +3749,7 @@ function renderBcFulfil() {
         <div class="form-group" style="margin-bottom:0">
           <label class="form-label">เหตุผล *</label>
           <input class="form-input" style="border-color:var(--red);font-size:12px" value="${item.ful_note}" 
-            onchange="S.fulfilmentItems[${i}].ful_note=this.value" placeholder="เช่น หมด flour ทำได้แค่ 2">
+            oninput="S.fulfilmentItems[${i}].ful_note=this.value;const b=document.getElementById('btnFulfilSubmit');if(b)b.disabled=S.fulfilmentItems.some(x=>!x.ful_status)||S.fulfilmentItems.some(x=>x.ful_status==='partial'&&!x.ful_note)" placeholder="เช่น หมด flour ทำได้แค่ 2">
         </div>
       </div>`;
     }
