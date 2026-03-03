@@ -2505,12 +2505,29 @@ function getBcAdminMenus() {
 
 // ─── ADMIN SCREEN RENDERERS (A1-A9) ────────────────────────
 function renderAdminDashboard() {
+  const STORES = ['MNG','ISH','GB','TMC'];
+  if (!S.dashStoreFilter) S.dashStoreFilter = 'ALL';
+  const sf = S.dashStoreFilter;
+
+  const allOrders = S.orders || [];
+  // Filter orders: exclude BC/HQ, then apply store filter
+  const storeOrders = allOrders.filter(o => STORES.includes(o.store_id));
+  const filtered = sf === 'ALL' ? storeOrders : storeOrders.filter(o => o.store_id === sf);
+
+  const total = filtered.length;
+  const bs = {};
+  filtered.forEach(o => { bs[o.status] = (bs[o.status]||0)+1; });
+  const fulfilRate = total > 0 ? Math.round(((bs.Delivered||0)/total)*100) : 0;
+
+  // Dashboard data recalc
   const d = S.dashboard || {};
-  const bs = d.by_status || {};
-  const total = d.today_total || 0;
-  const fulfilRate = total > 0 ? Math.round(((bs.Delivered||0)/(total))*100) : 0;
+
   document.getElementById('adminDashboardContent').innerHTML = `
-    <div class="sec-hd">📊 ภาพรวมวันนี้ — ทุกร้าน</div>
+    <div class="filter-bar">
+      <div class="filter-chip ${sf==='ALL'?'active':''}" onclick="S.dashStoreFilter='ALL';renderAdminDashboard()">ทุกร้าน</div>
+      ${STORES.map(s => `<div class="filter-chip ${sf===s?'active':''}" onclick="S.dashStoreFilter='${s}';renderAdminDashboard()">${getStoreName(s)}</div>`).join('')}
+    </div>
+    <div class="sec-hd">📊 ภาพรวมวันนี้ — ${sf==='ALL'?'ทุกร้าน (4)':getStoreName(sf)}</div>
     <div class="sum-grid">
       <div class="sum-card"><div class="sum-num">${total}</div><div class="sum-label">ออเดอร์</div></div>
       <div class="sum-card"><div class="sum-num" style="color:var(--orange)">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
@@ -2535,7 +2552,7 @@ function renderAdminDashboard() {
       </div>
     </div>
     <div class="sec-hd">🏪 Orders by Store</div>
-    <div class="pad">${renderStoreBreakdown()}</div>
+    <div class="pad">${renderStoreBreakdown(sf)}</div>
     <div class="sec-hd">🔗 Quick Links</div>
     <div class="pad" style="padding-top:0;display:flex;gap:8px">
       <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-waste-dashboard')">
@@ -2553,18 +2570,22 @@ function renderAdminDashboard() {
     </div>`;
 }
 
-function renderStoreBreakdown() {
+function renderStoreBreakdown(storeFilter) {
+  const STORES = ['MNG','ISH','GB','TMC'];
   const orders = S.orders || [];
   const stores = {};
+  STORES.forEach(sid => { stores[sid] = { total:0, pending:0, ordered:0, done:0 }; });
   orders.forEach(o => {
-    if (!stores[o.store_id]) stores[o.store_id] = { total:0, pending:0, ordered:0, done:0 };
+    if (!STORES.includes(o.store_id)) return;
+    if (storeFilter && storeFilter !== 'ALL' && o.store_id !== storeFilter) return;
     stores[o.store_id].total++;
     if (o.status === 'Pending') stores[o.store_id].pending++;
     else if (o.status === 'Ordered') stores[o.store_id].ordered++;
     else stores[o.store_id].done++;
   });
-  if (Object.keys(stores).length === 0) return '<div style="color:var(--td);font-size:12px;padding:12px">ยังไม่มีออเดอร์วันนี้</div>';
-  return Object.entries(stores).map(([sid, s]) => `
+  return Object.entries(stores)
+    .filter(([sid]) => !storeFilter || storeFilter === 'ALL' || sid === storeFilter)
+    .map(([sid, s]) => `
     <div class="card" style="margin-bottom:6px">
       <div class="card-row">
         <div class="card-body">
@@ -2574,6 +2595,7 @@ function renderStoreBreakdown() {
       </div>
     </div>`).join('');
 }
+
 
 // ─── A3: Product Management ──────────────────────────────────
 async function renderAdminProducts() {
@@ -3347,9 +3369,11 @@ async function renderAdminTopProducts() {
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
   if (!S.topProdDays) S.topProdDays = 30;
+  if (!S.topProdStore) S.topProdStore = "ALL";
   
   try {
-    const resp = await api('get_top_products', null, { days: String(S.topProdDays) });
+    const qp = { days: String(S.topProdDays) }; if (S.topProdStore !== 'ALL') qp.store = S.topProdStore;
+    const resp = await api('get_top_products', null, qp);
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
     
     const d = resp.data;
@@ -3362,7 +3386,14 @@ async function renderAdminTopProducts() {
         <div class="filter-chip ${S.topProdDays===7?'active':''}" onclick="S.topProdDays=7;renderAdminTopProducts()">7 วัน</div>
         <div class="filter-chip ${S.topProdDays===14?'active':''}" onclick="S.topProdDays=14;renderAdminTopProducts()">14 วัน</div>
         <div class="filter-chip ${S.topProdDays===30?'active':''}" onclick="S.topProdDays=30;renderAdminTopProducts()">30 วัน</div>
-      </div>`;
+      </div>
+      ${S.role === 'bc' ? `<div class="filter-bar" style="margin-top:0">
+        <div class="filter-chip ${S.topProdStore==='ALL'?'active':''}" onclick="S.topProdStore='ALL';renderAdminTopProducts()">All</div>
+        <div class="filter-chip ${S.topProdStore==='MNG'?'active':''}" onclick="S.topProdStore='MNG';renderAdminTopProducts()">MNG</div>
+        <div class="filter-chip ${S.topProdStore==='ISH'?'active':''}" onclick="S.topProdStore='ISH';renderAdminTopProducts()">ISH</div>
+        <div class="filter-chip ${S.topProdStore==='GB'?'active':''}" onclick="S.topProdStore='GB';renderAdminTopProducts()">GB</div>
+        <div class="filter-chip ${S.topProdStore==='TMC'?'active':''}" onclick="S.topProdStore='TMC';renderAdminTopProducts()">TMC</div>
+      </div>` : ''}`;
     
     // Summary cards
     html += `
