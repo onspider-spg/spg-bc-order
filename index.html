@@ -2053,7 +2053,7 @@ function renderReturnsScreen() {
               <span style="font-size:11px;font-weight:700;color:var(--gold)">${r.return_id}</span>
               <span class="status st-${(r.status||'').toLowerCase()}">${r.status}</span>
             </div>
-            <div style="font-size:12px;font-weight:600">${r.product_name || r.product_id}</div>
+            <div style="font-size:12px;font-weight:600">${r.product_id}</div>
             <div style="font-size:10px;color:var(--td)">จำนวน: ${r.quantity} · ${r.issue_type} · ${r.action}</div>
           </div>
         `).join('')
@@ -2197,11 +2197,6 @@ function renderBcHome() {
         <div class="card-body"><div class="card-title">Report Return / Feedback</div><div class="card-desc">แจ้งสินค้าส่งคืน / feedback ปัญหาสินค้า</div></div>
         <div class="card-right">→</div></div>
       </div>
-      <div class="card" onclick="showScreen('bc-print')">
-        <div class="card-row"><div class="card-icon" style="background:var(--orange-bg)">🖨️</div>
-        <div class="card-body"><div class="card-title">Print Centre</div><div class="card-desc">Production Sheet / Delivery Slip</div></div>
-        <div class="card-right">→</div></div>
-      </div>
     </div>
     ${bcAdminMenus}`;
 }
@@ -2240,7 +2235,7 @@ function getBcAdminMenus() {
     { screen:'admin-dept-mapping', icon:'🏢', bg:'var(--green-bg)', title:'Department Mapping', desc:'Dept → Role + Section scope', perm:'fn_manage_dept_mapping' },
     { screen:'admin-config', icon:'⚙️', bg:'var(--s2)', title:'System Config', desc:'Cutoff, Delivery, Auto Refresh', perm:'fn_manage_config' },
     { screen:'admin-notif-settings', icon:'🔔', bg:'var(--orange-bg)', title:'Notification Settings', desc:'เปิด/ปิดแจ้งเตือนตาม role', perm:'fn_manage_notifications' },
-    { screen:'admin-audit', icon:'📝', bg:'rgba(8,145,178,0.1)', title:'Audit Trail', desc:'ประวัติเปลี่ยนสิทธิ์ + mapping', perm:'fn_manage_permissions' },
+    { screen:'admin-audit', icon:'📝', bg:'rgba(8,145,178,0.1)', title:'Audit Trail', desc:'ประวัติเปลี่ยนสิทธิ์ + mapping', perm:'fn_view_all_orders' },
     { screen:'admin-announcements', icon:'📢', bg:'var(--gold-bg)', title:'Announcements', desc:'ตั้งประกาศ แจ้งเตือน กำหนด auto-expire', perm:'fn_manage_notifications' },
   ];
   const allowedAdmin = adminMenus.filter(m => hasPerm(m.perm));
@@ -3160,11 +3155,6 @@ async function renderAdminTopProducts() {
       html += '<div style="text-align:center;color:var(--td);font-size:12px;padding:16px">ไม่มีข้อมูล</div>';
     } else {
       topP.forEach((p, idx) => {
-        // v6.2: resolve product name from S.products if backend returned product_id as name
-        if (!p.name || p.name === p.product_id) {
-          const lp = (S.products || []).find(x => x.product_id === p.product_id);
-          if (lp) p.name = lp.product_name || p.name;
-        }
         const pct = Math.round((p.qty_ordered / maxQty) * 100);
         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
         const secIcon = sectionIcons[p.section] || '📦';
@@ -4037,7 +4027,7 @@ function renderBcReturns() {
   if (scope.length > 0) items = items.filter(r => scope.includes(r.section_id));
 
   // Counts
-  const open = items.filter(r => r.status === 'Returning' || r.status === 'Received');
+  const open = items.filter(r => r.status === 'Reported' || r.status === 'Received');
   const countOpen = open.length;
   const countAll = items.length;
 
@@ -4063,7 +4053,7 @@ function renderBcReturns() {
     const statusTag = returnStatusTag(r.status);
 
     let actions = '';
-    if (r.status === 'Returning') {
+    if (r.status === 'Reported') {
       actions = `<div style="display:flex;gap:6px;margin-top:8px">
         <button class="btn btn-blue btn-sm" style="flex:1" onclick="receiveReturn('${r.return_id}')">📥 รับของ (Receive)</button>
       </div>`;
@@ -4086,7 +4076,7 @@ function renderBcReturns() {
 
 function returnStatusTag(s) {
   const map = {
-    Returning: '<span class="tag tag-orange">📦 Returning</span>',
+    Reported: '<span class="tag tag-orange">📦 Reported</span>',
     Received: '<span class="tag tag-blue">📥 Received</span>',
     Reworked: '<span class="tag tag-green">🔧 Reworked</span>',
     Wasted: '<span class="tag tag-red">🗑️ Wasted</span>',
