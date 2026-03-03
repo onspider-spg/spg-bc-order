@@ -441,13 +441,13 @@ async function init() {
         loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(),
       ]);
       await loadDashboard();  // after orders so fallback can compute from S.orders
-      routeToHome();
+      await routeToHome();
     } else {
       // ─── DEMO MODE ───
       const role = (demoMode === 'bc') ? 'bc' : 'store';
       S.session = getMockSession(role);
       loadMockData(role);
-      routeToHome();
+      await routeToHome();
     }
     
   } catch (err) {
@@ -455,11 +455,11 @@ async function init() {
     const role = (demoMode === 'bc') ? 'bc' : 'store';
     S.session = getMockSession(role);
     loadMockData(role);
-    routeToHome();
+    await routeToHome();
   }
 }
 
-function routeToHome() {
+async function routeToHome() {
   // Check dept mapping
   const dm = S.deptMapping;
   if (dm && dm.module_role === 'not_applicable') {
