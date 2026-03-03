@@ -3350,9 +3350,12 @@ async function renderAdminTopProducts() {
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
   if (!S.topProdDays) S.topProdDays = 30;
+  if (!S.topProdStore) S.topProdStore = 'ALL';
   
   try {
-    const resp = await api('get_top_products', null, { days: String(S.topProdDays) });
+    const qp = { days: String(S.topProdDays) };
+    if (S.topProdStore !== 'ALL') qp.store = S.topProdStore;
+    const resp = await api('get_top_products', null, qp);
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
     
     const d = resp.data;
@@ -3365,7 +3368,14 @@ async function renderAdminTopProducts() {
         <div class="filter-chip ${S.topProdDays===7?'active':''}" onclick="S.topProdDays=7;renderAdminTopProducts()">7 วัน</div>
         <div class="filter-chip ${S.topProdDays===14?'active':''}" onclick="S.topProdDays=14;renderAdminTopProducts()">14 วัน</div>
         <div class="filter-chip ${S.topProdDays===30?'active':''}" onclick="S.topProdDays=30;renderAdminTopProducts()">30 วัน</div>
-      </div>`;
+      </div>
+      ${S.role === 'bc' ? `<div class="filter-bar" style="margin-top:0">
+        <div class="filter-chip ${S.topProdStore==='ALL'?'active':''}" onclick="S.topProdStore='ALL';renderAdminTopProducts()">ทุกร้าน</div>
+        <div class="filter-chip ${S.topProdStore==='MNG'?'active':''}" onclick="S.topProdStore='MNG';renderAdminTopProducts()">MNG</div>
+        <div class="filter-chip ${S.topProdStore==='ISH'?'active':''}" onclick="S.topProdStore='ISH';renderAdminTopProducts()">ISH</div>
+        <div class="filter-chip ${S.topProdStore==='GB'?'active':''}" onclick="S.topProdStore='GB';renderAdminTopProducts()">GB</div>
+        <div class="filter-chip ${S.topProdStore==='TMC'?'active':''}" onclick="S.topProdStore='TMC';renderAdminTopProducts()">TMC</div>
+      </div>` : ''}`;
     
     // Summary cards
     html += `
