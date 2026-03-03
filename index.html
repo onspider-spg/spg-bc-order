@@ -345,6 +345,7 @@ const S = {
   notifications: [],
   dashboard: null,
   currentScreen: 'loading',
+  currentParam: null,
   productSearch: '',
   productFilter: 'all',
   orderFilter: 'all',
@@ -371,12 +372,28 @@ const S = {
 // ─── HASH ROUTING ─────────────────────────────────────────────
 const HASH_SCREENS = new Set([
   'home','browse','cart','orders','stock','waste','returns',
+  'order-detail',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
   'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
   'admin-waste-dashboard','admin-top-products','admin-announcements','admin-product-edit'
 ]);
 let _skipHashChange = false;
+
+// Parse hash: "#bc-orders" → {screen:'bc-orders', param:null}
+//             "#order-detail/ORD-123" → {screen:'order-detail', param:'ORD-123'}
+function parseHash(hash) {
+  const h = (hash || '').replace('#', '');
+  const slashIdx = h.indexOf('/');
+  if (slashIdx === -1) return { screen: h, param: null };
+  return { screen: h.substring(0, slashIdx), param: decodeURIComponent(h.substring(slashIdx + 1)) };
+}
+
+function setHash(screen, param) {
+  _skipHashChange = true;
+  location.hash = param ? `${screen}/${encodeURIComponent(param)}` : screen;
+  _skipHashChange = false;
+}
 
 // ─── ENTRY FLOW ──────────────────────────────────────────────
 async function init() {
@@ -458,18 +475,19 @@ function routeToHome() {
   }
   
   // Check if URL has a hash to restore (deep-link)
-  const initHash = location.hash.replace('#', '');
-  if (initHash && HASH_SCREENS.has(initHash)) {
+  const { screen: initScreen, param: initParam } = parseHash(location.hash);
+  if (initScreen && HASH_SCREENS.has(initScreen)) {
     // Validate: store users can't access bc- screens (except waste), bc users can't access store-only screens
-    const isBcScreen = initHash.startsWith('bc-') || initHash.startsWith('admin-');
-    const isStoreOnly = ['home','browse','cart','orders','stock','returns'].includes(initHash);
+    const isBcScreen = initScreen.startsWith('bc-') || initScreen.startsWith('admin-');
+    const isStoreOnly = ['home','browse','cart','orders','stock','returns'].includes(initScreen);
     
-    if (S.role === 'bc' && isStoreOnly && initHash !== 'waste') {
+    if (S.role === 'bc' && isStoreOnly && initScreen !== 'waste') {
       showScreen('bc-home');
     } else if (S.role === 'store' && isBcScreen) {
       showScreen('home');
     } else {
-      showScreen(initHash);
+      // Handle deep links with params
+      await handleDeepLink(initScreen, initParam);
     }
   } else {
     // Default: route to role home
@@ -487,11 +505,28 @@ function routeToHome() {
   // Listen for hash changes (browser back/forward)
   window.addEventListener('hashchange', () => {
     if (_skipHashChange) return;
-    const hash = location.hash.replace('#', '');
-    if (hash && HASH_SCREENS.has(hash) && hash !== S.currentScreen) {
-      showScreen(hash);
+    const { screen: hash, param: hashParam } = parseHash(location.hash);
+    if (hash && HASH_SCREENS.has(hash) && (hash !== S.currentScreen || hashParam !== S.currentParam)) {
+      handleDeepLink(hash, hashParam);
     }
   });
+}
+
+// ─── DEEP LINK HANDLER ──────────────────────────────────────
+async function handleDeepLink(screen, param) {
+  // Screens that need a param to load properly
+  if (param) {
+    switch(screen) {
+      case 'order-detail':
+        return viewOrder(param); // loads order + shows detail
+      case 'bc-accept':
+        return showBcAccept(param); // loads order + shows accept
+      case 'bc-fulfil':
+        return showBcFulfil(param); // loads order + shows fulfil
+    }
+  }
+  // All other screens: just show
+  showScreen(screen, param);
 }
 
 // ─── API HELPER ──────────────────────────────────────────────
@@ -1027,13 +1062,12 @@ function renderApp() {
   `;
 }
 
-function showScreen(name) {
+function showScreen(name, param) {
   S.currentScreen = name;
+  S.currentParam = param || null;
   // Update hash for navigable screens (skip loading/error screens)
   if (HASH_SCREENS.has(name)) {
-    _skipHashChange = true;
-    location.hash = name;
-    _skipHashChange = false;
+    setHash(name, param);
   }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('scr-' + name);
@@ -1070,8 +1104,8 @@ function showScreen(name) {
       case 'admin-announcements': renderAdminAnnouncements(); break;
       case 'admin-product-edit': renderProductEditScreen(); break;
     }
-    // Render BC bottom nav on all BC sub-screens
-    if (name.startsWith('bc-') && name !== 'bc-home') {
+    // Render BC bottom nav on all BC sub-screens + dashboard screens in bottom nav
+    if ((name.startsWith('bc-') && name !== 'bc-home') || name === 'admin-top-products' || name === 'admin-waste-dashboard') {
       renderBcSubNav(name);
     }
   }
@@ -1617,7 +1651,7 @@ function filterOrders() {
 }
 
 async function viewOrder(orderId) {
-  showScreen('order-detail');
+  showScreen('order-detail', orderId);
   const content = document.getElementById('orderDetailContent');
   content.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   
@@ -3618,7 +3652,7 @@ async function showBcAccept(orderId) {
     viewOrderDetail(orderId);
     return;
   }
-  showScreen('bc-accept');
+  showScreen('bc-accept', orderId);
 }
 
 function renderBcAccept() {
@@ -3728,7 +3762,7 @@ async function showBcFulfil(orderId) {
   }));
   S.fulfilmentBy = S.session.user_id;
 
-  showScreen('bc-fulfil');
+  showScreen('bc-fulfil', orderId);
 }
 
 function renderBcFulfil() {
