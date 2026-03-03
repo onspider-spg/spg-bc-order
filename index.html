@@ -4679,18 +4679,57 @@ function printSlip80() {
 
 // ─── NOTIFICATIONS CHECK ─────────────────────────────────────
 // ─── NOTIFICATION DISMISS SYSTEM ─────────────────────────────
-function getDismissedIds() {
+// v6.4.4.4: Dismissed = {notif_id: timestamp} for 7-day expiry
+function getDismissedMap() {
   try {
     const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
+    const raw = JSON.parse(localStorage.getItem(key) || '{}');
+    // Migrate: old array format → new object format
+    if (Array.isArray(raw)) {
+      const map = {};
+      raw.forEach(id => { map[id] = Date.now(); });
+      saveDismissedMap(map);
+      return map;
+    }
+    return raw;
+  } catch { return {}; }
+}
+
+function saveDismissedMap(map) {
+  try {
+    const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
+    localStorage.setItem(key, JSON.stringify(map));
+  } catch {}
+}
+
+// Compat wrapper: returns array of dismissed IDs (still within 7 days)
+function getDismissedIds() {
+  const map = getDismissedMap();
+  const now = Date.now();
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+  return Object.keys(map).filter(id => (now - map[id]) < SEVEN_DAYS);
+}
+
+// Hidden = permanently deleted by user
+function getHiddenIds() {
+  try {
+    const key = 'bc_hidden_notifs_' + (S.session?.user_id || 'anon');
     return JSON.parse(localStorage.getItem(key) || '[]');
   } catch { return []; }
 }
 
-function saveDismissedIds(ids) {
+function saveHiddenIds(ids) {
   try {
-    const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
+    const key = 'bc_hidden_notifs_' + (S.session?.user_id || 'anon');
     localStorage.setItem(key, JSON.stringify(ids));
   } catch {}
+}
+
+function saveDismissedIds(ids) {
+  // Convert array calls to map format (set timestamp = now for new entries)
+  const map = getDismissedMap();
+  ids.forEach(id => { if (!map[id]) map[id] = Date.now(); });
+  saveDismissedMap(map);
 }
 
 // v6.4.4: Generate live notifications from pending orders & returns
@@ -4774,10 +4813,12 @@ function buildLiveNotifs() {
 }
 
 // v6.4.4: Get all notifications (broadcast + live), respecting user prefs
+// v6.4.4.4: Filter out hidden (deleted) notifications
 function getAllNotifs() {
   const prefs = getNotifPrefs();
   const broadcasts = prefs.broadcast ? (S.notifications || []) : [];
-  return [...broadcasts, ...buildLiveNotifs()];
+  const hidden = getHiddenIds();
+  return [...broadcasts, ...buildLiveNotifs()].filter(n => !hidden.includes(n.notif_id));
 }
 
 function getUnreadNotifs() {
@@ -4786,30 +4827,38 @@ function getUnreadNotifs() {
 }
 
 function dismissNotif(notifId) {
-  const ids = getDismissedIds();
-  if (!ids.includes(notifId)) ids.push(notifId);
-  saveDismissedIds(ids);
+  const map = getDismissedMap();
+  if (!map[notifId]) map[notifId] = Date.now();
+  saveDismissedMap(map);
   checkNotifications();
-  // Re-render panel if dialog is open
   const ov = document.getElementById('overlay');
   if (ov && ov.classList.contains('show')) showNotifPanel();
 }
 
 function undismissNotif(notifId) {
-  let ids = getDismissedIds();
-  ids = ids.filter(id => id !== notifId);
-  saveDismissedIds(ids);
+  const map = getDismissedMap();
+  delete map[notifId];
+  saveDismissedMap(map);
+  checkNotifications();
+  const ov = document.getElementById('overlay');
+  if (ov && ov.classList.contains('show')) showNotifPanel();
+}
+
+function hideNotif(notifId) {
+  const hidden = getHiddenIds();
+  if (!hidden.includes(notifId)) hidden.push(notifId);
+  saveHiddenIds(hidden);
   checkNotifications();
   const ov = document.getElementById('overlay');
   if (ov && ov.classList.contains('show')) showNotifPanel();
 }
 
 function dismissAllNotifs() {
-  const ids = getDismissedIds();
+  const map = getDismissedMap();
   getAllNotifs().forEach(n => {
-    if (n.notif_id && !ids.includes(n.notif_id)) ids.push(n.notif_id);
+    if (n.notif_id && !map[n.notif_id]) map[n.notif_id] = Date.now();
   });
-  saveDismissedIds(ids);
+  saveDismissedMap(map);
   checkNotifications();
   showNotifPanel();
 }
@@ -4845,13 +4894,18 @@ function showNotifPanel() {
   const unread = allNotifs.filter(n => !dismissed.includes(n.notif_id));
   const read = allNotifs.filter(n => dismissed.includes(n.notif_id));
   
+  // v6.4.4.4: Sort by date (newest first) within each group
+  const byDate = (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  unread.sort(byDate);
+  read.sort(byDate);
+  
   const typeIcon = (n) => n.type === 'pending_order' ? '📋' : n.type === 'return_reported' ? '↩️' : n.type === 'return_received' ? '📥' : n.type === 'broadcast' ? '📢' : '🔔';
   
   const renderItem = (n, isRead) => {
     const bg = isRead ? '' : 'background:var(--gold-bg);';
     const opa = isRead ? 'opacity:0.6;' : '';
     const envelope = isRead ? '📧' : '✉️';
-    const action = isRead ? `undismissNotif('${n.notif_id}')` : `dismissNotif('${n.notif_id}')`;
+    const envAction = isRead ? `undismissNotif('${n.notif_id}')` : `dismissNotif('${n.notif_id}')`;
     // v6.4.4.3: Clickable ref link for orders/returns
     let msgHtml = n.message;
     if (n._ref_type === 'order' && n._ref_id) {
@@ -4865,7 +4919,10 @@ function showNotifPanel() {
         <div style="font-size:11px;color:var(--td);margin-top:2px">${msgHtml}</div>
         ${n.created_at ? `<div style="font-size:9px;color:var(--tm);margin-top:4px">${new Date(n.created_at).toLocaleString('th-TH')}</div>` : ''}
       </div>
-      <div onclick="${action}" style="cursor:pointer;font-size:18px;padding:2px 4px;flex-shrink:0" title="${isRead ? 'Mark unread' : 'Mark read'}">${envelope}</div>
+      <div style="display:flex;gap:2px;flex-shrink:0;align-items:center">
+        <div onclick="${envAction}" style="cursor:pointer;font-size:18px;padding:2px 4px" title="${isRead ? 'Mark unread' : 'Mark read'}">${envelope}</div>
+        <div onclick="hideNotif('${n.notif_id}')" style="cursor:pointer;font-size:14px;padding:2px 4px;color:var(--red)" title="Delete">🗑️</div>
+      </div>
     </div>`;
   };
   
