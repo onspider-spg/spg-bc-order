@@ -277,10 +277,10 @@ textarea.form-input{resize:none;min-height:72px}
 .ful-partial{margin-top:6px;padding:10px;border-radius:8px;background:var(--red-bg)}
 
 /*═══ PRINT CENTRE ═══*/
-.print-area{padding:16px;background:#fff;color:#1a1a2e;border-radius:8px;margin:0 16px 12px;font-size:10px}
-.ptbl{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px}
-.ptbl th{background:#f1f5f9;padding:5px 4px;text-align:center;font-weight:700;border:1px solid #e2e8f0;font-size:9px}
-.ptbl td{padding:4px;text-align:center;border:1px solid #e2e8f0}
+.print-area{padding:16px;background:#fff;color:#1a1a2e;border-radius:8px;margin:0 16px 12px;font-size:12px}
+.ptbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.ptbl th{background:#f1f5f9;padding:6px 5px;text-align:center;font-weight:700;border:1px solid #e2e8f0;font-size:11px}
+.ptbl td{padding:5px;text-align:center;border:1px solid #e2e8f0}
 .ptbl td:first-child{text-align:left;font-weight:600}
 .ptbl tr.urg{background:#fff5f5}
 .slip-wrap{background:#fff;color:#1a1a2e;padding:14px;margin:0 16px 12px;border-radius:8px;font-family:'IBM Plex Sans Thai',monospace;font-size:10px}
@@ -289,7 +289,7 @@ textarea.form-input{resize:none;min-height:72px}
 .slip-dept{font-weight:600;color:#888;margin:6px 0 2px;font-size:9px}
 .slip-row{display:flex;justify-content:space-between;padding:1px 0}
 .slip-foot{border-top:1px dashed #ccc;padding-top:8px;margin-top:10px;font-size:9px}
-@media print{body{background:#fff!important}.screen{display:none!important}#scr-bc-print{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print,.scr-hdr,.filter-chips{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}}
+@media print{body{background:#fff!important}.screen{display:none!important}#scr-bc-print{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print,.scr-hdr,.filter-chips{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}.ptbl thead{display:table-header-group}.ptbl tr{page-break-inside:avoid}}
 </style>
 </head>
 <body>
@@ -993,18 +993,20 @@ function renderApp() {
     
     <div class="screen" id="scr-admin-waste-dashboard">
       <div class="topbar" style="background:var(--gold-bg)">
-        <div class="topbar-back" onclick="showScreen('admin-dashboard')">←</div>
+        <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
         <div class="topbar-title" style="color:var(--gold)">🗑️ Waste Dashboard</div>
       </div>
       <div class="content" id="adminWasteDbContent"></div>
+      <div class="bottomnav bc-nav" id="bcWasteDashNav"></div>
     </div>
     
     <div class="screen" id="scr-admin-top-products">
       <div class="topbar" style="background:var(--gold-bg)">
-        <div class="topbar-back" onclick="showScreen('admin-dashboard')">←</div>
+        <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
         <div class="topbar-title" style="color:var(--gold)">🏆 Top Products</div>
       </div>
       <div class="content" id="adminTopProdContent"></div>
+      <div class="bottomnav bc-nav" id="bcTopProductsNav"></div>
     </div>
     
     <div class="screen" id="scr-admin-announcements">
@@ -1082,6 +1084,8 @@ function renderBcSubNav(currentScreen) {
     'bc-stock': 'bcStockNav',
     'bc-returns': 'bcReturnsNav',
     'bc-print': 'bcPrintNav',
+    'admin-top-products': 'bcTopProductsNav',
+    'admin-waste-dashboard': 'bcWasteDashNav',
   };
   const navId = navMap[currentScreen];
   if (!navId) return;
@@ -1090,10 +1094,9 @@ function renderBcSubNav(currentScreen) {
   
   const items = [
     { screen: 'bc-home', icon: '🏠', label: 'Home' },
-    { screen: 'bc-orders', icon: '📋', label: 'Orders' },
-    { screen: 'bc-stock', icon: '📦', label: 'Stock' },
-    { screen: 'bc-print', icon: '🖨️', label: 'Print' },
-    { screen: 'waste', icon: '🗑️', label: 'Waste' },
+    { screen: 'admin-top-products', icon: '🏆', label: 'Top Products' },
+    { screen: 'bc-returns', icon: '↩️', label: 'Returns' },
+    { screen: 'admin-waste-dashboard', icon: '🗑️', label: 'Waste' },
   ];
   el.innerHTML = items.map(it => 
     `<div class="nav-item${it.screen === currentScreen ? ' active' : ''}" onclick="showScreen('${it.screen}')"><span class="ni">${it.icon}</span>${it.label}</div>`
@@ -2111,13 +2114,12 @@ function renderBcHome() {
     </div>
     <span class="user-tier">${s.tier_id}</span>`;
 
-  // Bottom nav (BC) — B-03: restructured with Fulfil tab
+  // Bottom nav (BC) — 4 tabs: Home, Top Products, Returns, Waste Dashboard
   document.getElementById('bcBottomNav').innerHTML = `
     <div class="nav-item active" onclick="showScreen('bc-home')"><span class="ni">🏠</span>Home</div>
-    <div class="nav-item" onclick="showScreen('bc-orders')"><span class="ni">📋</span>Orders</div>
-    <div class="nav-item" onclick="showScreen('bc-stock')"><span class="ni">📦</span>Stock</div>
-    <div class="nav-item" onclick="showScreen('bc-print')"><span class="ni">🖨️</span>Print</div>
-    <div class="nav-item" onclick="showScreen('waste')"><span class="ni">🗑️</span>Waste</div>`;
+    <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
+    <div class="nav-item" onclick="showScreen('bc-returns')"><span class="ni">↩️</span>Returns</div>
+    <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>`;
 
   // Dashboard + Menu
   const d = S.dashboard || { today_total:0, by_status:{}, cutoff_violations_today:0, urgent_items:0 };
@@ -2153,7 +2155,7 @@ function renderBcHome() {
       </div>
       <div class="card" onclick="showScreen('bc-returns')">
         <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">↩️</div>
-        <div class="card-body"><div class="card-title">Returns</div><div class="card-desc">จัดการสินค้าที่ร้านส่งคืน</div></div>
+        <div class="card-body"><div class="card-title">Report Return / Feedback</div><div class="card-desc">แจ้งสินค้าส่งคืน / feedback ปัญหาสินค้า</div></div>
         <div class="card-right">→</div></div>
       </div>
       <div class="card" onclick="showScreen('bc-print')">
@@ -4159,7 +4161,7 @@ function renderProductionSheet() {
       <div style="font-size:9px;color:#555;margin-top:2px">Orders: ${orderIds.length} รายการ (${orderIds.join(', ')})</div>
     </div>
     <table class="ptbl">
-      <tr><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr>`;
+      <thead><tr><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr></thead><tbody>`;
 
   products.forEach(p => {
     const row = pivot[p];
@@ -4177,12 +4179,12 @@ function renderProductionSheet() {
     html += '</tr>';
   });
 
-  html += '</table>';
+  html += '</tbody></table>';
 
   // Footnotes section
   const hasNotes = itemNotes.length > 0 || orderNotes.length > 0;
   if (hasNotes) {
-    html += `<div style="margin-top:8px;font-size:8px;color:#555;border-top:1px dashed #ddd;padding-top:6px">`;
+    html += `<div style="margin-top:8px;font-size:10px;color:#555;border-top:1px dashed #ddd;padding-top:6px">`;
     html += `<div>* = URGENT ⚡</div>`;
     // Item notes
     if (itemNotes.length) {
@@ -4236,10 +4238,13 @@ function renderDeliverySlip() {
 
   // Filter orders for selected store
   const storeOrders = orders.filter(o => o.store_id === S.bcPrintStore);
+  const orderIds = storeOrders.map(o => o.order_id).sort();
 
-  // Collect notes
-  const notes = []; let noteIdx = 0;
-  const noteLabels = 'ABCDEFGHIJKLMNO'.split('');
+  // Collect notes (2 types)
+  const itemNotes = []; // {idx, product, text}
+  const orderNotes = []; // {order_id, dept, name, text}
+  const seenOrderNotes = new Set();
+  let noteIdx = 0;
 
   // Group by section → dept → orderer
   const bySection = {};
@@ -4251,18 +4256,22 @@ function renderDeliverySlip() {
       const deptKey = `${getDeptName(o.dept_id)} (${o.display_name || o.user_id})`;
       if (!bySection[sec][deptKey]) bySection[sec][deptKey] = [];
 
-      let noteRef = '';
-      if (it.note && noteIdx < noteLabels.length) {
-        noteRef = noteLabels[noteIdx++];
-        notes.push({ label: noteRef, text: `${it.product_name}: ${it.note}` });
+      let itemNoteIdx = [];
+      if (it.item_note) {
+        noteIdx++;
+        itemNoteIdx.push(noteIdx);
+        itemNotes.push({ idx: noteIdx, product: it.product_name, text: it.item_note });
       }
 
-      bySection[sec][deptKey].push({ ...it, noteRef, order_id: o.order_id });
+      // Order note (once per order)
+      if (o.header_note && !seenOrderNotes.has(o.order_id)) {
+        seenOrderNotes.add(o.order_id);
+        orderNotes.push({ order_id: o.order_id, dept: o.dept_id, name: o.display_name || '', text: o.header_note });
+      }
+
+      bySection[sec][deptKey].push({ ...it, itemNoteIdx, order_id: o.order_id });
     });
   });
-
-  // Header note from orders
-  const headerNotes = storeOrders.filter(o => o.header_note).map(o => o.header_note);
 
   const now = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
   const sectionIcons = { cake:'🎂', sauce:'🫕', other:'📦' };
@@ -4272,8 +4281,8 @@ function renderDeliverySlip() {
       <div style="font-size:16px;font-weight:700">${S.bcPrintStore}</div>
       <div>${getStoreName(S.bcPrintStore)}</div>
       <div style="font-size:8px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)}</div>
-    </div>
-    ${headerNotes.length ? `<div style="background:#fffde7;padding:4px 6px;border-radius:4px;margin-bottom:8px;font-size:9px">📝 ${headerNotes.join(' | ')}</div>` : ''}`;
+      <div style="font-size:7px;color:#555;margin-top:2px">Orders: ${orderIds.length} (${orderIds.join(', ')})</div>
+    </div>`;
 
   // Render sections
   Object.keys(bySection).sort().forEach(sec => {
@@ -4283,7 +4292,8 @@ function renderDeliverySlip() {
       html += `<div class="slip-dept">--- ${dept} ---</div>`;
       depts[dept].forEach(it => {
         const urgent = it.is_urgent ? '⭐ ' : '';
-        const nameStr = `${urgent}<strong>${it.product_name}</strong>${it.noteRef ? `<sup>${it.noteRef}</sup>` : ''}`;
+        const noteRef = it.itemNoteIdx.length ? `<sup>${it.itemNoteIdx.join(',')}</sup>` : '';
+        const nameStr = `${urgent}<strong>${it.product_name}</strong>${noteRef}`;
         let qtyStr;
         if (it.fulfilment_status === 'full') qtyStr = `${it.qty_ordered} → <strong>${it.qty_sent} ✓</strong>`;
         else if (it.fulfilment_status === 'partial') qtyStr = `${it.qty_ordered} → <strong style="color:#dc2626">${it.qty_sent} ✗</strong>`;
@@ -4293,21 +4303,42 @@ function renderDeliverySlip() {
     });
   });
 
-  // Footer
-  if (notes.length) {
-    html += `<div style="margin:8px 0;border-top:1px dashed #ccc;padding-top:4px;font-size:8px;color:#888">
-      ${notes.map(n => `(${n.label}) ${n.text}`).join(' | ')}</div>`;
+  // Footnotes
+  const hasNotes = itemNotes.length > 0 || orderNotes.length > 0;
+  if (hasNotes) {
+    html += `<div style="margin:8px 0;border-top:1px dashed #ccc;padding-top:4px;font-size:8px;color:#555">`;
+    if (itemNotes.length) {
+      html += `<div style="font-weight:600">Item Notes:</div>`;
+      itemNotes.forEach(n => { html += `<div>(${n.idx}) ${n.product}: ${n.text}</div>`; });
+    }
+    if (orderNotes.length) {
+      html += `<div style="font-weight:600;margin-top:2px">Order Notes:</div>`;
+      orderNotes.forEach(n => { html += `<div>${n.order_id} | ${n.dept}${n.name ? ' — '+n.name : ''}: ${n.text}</div>`; });
+    }
+    html += `</div>`;
   }
+
   html += `<div class="slip-foot">
     Packed by: ____________<br>
     Checked by: ___________<br>
     <div style="font-size:7px;color:#aaa;margin-top:4px;text-align:center">Printed: ${now}</div>
   </div></div>`;
   html += `<div style="text-align:center;padding:12px" class="no-print">
-    <button class="btn btn-primary" onclick="window.print()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Delivery Slip</button>
+    <button class="btn btn-primary" onclick="printSlip80()" style="font-size:14px;padding:10px 24px">🖨️ พิมพ์ Delivery Slip (80×80mm)</button>
   </div>`;
 
   document.getElementById('bcPrintContent').innerHTML = html;
+}
+
+// ─── PRINT SLIP 80x80mm ───
+function printSlip80() {
+  // Inject 80x80mm page style, print, then remove
+  const style = document.createElement('style');
+  style.id = 'slip-page-style';
+  style.textContent = '@page{size:80mm 80mm;margin:2mm}';
+  document.head.appendChild(style);
+  window.print();
+  setTimeout(() => { const el = document.getElementById('slip-page-style'); if(el) el.remove(); }, 1000);
 }
 
 // ─── NOTIFICATIONS CHECK ─────────────────────────────────────
