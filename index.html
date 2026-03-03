@@ -545,7 +545,7 @@ async function loadDashboard() {
   
   // Fallback: compute from loaded orders
   const today = todaySydney();
-  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today || o.order_date === today);
+  const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
   S.dashboard = {
     today_total: todayOrders.length,
     by_status: {
@@ -1604,7 +1604,7 @@ function filterOrders() {
         <span style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</span>
         <span class="status ${statusClass(o.status)}">${o.status}</span>
       </div>
-      <div style="font-size:11px;color:var(--td)">📅 ส่ง ${formatDateThai(o.delivery_date)} · สั่ง ${formatDateThai(o.order_date)}</div>
+      <div style="font-size:11px;color:var(--td)">📅 Order Date : ${formatDateAU(o.order_date)} · Delivery By : ${formatDateAU(o.delivery_date)}</div>
       ${o.is_cutoff_violation ? '<div class="tag tag-orange" style="margin-top:4px;font-size:9px">⚠️ Cutoff Violation</div>' : ''}
       ${o.header_note ? `<div style="font-size:10px;color:var(--td);margin-top:4px">📝 ${o.header_note}</div>` : ''}
     </div>
@@ -1818,7 +1818,7 @@ function renderWasteList() {
         <div class="sec-hd">📅 ${formatDateThai(d)}</div>
         ${grouped[d].map(w => {
           const pName = (S.products.find(p => p.product_id === w.product_id) || {}).product_name || w.product_id;
-          const reasonMap = { Unsold:'ขายไม่หมด', Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
+          const reasonMap = { Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
           const reasonLabel = reasonMap[w.reason] || w.reason;
           const reasonColor = w.reason === 'Expired' ? 'var(--red)' : w.reason === 'Damaged' ? 'var(--orange)' : 'var(--td)';
           return `
@@ -2901,8 +2901,8 @@ async function renderAdminWasteDashboard() {
     
     const d = resp.data;
     const sm = d.summary;
-    const reasonColors = { Unsold:'#f59e0b', Expired:'#ef4444', Damaged:'#f97316', Return:'#8b5cf6', Other:'#6b7280' };
-    const reasonLabels = { Unsold:'ขายไม่หมด', Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
+    const reasonColors = { Expired:'#ef4444', Damaged:'#f97316', Return:'#8b5cf6', Other:'#6b7280' };
+    const reasonLabels = { Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
     
     // Period selector
     let html = `
@@ -4539,6 +4539,15 @@ function formatDateThai(str) {
   const d = new Date(str + 'T00:00:00');
   const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+  function formatDateAU(str) {
+  if (!str) return '';
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-AU', {
+    day: '2-digit',
+    month: 'short'
+  });
 }
 
 function getStoreName(id) {
