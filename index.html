@@ -4732,7 +4732,7 @@ function buildLiveNotifs() {
           title: 'PENDING ORDER !!',
           message: `${o.order_id} · ${getStoreName(o.store_id)} · ${items} รายการ`,
           created_at: o.created_at,
-          _live: true
+          _live: true, _ref_type: 'order', _ref_id: o.order_id
         });
       }
     });
@@ -4748,7 +4748,7 @@ function buildLiveNotifs() {
           title: 'RETURN REQUEST !!',
           message: `${r.return_id} · ${r.product_name || r.product_id} ×${r.quantity} · ${getStoreName(r.store_id)}`,
           created_at: r.created_at,
-          _live: true
+          _live: true, _ref_type: 'return', _ref_id: r.return_id
         });
       }
     });
@@ -4764,7 +4764,7 @@ function buildLiveNotifs() {
           title: 'RETURN RECEIVED !!',
           message: `${r.return_id} · ${r.product_name || r.product_id} ×${r.quantity} · รับของแล้ว รอ Rework/Waste`,
           created_at: r.created_at,
-          _live: true
+          _live: true, _ref_type: 'return', _ref_id: r.return_id
         });
       }
     });
@@ -4852,10 +4852,17 @@ function showNotifPanel() {
     const opa = isRead ? 'opacity:0.6;' : '';
     const envelope = isRead ? '📧' : '✉️';
     const action = isRead ? `undismissNotif('${n.notif_id}')` : `dismissNotif('${n.notif_id}')`;
+    // v6.4.4.3: Clickable ref link for orders/returns
+    let msgHtml = n.message;
+    if (n._ref_type === 'order' && n._ref_id) {
+      msgHtml = n.message.replace(n._ref_id, `<span style="color:var(--blue);text-decoration:underline;cursor:pointer;font-weight:600" onclick="closeDialog();viewOrderDetail('${n._ref_id}')">${n._ref_id}</span>`);
+    } else if (n._ref_type === 'return' && n._ref_id) {
+      msgHtml = n.message.replace(n._ref_id, `<span style="color:var(--blue);text-decoration:underline;cursor:pointer;font-weight:600" onclick="closeDialog();showReturnDetail('${n._ref_id}')">${n._ref_id}</span>`);
+    }
     return `<div style="display:flex;align-items:start;padding:12px 16px;border-bottom:1px solid var(--b1);${bg}${opa}">
       <div style="flex:1">
         <div style="font-size:12px;font-weight:600">${typeIcon(n)} ${n.title || n.type}</div>
-        <div style="font-size:11px;color:var(--td);margin-top:2px">${n.message}</div>
+        <div style="font-size:11px;color:var(--td);margin-top:2px">${msgHtml}</div>
         ${n.created_at ? `<div style="font-size:9px;color:var(--tm);margin-top:4px">${new Date(n.created_at).toLocaleString('th-TH')}</div>` : ''}
       </div>
       <div onclick="${action}" style="cursor:pointer;font-size:18px;padding:2px 4px;flex-shrink:0" title="${isRead ? 'Mark unread' : 'Mark read'}">${envelope}</div>
