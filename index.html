@@ -1258,6 +1258,7 @@ function renderHomeDashboard() {
       </div>` : ''}
     </div>
     ${adminMenus}
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.3</div>
   `;
 }
 
@@ -2269,25 +2270,31 @@ async function renderReturnDashboard() {
   const el = document.getElementById('returnDashContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
 
-  if (!S.returnDashDays) S.returnDashDays = 30;
+  // v6.5.3: Date range state
+  if (!S.returnDash) S.returnDash = { from: daysAgoStr(30), to: todaySydney(), store: 'ALL' };
+  const { from, to, store } = S.returnDash;
 
   try {
-    const resp = await api('get_return_dashboard', null, { days: String(S.returnDashDays) });
+    const resp = await api('get_return_dashboard', null, { from_date: from, to_date: to, store: store || 'ALL' });
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
 
     const d = resp.data;
     const bs = d.byStatus || {};
+    const isMgmt = d.is_management;
 
-    let html = `
-      <div class="filter-bar">
-        <div class="filter-chip ${S.returnDashDays===7?'active':''}" onclick="S.returnDashDays=7;renderReturnDashboard()">7 วัน</div>
-        <div class="filter-chip ${S.returnDashDays===14?'active':''}" onclick="S.returnDashDays=14;renderReturnDashboard()">14 วัน</div>
-        <div class="filter-chip ${S.returnDashDays===30?'active':''}" onclick="S.returnDashDays=30;renderReturnDashboard()">30 วัน</div>
-      </div>`;
+    // Filter bar
+    let html = buildDashFilterBar({
+      stateKey: 'returnDash', renderFn: 'renderReturnDashboard',
+      fromDate: d.from_date, toDate: d.to_date, storeId: store, isMgmt,
+    });
+
+    // Update state with actual dates from backend
+    S.returnDash.from = d.from_date;
+    S.returnDash.to = d.to_date;
 
     // Summary cards
     html += `
-      <div class="sec-hd">📊 สรุปภาพรวม (${S.returnDashDays} วัน)</div>
+      <div class="sec-hd">📊 สรุปภาพรวม</div>
       <div class="sum-grid">
         <div class="sum-card" style="border-left:3px solid var(--red)">
           <div class="sum-val" style="color:var(--red)">${d.summary.total}</div>
@@ -2455,7 +2462,8 @@ function renderBcHome() {
         <div class="card-right">→</div></div>
       </div>
     </div>
-    ${bcAdminMenus}`;
+    ${bcAdminMenus}
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.3</div>`;
 }
 function getBcAdminMenus() {
   const s = S.session || {};
@@ -2827,7 +2835,7 @@ async function handleProductImageFile(input) {
 
   // Validate
   if (!file.type.startsWith('image/')) { toast('กรุณาเลือกไฟล์รูปภาพ', 'error'); return; }
-  if (file.size > 500 * 1024) { toast('ไฟล์ใหญ่เกิน 500KB', 'error'); return; }
+  if (file.size > 5 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 5MB', 'error'); return; }
 
   const status = document.getElementById('prdUploadStatus');
   const preview = document.getElementById('imgPreview');
@@ -3487,28 +3495,34 @@ async function renderAdminWasteDashboard() {
   const el = document.getElementById('adminWasteDbContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
-  if (!S.wasteDashDays) S.wasteDashDays = 30;
+  // v6.5.3: Date range state
+  if (!S.wasteDash) S.wasteDash = { from: daysAgoStr(30), to: todaySydney(), store: 'ALL' };
+  const { from, to, store } = S.wasteDash;
   
   try {
-    const resp = await api('get_waste_dashboard', null, { days: String(S.wasteDashDays) });
+    const resp = await api('get_waste_dashboard', null, { from_date: from, to_date: to, store: store || 'ALL' });
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
     
     const d = resp.data;
     const sm = d.summary;
+    const isMgmt = d.is_management;
     const reasonColors = { Expired:'#ef4444', Damaged:'#f97316', Return:'#8b5cf6', Other:'#6b7280' };
     const reasonLabels = { Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
     
-    // Period selector
-    let html = `
-      <div class="filter-bar">
-        <div class="filter-chip ${S.wasteDashDays===7?'active':''}" onclick="S.wasteDashDays=7;renderAdminWasteDashboard()">7 วัน</div>
-        <div class="filter-chip ${S.wasteDashDays===14?'active':''}" onclick="S.wasteDashDays=14;renderAdminWasteDashboard()">14 วัน</div>
-        <div class="filter-chip ${S.wasteDashDays===30?'active':''}" onclick="S.wasteDashDays=30;renderAdminWasteDashboard()">30 วัน</div>
-      </div>`;
+    // Filter bar
+    let html = buildDashFilterBar({
+      stateKey: 'wasteDash', renderFn: 'renderAdminWasteDashboard',
+      fromDate: d.from_date, toDate: d.to_date, storeId: store, isMgmt,
+    });
+    
+    // Update state with actual dates from backend (may be capped)
+    S.wasteDash.from = d.from_date;
+    S.wasteDash.to = d.to_date;
     
     // Summary cards
+    const totalDays = Math.max(1, Math.round((new Date(d.to_date) - new Date(d.from_date)) / 86400000) + 1);
     html += `
-      <div class="sec-hd">📊 สรุปภาพรวม (${S.wasteDashDays} วัน)</div>
+      <div class="sec-hd">📊 สรุปภาพรวม</div>
       <div class="sum-grid">
         <div class="sum-card" style="border-left:3px solid var(--red)">
           <div class="sum-val" style="color:var(--red)">${sm.today_qty}</div>
@@ -3522,11 +3536,11 @@ async function renderAdminWasteDashboard() {
         </div>
         <div class="sum-card" style="border-left:3px solid var(--blue)">
           <div class="sum-val">${sm.total_qty}</div>
-          <div class="sum-lbl">ทั้งหมด ${S.wasteDashDays} วัน</div>
+          <div class="sum-lbl">ทั้งหมดในช่วง</div>
           <div style="font-size:9px;color:var(--td)">${sm.total_records} รายการ</div>
         </div>
         <div class="sum-card" style="border-left:3px solid var(--gold)">
-          <div class="sum-val">${sm.total_records > 0 ? Math.round(sm.total_qty / S.wasteDashDays) : 0}</div>
+          <div class="sum-val">${sm.total_records > 0 ? Math.round(sm.total_qty / totalDays) : 0}</div>
           <div class="sum-lbl">เฉลี่ย/วัน</div>
         </div>
       </div>`;
@@ -3602,7 +3616,7 @@ async function renderAdminWasteDashboard() {
     // Daily Trend (bar chart)
     const trend = d.dailyTrend || [];
     const maxDay = Math.max(...trend.map(t => t.qty), 1);
-    const recentTrend = trend.slice(-Math.min(S.wasteDashDays, 14));
+    const recentTrend = trend.length > 30 ? trend.slice(-30) : trend;
     html += `<div class="sec-hd">📈 แนวโน้มรายวัน</div>
       <div class="pad" style="padding-top:0;overflow-x:auto">
         <div style="display:flex;align-items:flex-end;gap:3px;height:120px;min-width:${recentTrend.length * 24}px">`;
@@ -5477,6 +5491,68 @@ function formatDateThai(str) {
     day: '2-digit',
     month: 'short'
   });
+}
+
+// v6.5.3: Dashboard date filter helpers
+function daysAgoStr(n) {
+  const d = sydneyNow();
+  d.setDate(d.getDate() - n);
+  return formatDate(d);
+}
+
+function buildDashFilterBar(opts) {
+  // opts: { stateKey, renderFn, fromDate, toDate, storeId, isMgmt }
+  const { stateKey, renderFn, fromDate, toDate, storeId, isMgmt } = opts;
+  const today = todaySydney();
+  const stores = ['MNG','ISH','GB','TMC','RW'];
+
+  // Quick presets
+  const presets = [
+    { label: 'วันนี้', from: today, to: today },
+    { label: '7 วัน', from: daysAgoStr(7), to: today },
+    { label: '30 วัน', from: daysAgoStr(30), to: today },
+  ];
+  if (isMgmt) {
+    presets.push({ label: '90 วัน', from: daysAgoStr(90), to: today });
+    presets.push({ label: 'ทั้งหมด', from: '2024-01-01', to: today });
+  }
+
+  let html = `<div style="padding:8px 12px">`;
+
+  // Date range display
+  html += `<div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--td)">
+    📅 <strong>${formatDateThai(fromDate)}</strong> — <strong>${formatDateThai(toDate)}</strong>
+  </div>`;
+
+  // Quick presets
+  html += `<div class="filter-bar" style="margin-bottom:8px">`;
+  presets.forEach(p => {
+    const active = fromDate === p.from && toDate === p.to;
+    html += `<div class="filter-chip ${active ? 'active' : ''}" onclick="S.${stateKey}={from:'${p.from}',to:'${p.to}',store:S.${stateKey}?.store||'ALL'};${renderFn}()">${p.label}</div>`;
+  });
+  html += `</div>`;
+
+  // Custom date range
+  html += `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+    <input type="date" id="${stateKey}_from" value="${fromDate}" max="${today}" style="flex:1;padding:6px 8px;border:1px solid var(--b2);border-radius:8px;font-size:11px;background:var(--bg)">
+    <span style="font-size:10px;color:var(--td)">ถึง</span>
+    <input type="date" id="${stateKey}_to" value="${toDate}" max="${today}" style="flex:1;padding:6px 8px;border:1px solid var(--b2);border-radius:8px;font-size:11px;background:var(--bg)">
+    <div onclick="S.${stateKey}={from:document.getElementById('${stateKey}_from').value,to:document.getElementById('${stateKey}_to').value,store:S.${stateKey}?.store||'ALL'};${renderFn}()" style="cursor:pointer;padding:6px 10px;border-radius:8px;background:var(--blue);color:white;font-size:10px;font-weight:600;white-space:nowrap">ดู</div>
+  </div>`;
+
+  // Store filter (management only)
+  if (isMgmt) {
+    html += `<div style="display:flex;gap:6px;align-items:center">
+      <span style="font-size:10px;color:var(--td);white-space:nowrap">🏪 ร้าน:</span>
+      <select onchange="S.${stateKey}.store=this.value;${renderFn}()" style="flex:1;padding:6px 8px;border:1px solid var(--b2);border-radius:8px;font-size:11px;background:var(--bg)">
+        <option value="ALL" ${storeId==='ALL'?'selected':''}>ทุกร้าน</option>
+        ${stores.map(s => `<option value="${s}" ${storeId===s?'selected':''}>${getStoreName(s)}</option>`).join('')}
+      </select>
+    </div>`;
+  }
+
+  html += `</div>`;
+  return html;
 }
 
 function getStoreName(id) {
