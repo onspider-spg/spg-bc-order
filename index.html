@@ -1284,7 +1284,7 @@ function renderHomeDashboard() {
       </div>` : ''}
     </div>
     ${adminMenus}
-    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.4</div>
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.5</div>
   `;
 }
 
@@ -2501,7 +2501,7 @@ function renderBcHome() {
       </div>
     </div>
     ${bcAdminMenus}
-    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.4</div>`;
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.5</div>`;
 }
 function getBcAdminMenus() {
   const s = S.session || {};
@@ -2693,15 +2693,30 @@ async function renderAdminProducts() {
   if (secFilter !== 'all') list = list.filter(p => p.section_id === secFilter);
   const q = S.adminProductSearch.toLowerCase();
   if (q) list = list.filter(p => p.product_name.toLowerCase().includes(q));
+  
+  const cols = S._visCols || [];
+  
   list.sort((a,b) => {
     const sc = S._pmSort;
     let va, vb;
-    switch(sc.col) {
-      case 'name': va = (a.product_name||'').toLowerCase(); vb = (b.product_name||'').toLowerCase(); break;
-      case 'section': va = a.section_id||''; vb = b.section_id||''; break;
-      case 'stock': va = a.allow_stock ? 1 : 0; vb = b.allow_stock ? 1 : 0; break;
-      case 'active': va = isActFn(a) ? 1 : 0; vb = isActFn(b) ? 1 : 0; break;
-      default: va = a.sort_order||999; vb = b.sort_order||999;
+    if (sc.col.startsWith('vis|')) {
+      // Visibility column sort: vis|MNG|dessert
+      const ck = sc.col.slice(4); // remove "vis|" prefix → "MNG|dessert"
+      const aVis = visMap[a.product_id]?.[ck];
+      const bVis = visMap[b.product_id]?.[ck];
+      // Check dirty state too
+      const adk = a.product_id + '|' + ck;
+      const bdk = b.product_id + '|' + ck;
+      va = S._pmDirty.hasOwnProperty(adk) ? (S._pmDirty[adk] ? 1 : 0) : (aVis?.active ? 1 : 0);
+      vb = S._pmDirty.hasOwnProperty(bdk) ? (S._pmDirty[bdk] ? 1 : 0) : (bVis?.active ? 1 : 0);
+    } else {
+      switch(sc.col) {
+        case 'name': va = (a.product_name||'').toLowerCase(); vb = (b.product_name||'').toLowerCase(); break;
+        case 'section': va = a.section_id||''; vb = b.section_id||''; break;
+        case 'stock': va = a.allow_stock ? 1 : 0; vb = b.allow_stock ? 1 : 0; break;
+        case 'active': va = isActFn(a) ? 1 : 0; vb = isActFn(b) ? 1 : 0; break;
+        default: va = a.sort_order||999; vb = b.sort_order||999;
+      }
     }
     const cmp = va < vb ? -1 : va > vb ? 1 : 0;
     return sc.dir === 'asc' ? cmp : -cmp;
@@ -2710,7 +2725,6 @@ async function renderAdminProducts() {
   const secCounts = {};
   (tab === 'active' ? active : inactive).forEach(p => { secCounts[p.section_id] = (secCounts[p.section_id]||0) + 1; });
   
-  const cols = S._visCols || [];
   const shortD = d => d === 'dessert' ? 'des' : d === 'drink' ? 'drk' : d === 'front' ? 'frt' : d;
   const dirtyCount = Object.keys(S._pmDirty).length;
   const sc = S._pmSort;
@@ -2731,7 +2745,7 @@ async function renderAdminProducts() {
       ).join('')}
       <input class="pm-search" placeholder="🔍 ค้นหาชื่อสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()">
     </div>
-    <div style="padding:6px 12px;font-size:11px;color:var(--td)">แสดง ${list.length} รายการ${cols.length ? ' · scroll ↔ ดู visibility · กด checkbox เพื่อเปิด/ปิดร้าน' : ''} · กดหัวคอลัมน์เพื่อ sort</div>
+    <div style="padding:6px 12px;font-size:11px;color:var(--td)">แสดง ${list.length} รายการ · กดหัวคอลัมน์เพื่อ sort${cols.length ? ' · กด checkbox เพื่อเปิด/ปิดร้าน' : ''}</div>
     <div class="pm-tscroll">
       <table class="pm-tbl">
         <thead><tr>
@@ -2739,7 +2753,10 @@ async function renderAdminProducts() {
           <th class="${sortCls('name')}" onclick="pmSort('name')">ชื่อสินค้า${sortIcon('name')}</th>
           <th class="${sortCls('section')}" onclick="pmSort('section')">Section${sortIcon('section')}</th>
           <th class="${sortCls('stock')}" onclick="pmSort('stock')">Stock${sortIcon('stock')}</th>
-          ${cols.map(c => `<th style="min-width:42px">${c.store_id}<br>${shortD(c.dept_id)}</th>`).join('')}
+          ${cols.map(c => {
+            const vk = 'vis|' + c.store_id + '|' + c.dept_id;
+            return `<th class="${sortCls(vk)}" onclick="pmSort('${vk}')" style="min-width:42px;cursor:pointer">${c.store_id}<br>${shortD(c.dept_id)}${sortIcon(vk)}</th>`;
+          }).join('')}
           <th class="${sortCls('active')}" onclick="pmSort('active')">สถานะ${sortIcon('active')}</th>
           <th>แก้ไข</th>
         </tr></thead>
