@@ -3280,37 +3280,93 @@ async function toggleNotifSetting(key, enabled) {
 // ─── A2: Cutoff Violations ───────────────────────────────────
 function renderAdminCutoff() {
   const orders = S.orders || [];
-  const violations = orders.filter(o => o.is_cutoff_violation);
+  const allViolations = orders.filter(o => o.is_cutoff_violation);
   
-  // Group by created_by
+  // Store filter
+  if (!S.cutoffStoreFilter) S.cutoffStoreFilter = 'ALL';
+  const storeFilter = S.cutoffStoreFilter;
+  const violations = storeFilter === 'ALL' ? allViolations : allViolations.filter(o => o.store_id === storeFilter);
+  const totalOrders = storeFilter === 'ALL' ? orders.length : orders.filter(o => o.store_id === storeFilter).length;
+  
+  // Violation rate
+  const rate = totalOrders > 0 ? Math.round(violations.length / totalOrders * 100) : 0;
+  
+  // Group by display_name (show name not user_id)
   const byUser = {};
   violations.forEach(o => {
-    const u = o.created_by || 'ไม่ทราบ';
-    if (!byUser[u]) byUser[u] = [];
-    byUser[u].push(o);
+    const name = o.display_name || o.user_id || 'ไม่ทราบ';
+    if (!byUser[name]) byUser[name] = [];
+    byUser[name].push(o);
   });
+  // Sort by most violations first
+  const sortedUsers = Object.entries(byUser).sort((a,b) => b[1].length - a[1].length);
   
-  document.getElementById('adminCutoffContent').innerHTML = `
-    <div class="sec-hd">⏰ Cutoff Violations (${violations.length})</div>
-    <div class="pad">
-      ${violations.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--td);font-size:12px">✅ ไม่มี violation</div>' : `
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          ${Object.entries(byUser).map(([user, arr]) => `
-            <div class="card" style="flex:1;min-width:120px;padding:12px;text-align:center">
-              <div style="font-size:24px;font-weight:700;color:var(--red)">${arr.length}</div>
-              <div style="font-size:11px;color:var(--td)">${user}</div>
-            </div>
-          `).join('')}
+  // Unique stores for filter
+  const stores = [...new Set(allViolations.map(o => o.store_id))].sort();
+  
+  const el = document.getElementById('adminCutoffContent');
+  el.innerHTML = `
+    <div class="sec-hd">⏰ Cutoff Violations</div>
+    
+    <!-- Store Filter -->
+    <div class="filter-bar">
+      <div class="filter-chip ${storeFilter==='ALL'?'active':''}" onclick="S.cutoffStoreFilter='ALL';renderAdminCutoff()">ทั้งหมด (${allViolations.length})</div>
+      ${stores.map(s => {
+        const cnt = allViolations.filter(o => o.store_id === s).length;
+        return `<div class="filter-chip ${storeFilter===s?'active':''}" onclick="S.cutoffStoreFilter='${s}';renderAdminCutoff()">${s} (${cnt})</div>`;
+      }).join('')}
+    </div>
+    
+    <div class="pad" style="padding-top:0">
+      <!-- Summary -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="card" style="flex:1;min-width:80px;padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--red)">${violations.length}</div>
+          <div style="font-size:10px;color:var(--td)">Violations</div>
         </div>
-        ${violations.map(o => `<div class="card" style="margin-bottom:4px;border-left:3px solid var(--red)">
-          <div class="card-row">
-            <div class="card-body">
-              <div class="card-title">${o.order_id}</div>
-              <div class="card-desc">${getStoreName(o.store_id)} · ${o.created_by||'-'} · ${new Date(o.created_at).toLocaleString('th-TH')}</div>
-            </div>
-            <div style="font-size:9px;padding:2px 8px;border-radius:10px;background:var(--red-bg);color:var(--red)">${o.status}</div>
+        <div class="card" style="flex:1;min-width:80px;padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:${rate>10?'var(--red)':'var(--green)'}">${rate}%</div>
+          <div style="font-size:10px;color:var(--td)">จาก ${totalOrders} orders</div>
+        </div>
+        <div class="card" style="flex:1;min-width:80px;padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--gold)">${sortedUsers.length}</div>
+          <div style="font-size:10px;color:var(--td)">คนที่สั่งเลย</div>
+        </div>
+      </div>
+
+      ${violations.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--td);font-size:12px">✅ ไม่มี violation</div>' : `
+        <!-- Repeat Offender Ranking -->
+        ${sortedUsers.length > 0 ? `
+          <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--td)">🏆 Repeat Offenders</div>
+          <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+            ${sortedUsers.map(([name, arr], i) => `
+              <div class="card" style="flex:1;min-width:100px;padding:8px 12px;text-align:center;border-left:3px solid ${i===0?'var(--red)':i===1?'var(--gold)':'var(--s3)'}">
+                <div style="font-size:20px;font-weight:700;color:${i===0?'var(--red)':'var(--td)'}">${arr.length}</div>
+                <div style="font-size:10px;color:var(--td)">${name}</div>
+                <div style="font-size:9px;color:var(--tm)">${arr[0]?.store_id || ''}</div>
+              </div>
+            `).join('')}
           </div>
-        </div>`).join('')}
+        ` : ''}
+        
+        <!-- Violation List -->
+        <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--td)">📋 รายละเอียด</div>
+        ${violations.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(o => {
+          const createdTime = new Date(o.created_at).toLocaleString('th-TH', { timeZone:'Australia/Sydney', hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short' });
+          const delivDate = o.delivery_date || '—';
+          return `<div class="card" style="margin-bottom:4px;border-left:3px solid var(--red);cursor:pointer" onclick="viewOrderDetail('${o.order_id}')">
+            <div class="card-row">
+              <div class="card-body">
+                <div class="card-title" style="font-size:11px">${o.order_id}</div>
+                <div class="card-desc">
+                  🏪 ${getStoreName(o.store_id)} · 👤 ${o.display_name || o.user_id || '—'} · 📅 ส่ง ${delivDate}
+                </div>
+                <div style="font-size:9px;color:var(--red);margin-top:2px">⏰ สั่งเมื่อ ${createdTime}</div>
+              </div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:10px;background:var(--red-bg);color:var(--red)">${o.status}</div>
+            </div>
+          </div>`;
+        }).join('')}
       `}
     </div>`;
 }
