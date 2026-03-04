@@ -374,7 +374,7 @@ const HASH_SCREENS = new Set([
   'home','browse','cart','orders','stock','waste','returns','return-dashboard',
   'order-detail',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
-  'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
+  'admin-dashboard','admin-products','admin-access','admin-dept-mapping','admin-ordering-channels',
   'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
   'admin-waste-dashboard','admin-top-products','admin-announcements','admin-product-edit'
 ]);
@@ -1008,6 +1008,14 @@ function renderApp() {
       </div>
       <div class="content" id="adminDeptMappingContent"></div>
     </div>
+
+    <div class="screen" id="scr-admin-ordering-channels">
+      <div class="topbar" style="background:var(--blue-bg)">
+        <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
+        <div class="topbar-title" style="color:var(--blue)">📋 Ordering Channels</div>
+      </div>
+      <div class="content" id="adminOrderingChannelsContent"></div>
+    </div>
     
     <div class="screen" id="scr-admin-config">
       <div class="topbar" style="background:var(--gold-bg)">
@@ -1110,6 +1118,7 @@ function showScreen(name, param) {
       case 'admin-products': renderAdminProducts(); break;
       case 'admin-access': renderAdminAccess(); break;
       case 'admin-dept-mapping': renderAdminDeptMapping(); break;
+      case 'admin-ordering-channels': renderAdminOrderingChannels(); break;
       case 'admin-config': renderAdminConfig(); break;
       case 'admin-notif-settings': renderAdminNotifSettings(); break;
       case 'admin-cutoff': renderAdminCutoff(); break;
@@ -2481,6 +2490,7 @@ function getBcAdminMenus() {
     { screen:'admin-products', icon:'📦', bg:'var(--blue-bg)', title:'Manage Products', desc:'เพิ่ม/แก้/ปิด สินค้า ทุก section', perm:'fn_manage_products' },
     { screen:'admin-access', icon:'👥', bg:'var(--purple-bg)', title:'User Access', desc:'จัดการสิทธิ์ Function × Tier', perm:'fn_manage_permissions' },
     { screen:'admin-dept-mapping', icon:'🏢', bg:'var(--green-bg)', title:'Department Mapping', desc:'Dept → Role + Section scope', perm:'fn_manage_dept_mapping' },
+    { screen:'admin-ordering-channels', icon:'📋', bg:'var(--blue-bg)', title:'Ordering Channels', desc:'เปิด/ปิด ร้าน+แผนก ที่สั่ง BC Order ได้', perm:'fn_manage_config' },
     { screen:'admin-config', icon:'⚙️', bg:'var(--s2)', title:'System Config', desc:'Cutoff, Delivery, Auto Refresh', perm:'fn_manage_config' },
     { screen:'admin-notif-settings', icon:'🔔', bg:'var(--orange-bg)', title:'Notification Settings', desc:'เปิด/ปิดแจ้งเตือนตาม role', perm:'fn_manage_notifications' },
     { screen:'admin-audit', icon:'📝', bg:'rgba(8,145,178,0.1)', title:'Audit Trail', desc:'ประวัติเปลี่ยนสิทธิ์ + mapping', perm:'fn_view_all_orders' },
@@ -2674,7 +2684,7 @@ async function renderProductEditScreen() {
     } catch(e) {}
   }
 
-  // Load visibility options from DB (stores × depts that can order)
+  // Load visibility options from DB (active ordering channels)
   if (!S._visOptions) {
     el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
     try {
@@ -2682,8 +2692,7 @@ async function renderProductEditScreen() {
       if (resp.success) S._visOptions = resp.data;
     } catch(e) {}
   }
-  const visStores = S._visOptions?.stores || [];
-  const visDepts = S._visOptions?.depts || [];
+  const channels = S._visOptions?.channels || [];
   
   const cats = S.categories || [];
   const sections = ['cake', 'sauce'];
@@ -2773,22 +2782,20 @@ async function renderProductEditScreen() {
     <div class="sec-hd">👁️ ร้านที่เห็นสินค้านี้</div>
     <div class="pad" style="padding-top:0">
       <div style="font-size:10px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้</div>
-      ${visStores.length === 0 || visDepts.length === 0
-        ? '<div style="padding:12px;color:var(--red);font-size:11px">⚠️ ไม่พบร้าน/แผนกที่เปิดใช้งาน — ตรวจสอบ Department Mapping</div>'
-        : visStores.map(store => {
-        return visDepts.map(dept => {
-          const vis = S._editVisibility.find(v => v.store_id === store.store_id && v.dept_id === dept);
-          const checked = vis ? vis.is_active : (!isEdit); // new product = all checked by default
+      ${channels.length === 0
+        ? '<div style="padding:12px;color:var(--red);font-size:11px">⚠️ ไม่พบ Ordering Channel — กรุณาเพิ่มใน Settings → Ordering Channels</div>'
+        : channels.map(ch => {
+          const vis = S._editVisibility.find(v => v.store_id === ch.store_id && v.dept_id === ch.dept_id);
+          const checked = vis ? vis.is_active : (!isEdit);
           return `
           <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2)">
-            <input type="checkbox" id="vis_${store.store_id}_${dept}" ${checked ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold)">
-            <label for="vis_${store.store_id}_${dept}" style="flex:1;font-size:12px;cursor:pointer">
-              <span style="font-weight:600">${getStoreName(store.store_id)}</span>
-              <span style="color:var(--td);font-size:10px"> · ${getDeptName(dept)}</span>
+            <input type="checkbox" id="vis_${ch.store_id}_${ch.dept_id}" ${checked ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold)">
+            <label for="vis_${ch.store_id}_${ch.dept_id}" style="flex:1;font-size:12px;cursor:pointer">
+              <span style="font-weight:600">${getStoreName(ch.store_id)}</span>
+              <span style="color:var(--td);font-size:10px"> · ${getDeptName(ch.dept_id)}</span>
             </label>
           </div>`;
-        }).join('');
-      }).join('')}
+        }).join('')}
       <div style="display:flex;gap:8px;margin-top:8px">
         <div style="font-size:10px;color:var(--blue);cursor:pointer" onclick="toggleAllVis(true)">✅ เลือกทั้งหมด</div>
         <div style="font-size:10px;color:var(--red);cursor:pointer" onclick="toggleAllVis(false)">❌ ยกเลิกทั้งหมด</div>
@@ -2889,17 +2896,14 @@ async function submitProductEdit(productId) {
   
   if (isEdit) body.product_id = productId;
   
-  // Collect visibility from dynamic options
-  const visStores = (S._visOptions?.stores || []).map(s => s.store_id);
-  const visDepts = S._visOptions?.depts || [];
+  // Collect visibility from ordering channels
+  const channels = S._visOptions?.channels || [];
   const visibility = [];
-  visStores.forEach(sid => {
-    visDepts.forEach(dept => {
-      const cb = document.getElementById('vis_' + sid + '_' + dept);
-      if (cb) {
-        visibility.push({ store_id: sid, dept_id: dept, is_active: cb.checked });
-      }
-    });
+  channels.forEach(ch => {
+    const cb = document.getElementById('vis_' + ch.store_id + '_' + ch.dept_id);
+    if (cb) {
+      visibility.push({ store_id: ch.store_id, dept_id: ch.dept_id, is_active: cb.checked });
+    }
   });
   
   try {
@@ -3120,6 +3124,94 @@ async function toggleDeptActive(deptId, newActive) {
     toast(resp.message || 'อัพเดตแล้ว', 'success');
     await renderAdminDeptMapping();
   } catch(e) { toast('เกิดข้อผิดพลาด', 'error'); }
+}
+
+// ─── A8B: Ordering Channels (bc_ordering_channels) ──────────
+async function renderAdminOrderingChannels() {
+  const el = document.getElementById('adminOrderingChannelsContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+
+  try {
+    const resp = await api('get_ordering_channels');
+    if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + resp.error + '</div>'; return; }
+
+    const { channels, stores, departments } = resp.data;
+    const activeCount = channels.filter(c => c.is_active).length;
+
+    let html = `
+      <div style="padding:8px 12px;font-size:10px;color:var(--td)">
+        เปิด/ปิด ร้าน+แผนก ที่สามารถสั่ง BC Order ได้ — รายการที่เปิดจะแสดงใน Product Visibility
+      </div>
+
+      <div class="sec-hd">📋 Ordering Channels (${activeCount}/${channels.length} เปิด)</div>
+      <div class="pad" style="padding-top:0">`;
+
+    if (channels.length === 0) {
+      html += '<div style="padding:16px;color:var(--td);text-align:center">ยังไม่มี channel — เพิ่มด้านล่าง</div>';
+    } else {
+      channels.forEach(ch => {
+        const isOn = ch.is_active;
+        html += `
+        <div class="card" style="margin-bottom:6px;${isOn ? '' : 'opacity:.5;border-left:3px solid var(--red)'}">
+          <div class="card-row">
+            <div class="card-body">
+              <div class="card-title" style="font-size:13px">${getStoreName(ch.store_id)}</div>
+              <div class="card-desc">${getDeptName(ch.dept_id)} <span style="color:var(--td);font-size:9px">(${ch.store_id} · ${ch.dept_id})</span></div>
+            </div>
+            <div onclick="toggleOrderingChannel('${ch.store_id}','${ch.dept_id}',${!isOn})" 
+              style="cursor:pointer;font-size:10px;padding:4px 10px;border-radius:8px;font-weight:600;
+              background:${isOn ? 'var(--green-bg)' : 'var(--red-bg)'};color:${isOn ? 'var(--green)' : 'var(--red)'}">${isOn ? '✅ ON' : '🔇 OFF'}</div>
+          </div>
+        </div>`;
+      });
+    }
+
+    // Add new channel form
+    const storeOpts = stores.map(s => `<option value="${s.store_id}">${s.store_name} (${s.store_id})</option>`).join('');
+    const deptOpts = departments.map(d => `<option value="${d.dept_id}">${d.dept_name} (${d.dept_id})</option>`).join('');
+
+    html += `</div>
+      <div class="sec-hd">➕ เพิ่ม Channel ใหม่</div>
+      <div class="pad" style="padding-top:0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <select id="newChStore" class="form-input" style="font-size:11px">
+            <option value="">เลือกร้าน</option>
+            ${storeOpts}
+          </select>
+          <select id="newChDept" class="form-input" style="font-size:11px">
+            <option value="">เลือกแผนก</option>
+            ${deptOpts}
+          </select>
+        </div>
+        <button class="btn btn-primary" style="width:100%;font-size:12px;padding:10px" onclick="addOrderingChannel()">➕ เพิ่ม</button>
+      </div>`;
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
+  }
+}
+
+async function toggleOrderingChannel(storeId, deptId, newActive) {
+  try {
+    const resp = await api('toggle_ordering_channel', { store_id: storeId, dept_id: deptId, is_active: newActive });
+    toast(resp.message || 'อัพเดตแล้ว', 'success');
+    S._visOptions = null; // clear cache so product edit reloads
+    await renderAdminOrderingChannels();
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+
+async function addOrderingChannel() {
+  const storeId = document.getElementById('newChStore').value;
+  const deptId = document.getElementById('newChDept').value;
+  if (!storeId || !deptId) { toast('กรุณาเลือกร้านและแผนก', 'error'); return; }
+
+  try {
+    const resp = await api('add_ordering_channel', { store_id: storeId, dept_id: deptId });
+    toast(resp.message || '✅ เพิ่มแล้ว', 'success');
+    S._visOptions = null;
+    await renderAdminOrderingChannels();
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
 }
 
 // ─── A5: System Config (Editable) ────────────────────────────
