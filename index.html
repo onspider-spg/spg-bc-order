@@ -375,7 +375,7 @@ const HASH_SCREENS = new Set([
   'order-detail',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
-  'admin-config','admin-notif-settings','admin-module-access','admin-cutoff','admin-audit',
+  'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
   'admin-waste-dashboard','admin-top-products','admin-announcements','admin-product-edit'
 ]);
 let _skipHashChange = false;
@@ -1024,14 +1024,6 @@ function renderApp() {
       </div>
       <div class="content" id="adminNotifSettingsContent"></div>
     </div>
-
-    <div class="screen" id="scr-admin-module-access">
-      <div class="topbar" style="background:var(--gold-bg)">
-        <div class="topbar-back" onclick="showScreen('bc-home')">←</div>
-        <div class="topbar-title" style="color:var(--gold)">🔑 Module Access Override</div>
-      </div>
-      <div class="content" id="adminModuleAccessContent"></div>
-    </div>
     
     <div class="screen" id="scr-admin-cutoff">
       <div class="topbar" style="background:var(--gold-bg)">
@@ -1120,7 +1112,6 @@ function showScreen(name, param) {
       case 'admin-dept-mapping': renderAdminDeptMapping(); break;
       case 'admin-config': renderAdminConfig(); break;
       case 'admin-notif-settings': renderAdminNotifSettings(); break;
-      case 'admin-module-access': renderAdminModuleAccess(); break;
       case 'admin-cutoff': renderAdminCutoff(); break;
       case 'admin-audit': renderAdminAudit(); break;
       case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
@@ -2489,7 +2480,6 @@ function getBcAdminMenus() {
   const adminMenus = [
     { screen:'admin-products', icon:'📦', bg:'var(--blue-bg)', title:'Manage Products', desc:'เพิ่ม/แก้/ปิด สินค้า ทุก section', perm:'fn_manage_products' },
     { screen:'admin-access', icon:'👥', bg:'var(--purple-bg)', title:'User Access', desc:'จัดการสิทธิ์ Function × Tier', perm:'fn_manage_permissions' },
-    { screen:'admin-module-access', icon:'🔑', bg:'var(--gold-bg)', title:'Module Access Override', desc:'กำหนด Tier เฉพาะคน ใน BC Order', perm:'fn_manage_permissions' },
     { screen:'admin-dept-mapping', icon:'🏢', bg:'var(--green-bg)', title:'Department Mapping', desc:'Dept → Role + Section scope', perm:'fn_manage_dept_mapping' },
     { screen:'admin-config', icon:'⚙️', bg:'var(--s2)', title:'System Config', desc:'Cutoff, Delivery, Auto Refresh', perm:'fn_manage_config' },
     { screen:'admin-notif-settings', icon:'🔔', bg:'var(--orange-bg)', title:'Notification Settings', desc:'เปิด/ปิดแจ้งเตือนตาม role', perm:'fn_manage_notifications' },
@@ -3045,97 +3035,6 @@ async function savePermBatch() {
 
   toast(`✅ บันทึก ${ok} สำเร็จ${fail ? ` / ❌ ${fail} ล้มเหลว` : ''}`, fail ? 'warning' : 'success');
   await renderAdminAccess();
-}
-
-// ─── A6B: Module Access Override (account_module_access for bc_order) ──
-async function renderAdminModuleAccess() {
-  const el = document.getElementById('adminModuleAccessContent');
-  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
-
-  try {
-    const resp = await api('get_module_access');
-    if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + resp.error + '</div>'; return; }
-
-    const { accounts, tiers } = resp.data;
-    const tierOpts = tiers.map(t => `<option value="${t.tier_id}">${t.tier_id} — ${t.tier_name}</option>`).join('');
-
-    el.innerHTML = `
-      <div style="padding:8px 12px;font-size:10px;color:var(--td)">กำหนด Tier เฉพาะคน สำหรับ BC Order — ★ = มี override</div>
-      <div style="overflow-x:auto;padding:0 8px">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
-          <thead>
-            <tr style="background:var(--s2)">
-              <th style="padding:8px;text-align:left;font-weight:600">Account</th>
-              <th style="padding:8px;text-align:left;font-weight:600">Store</th>
-              <th style="padding:8px;text-align:center;font-weight:600">Global</th>
-              <th style="padding:8px;text-align:center;font-weight:600">BC Override</th>
-              <th style="padding:8px;text-align:center;font-weight:600">Effective</th>
-              <th style="padding:8px;text-align:center;font-weight:600;min-width:120px">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${accounts.filter(a => a.status === 'approved').map(a => {
-              const hasOverride = !!a.bc_override;
-              return `<tr style="border-bottom:1px solid var(--s2)${hasOverride ? ';background:var(--gold-bg)':''}">
-                <td style="padding:6px 8px;font-size:10px">
-                  <div style="font-weight:600">${a.display_label}</div>
-                  <div style="color:var(--td);font-size:9px">${a.account_id}</div>
-                </td>
-                <td style="padding:6px 8px;font-size:10px">${a.store_id || '—'}</td>
-                <td style="padding:6px;text-align:center;font-size:10px">${a.tier_id}</td>
-                <td style="padding:6px;text-align:center">
-                  ${hasOverride ? `<span style="font-weight:700;color:var(--gold)">★ ${a.bc_override}</span>` : '<span style="color:var(--td)">—</span>'}
-                </td>
-                <td style="padding:6px;text-align:center;font-weight:600;font-size:10px">${a.effective_tier}</td>
-                <td style="padding:4px;text-align:center">
-                  <div style="display:flex;gap:4px;justify-content:center;align-items:center">
-                    <select id="sel-${a.account_id}" style="font-size:10px;padding:2px 4px;border:1px solid var(--s3);border-radius:4px;max-width:80px">
-                      <option value="">— ไม่ override —</option>
-                      ${tierOpts}
-                    </select>
-                    <button onclick="applyModuleAccess('${a.account_id}')"
-                      style="font-size:9px;padding:3px 8px;background:var(--gold);color:#fff;border:none;border-radius:4px;cursor:pointer">Set</button>
-                  </div>
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`;
-
-    // Pre-select current override values
-    accounts.forEach(a => {
-      const sel = document.getElementById('sel-' + a.account_id);
-      if (sel) sel.value = a.bc_override || '';
-    });
-
-  } catch(e) {
-    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
-  }
-}
-
-async function applyModuleAccess(accountId) {
-  const sel = document.getElementById('sel-' + accountId);
-  if (!sel) return;
-  const newTier = sel.value;
-
-  if (newTier === '') {
-    // Remove override
-    if (!confirm(`ลบ override ของ ${accountId}?\n→ จะกลับไปใช้ Global Tier`)) return;
-    try {
-      const resp = await api('remove_module_access', { account_id: accountId });
-      toast(resp.message || '✅ ลบ override แล้ว', 'success');
-      await renderAdminModuleAccess();
-    } catch(e) { toast('❌ ' + e.message, 'error'); }
-  } else {
-    // Set override
-    if (!confirm(`ตั้ง ${accountId} → ${newTier} ใน BC Order?`)) return;
-    try {
-      const resp = await api('set_module_access', { account_id: accountId, module_tier: newTier });
-      toast(resp.message || '✅ บันทึกแล้ว', 'success');
-      await renderAdminModuleAccess();
-    } catch(e) { toast('❌ ' + e.message, 'error'); }
-  }
 }
 
 // ─── A8: Department Mapping ──────────────────────────────────
