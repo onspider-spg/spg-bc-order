@@ -2862,6 +2862,10 @@ async function submitProductEdit(productId) {
 }
 
 // ─── A6: User Access Management ──────────────────────────────
+let _permMatrix = {};   // local copy of matrix
+let _permOriginal = {}; // original from server (to detect changes)
+let _permFunctions = []; // function list
+
 async function renderAdminAccess() {
   const el = document.getElementById('adminAccessContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
@@ -2871,46 +2875,108 @@ async function renderAdminAccess() {
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + resp.error + '</div>'; return; }
     
     const { functions, matrix } = resp.data;
-    const tiers = ['T1','T2','T3','T4','T5','T6','T7'];
+    _permFunctions = functions;
+    _permOriginal = JSON.parse(JSON.stringify(matrix));
+    _permMatrix = JSON.parse(JSON.stringify(matrix));
     
-    el.innerHTML = `
-      <div style="padding:8px 12px;font-size:10px;color:var(--td)">กดเพื่อ toggle ON/OFF — เฉพาะ T1/T2 เท่านั้น</div>
-      <div style="overflow-x:auto;padding:0 8px">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
-          <thead>
-            <tr style="background:var(--s2)">
-              <th style="padding:8px;text-align:left;font-weight:600;position:sticky;left:0;background:var(--s2);z-index:1">Function</th>
-              ${tiers.map(t => `<th style="padding:8px;text-align:center;font-weight:600;min-width:36px">${t}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${functions.map(fn => `<tr style="border-bottom:1px solid var(--s2)">
-              <td style="padding:6px 8px;font-weight:500;position:sticky;left:0;background:var(--bg);z-index:1;font-size:10px" title="${fn.description||''}">${fn.function_name || fn.function_id}</td>
-              ${tiers.map(t => {
-                const allowed = matrix[fn.function_id] && matrix[fn.function_id][t];
-                return `<td style="padding:6px;text-align:center">
-                  <div onclick="togglePermission('${fn.function_id}','${t}',${!allowed})" 
-                    style="cursor:pointer;width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;
-                    background:${allowed?'var(--green-bg)':'var(--s2)'};color:${allowed?'var(--green)':'var(--tm)'}">${allowed?'✅':'—'}</div>
-                </td>`;
-              }).join('')}
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
+    renderPermGrid(el);
   } catch(e) {
     el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
   }
 }
 
-async function togglePermission(functionId, tierId, newAllowed) {
-  const label = functionId + ' × ' + tierId + ' → ' + (newAllowed ? 'ON' : 'OFF');
-  if (!confirm('เปลี่ยนสิทธิ์?\n' + label)) return;
-  try {
-    const resp = await api('update_permission', { function_id: functionId, tier_id: tierId, allowed: newAllowed });
-    toast(resp.message || label, 'success');
-    await renderAdminAccess();
-  } catch(e) { toast('เกิดข้อผิดพลาด', 'error'); }
+function renderPermGrid(el) {
+  const tiers = ['T1','T2','T3','T4','T5','T6','T7'];
+  const pendingCount = countPermChanges();
+  
+  el.innerHTML = `
+    <div style="padding:8px 12px;font-size:10px;color:var(--td)">กดเพื่อ toggle ON/OFF — กด Save เพื่อบันทึกทั้งหมด</div>
+    <div style="overflow-x:auto;padding:0 8px">
+      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
+        <thead>
+          <tr style="background:var(--s2)">
+            <th style="padding:8px;text-align:left;font-weight:600;position:sticky;left:0;background:var(--s2);z-index:1">Function</th>
+            ${tiers.map(t => `<th style="padding:8px;text-align:center;font-weight:600;min-width:36px">${t}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${_permFunctions.map(fn => `<tr style="border-bottom:1px solid var(--s2)">
+            <td style="padding:6px 8px;font-weight:500;position:sticky;left:0;background:var(--bg);z-index:1;font-size:10px" title="${fn.description||''}">${fn.function_name || fn.function_id}</td>
+            ${tiers.map(t => {
+              const allowed = _permMatrix[fn.function_id] && _permMatrix[fn.function_id][t];
+              const orig = _permOriginal[fn.function_id] && _permOriginal[fn.function_id][t];
+              const changed = !!allowed !== !!orig;
+              return `<td style="padding:6px;text-align:center">
+                <div onclick="togglePermLocal('${fn.function_id}','${t}')" 
+                  style="cursor:pointer;width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;
+                  background:${allowed?'var(--green-bg)':'var(--s2)'};color:${allowed?'var(--green)':'var(--tm)'};
+                  ${changed?'outline:2px solid var(--gold);outline-offset:-1px;':''}">${allowed?'✅':'—'}</div>
+              </td>`;
+            }).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:12px;display:flex;gap:8px;justify-content:center;position:sticky;bottom:0;background:var(--bg)">
+      ${pendingCount > 0 ? `
+        <button class="btn btn-gold" onclick="savePermBatch()" style="flex:1;max-width:200px">💾 Save (${pendingCount} changes)</button>
+        <button class="btn btn-outline" onclick="resetPermChanges()" style="flex:1;max-width:120px">↩️ Reset</button>
+      ` : `
+        <div style="font-size:11px;color:var(--td);padding:8px">✅ No pending changes</div>
+      `}
+    </div>`;
+}
+
+function togglePermLocal(functionId, tierId) {
+  if (!_permMatrix[functionId]) _permMatrix[functionId] = {};
+  _permMatrix[functionId][tierId] = !_permMatrix[functionId][tierId];
+  renderPermGrid(document.getElementById('adminAccessContent'));
+}
+
+function countPermChanges() {
+  let count = 0;
+  for (const fn of _permFunctions) {
+    for (const t of ['T1','T2','T3','T4','T5','T6','T7']) {
+      const now = !!(_permMatrix[fn.function_id] && _permMatrix[fn.function_id][t]);
+      const orig = !!(_permOriginal[fn.function_id] && _permOriginal[fn.function_id][t]);
+      if (now !== orig) count++;
+    }
+  }
+  return count;
+}
+
+function resetPermChanges() {
+  _permMatrix = JSON.parse(JSON.stringify(_permOriginal));
+  renderPermGrid(document.getElementById('adminAccessContent'));
+  toast('↩️ Reset แล้ว', 'info');
+}
+
+async function savePermBatch() {
+  const changes = [];
+  for (const fn of _permFunctions) {
+    for (const t of ['T1','T2','T3','T4','T5','T6','T7']) {
+      const now = !!(_permMatrix[fn.function_id] && _permMatrix[fn.function_id][t]);
+      const orig = !!(_permOriginal[fn.function_id] && _permOriginal[fn.function_id][t]);
+      if (now !== orig) changes.push({ function_id: fn.function_id, tier_id: t, allowed: now });
+    }
+  }
+  if (changes.length === 0) return;
+  if (!confirm(`บันทึก ${changes.length} รายการ?`)) return;
+
+  const el = document.getElementById('adminAccessContent');
+  const btn = el.querySelector('.btn-gold');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
+
+  let ok = 0, fail = 0;
+  for (const c of changes) {
+    try {
+      await api('update_permission', c);
+      ok++;
+    } catch(e) { fail++; }
+  }
+
+  toast(`✅ บันทึก ${ok} สำเร็จ${fail ? ` / ❌ ${fail} ล้มเหลว` : ''}`, fail ? 'warning' : 'success');
+  await renderAdminAccess();
 }
 
 // ─── A8: Department Mapping ──────────────────────────────────
