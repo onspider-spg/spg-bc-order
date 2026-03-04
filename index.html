@@ -2814,7 +2814,7 @@ async function handleProductImageFile(input) {
 
   // Validate
   if (!file.type.startsWith('image/')) { toast('กรุณาเลือกไฟล์รูปภาพ', 'error'); return; }
-  if (file.size > 5 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 5MB', 'error'); return; }
+  if (file.size > 500 * 1024) { toast('ไฟล์ใหญ่เกิน 500KB', 'error'); return; }
 
   const status = document.getElementById('prdUploadStatus');
   const preview = document.getElementById('imgPreview');
