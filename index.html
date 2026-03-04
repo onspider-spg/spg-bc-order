@@ -717,7 +717,7 @@ function loadMockData(role) {
   ];
   if (role === 'bc') {
     const deptId = S.session.dept_id;
-    const sc = deptId === 'bakery' ? ['cake','sauce'] : [deptId];
+    const sc = deptId === 'bakery' ? ['cake','sauce','tart','bread'] : [deptId];
     S.deptMapping = { module_role: deptId === 'bakery' ? 'bc_management' : 'bc_production', section_scope: sc };
   } else {
     S.deptMapping = { module_role: 'store', section_scope: [] };
@@ -1333,7 +1333,17 @@ function catEmoji(name) {
   if (n.includes('cake')) return '🎂';
   if (n.includes('sauce')) return '🍶';
   if (n.includes('baked') || n.includes('bakery')) return '🍞';
+  if (n.includes('tart')) return '🥧';
+  if (n.includes('bread')) return '🥖';
   if (n.includes('drink')) return '🧃';
+  return '📦';
+}
+
+function secEmoji(s) {
+  if (s === 'cake') return '🎂';
+  if (s === 'sauce') return '🫕';
+  if (s === 'tart') return '🥧';
+  if (s === 'bread') return '🥖';
   return '📦';
 }
 
@@ -2703,7 +2713,7 @@ async function renderProductEditScreen() {
   const channels = S._visOptions?.channels || [];
   
   const cats = S.categories || [];
-  const sections = ['cake', 'sauce'];
+  const sections = ['cake', 'sauce', 'tart', 'bread'];
   
   const imgUrl = isEdit ? (p.image_url || '') : '';
   
@@ -2746,7 +2756,7 @@ async function renderProductEditScreen() {
         <div class="form-group">
           <label class="form-label">Section (ทีมผลิต) *</label>
           <select class="form-input" id="prdSection">
-            ${sections.map(s => `<option value="${s}" ${isEdit && p.section_id===s?'selected':''}>${s === 'cake' ? '🎂 cake' : '🫕 sauce'}</option>`).join('')}
+            ${sections.map(s => `<option value="${s}" ${isEdit && p.section_id===s?'selected':''}>${secEmoji(s)} ${s}</option>`).join('')}
           </select>
         </div>
       </div>
