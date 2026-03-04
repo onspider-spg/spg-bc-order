@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <link rel="icon" href="favicon.ico" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>BC Order — Siam Palette Group</title>
@@ -291,6 +290,26 @@ textarea.form-input{resize:none;min-height:72px}
 .slip-row{display:flex;justify-content:space-between;padding:1px 0}
 .slip-foot{border-top:1px dashed #ccc;padding-top:8px;margin-top:10px;font-size:9px}
 @media print{body{background:#fff!important}.screen{display:none!important}#scr-bc-print{display:block!important;position:static!important;overflow:visible!important}.topbar,.bottomnav,.filter-bar,.bc-nav,.no-print,.scr-hdr,.filter-chips{display:none!important}.print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}.ptbl thead{display:table-header-group}.ptbl tr{page-break-inside:avoid}body.slip-mode #scr-bc-print{width:76mm;margin:0 auto;padding:0}body.slip-mode .slip-wrap{width:76mm;font-size:10px}body.slip-mode .slip-hd{font-size:11px}body.slip-mode .slip-row{font-size:10px}body.slip-mode .slip-sec{font-size:11px}body.slip-mode .slip-dept{font-size:9px}body.slip-mode .slip-foot{font-size:8px}}
+/* ─── Product Management Table ─── */
+.pm-filters{display:flex;gap:6px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;align-items:center}
+.pm-chip{padding:5px 10px;border-radius:8px;font-size:10px;font-weight:600;background:#e2e8f0;color:#64748b;cursor:pointer;white-space:nowrap}
+.pm-chip.active{background:var(--navy);color:#fff}
+.pm-search{flex:1;min-width:100px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;outline:none}
+.pm-stats{display:flex;gap:6px;padding:6px 12px;flex-wrap:wrap}
+.pm-stat{font-size:9px;padding:2px 8px;border-radius:6px;font-weight:600}
+.pm-tscroll{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);-webkit-overflow-scrolling:touch}
+.pm-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.pm-tbl thead th{background:#f1f5f9;padding:6px 4px;text-align:center;font-weight:700;font-size:9px;color:#64748b;position:sticky;top:0;z-index:2;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.pm-tbl thead th:nth-child(2){text-align:left;min-width:100px}
+.pm-tbl tbody td{padding:5px 4px;border-bottom:1px solid #f1f5f9;vertical-align:middle;text-align:center}
+.pm-tbl tbody td:nth-child(2){text-align:left;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-tbl tbody tr:hover{background:#f8fafc}
+.pm-tbl .sec-badge{font-size:8px;padding:2px 5px;border-radius:4px;font-weight:700;display:inline-block}
+.sec-sauce{background:#fef3c7;color:#92400e}.sec-cake{background:#fce7f3;color:#9d174d}.sec-tart{background:#ede9fe;color:#6d28d9}.sec-bread{background:#d1fae5;color:#065f46}
+.pm-tbl .vis-y{color:#16a34a;font-weight:700;font-size:11px}.pm-tbl .vis-n{color:#e2e8f0;font-size:10px}
+.pm-edit{font-size:9px;padding:3px 8px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-weight:600;cursor:pointer;border:none;white-space:nowrap}
+.pm-act{font-size:9px;padding:2px 6px;border-radius:6px;font-weight:700;cursor:pointer;border:none}
+.pm-act.on{background:#dcfce7;color:#16a34a}.pm-act.off{background:#fee2e2;color:#dc2626}
 </style>
 </head>
 <body>
@@ -1259,7 +1278,7 @@ function renderHomeDashboard() {
       </div>` : ''}
     </div>
     ${adminMenus}
-    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.3</div>
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.4</div>
   `;
 }
 
@@ -2474,7 +2493,7 @@ function renderBcHome() {
       </div>
     </div>
     ${bcAdminMenus}
-    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.3</div>`;
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.4</div>`;
 }
 function getBcAdminMenus() {
   const s = S.session || {};
@@ -2618,48 +2637,110 @@ async function renderAdminProducts() {
   const el = document.getElementById('adminProductsContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
-  // Reload products to get latest
   try { await loadProducts(); } catch(e) {}
   
-  const prods = S.products || [];
-  const active = prods.filter(p => p.is_active === true || p.is_active === 'TRUE');
-  const inactive = prods.filter(p => p.is_active !== true && p.is_active !== 'TRUE');
+  // Load all visibility entries (one call, cached)
+  if (!S._allVis || S._allVisStale) {
+    try {
+      const vResp = await api('get_product_visibility');
+      S._allVis = vResp.data || [];
+      S._allVisStale = false;
+    } catch(e) { S._allVis = []; }
+  }
   
-  // Search state
+  // Load channels (cached)
+  if (!S._visCols) {
+    try {
+      const cResp = await api('get_visibility_options');
+      S._visCols = (cResp.data || []).sort((a,b) => {
+        const so = ['MNG','ISH','GB','TMC'];
+        const do2 = ['dessert','drink','front'];
+        return (so.indexOf(a.store_id) - so.indexOf(b.store_id)) || (do2.indexOf(a.dept_id) - do2.indexOf(b.dept_id));
+      });
+    } catch(e) { S._visCols = []; }
+  }
+  
+  // Build vis lookup: { "PRD-001": Set(["MNG|dessert",...]) }
+  const visMap = {};
+  (S._allVis || []).forEach(v => {
+    if (!v.is_active) return;
+    if (!visMap[v.product_id]) visMap[v.product_id] = new Set();
+    visMap[v.product_id].add(v.store_id + '|' + v.dept_id);
+  });
+  
+  const prods = S.products || [];
+  const isAct = p => p.is_active === true || p.is_active === 'TRUE';
+  const active = prods.filter(isAct);
+  const inactive = prods.filter(p => !isAct(p));
+  
   if (!S.adminProductSearch) S.adminProductSearch = '';
   if (!S.adminProductTab) S.adminProductTab = 'active';
+  if (!S.adminProductSec) S.adminProductSec = 'all';
   
   const tab = S.adminProductTab;
-  const list = tab === 'active' ? active : inactive;
+  const secFilter = S.adminProductSec;
+  let list = tab === 'active' ? active : inactive;
+  if (secFilter !== 'all') list = list.filter(p => p.section_id === secFilter);
   const q = S.adminProductSearch.toLowerCase();
-  const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
+  if (q) list = list.filter(p => p.product_name.toLowerCase().includes(q));
+  list.sort((a,b) => (a.sort_order||999) - (b.sort_order||999));
+  
+  const secCounts = {};
+  (tab === 'active' ? active : inactive).forEach(p => { secCounts[p.section_id] = (secCounts[p.section_id]||0) + 1; });
+  
+  const cols = S._visCols || [];
+  const shortD = d => d === 'dessert' ? 'des' : d === 'drink' ? 'drk' : d === 'front' ? 'frt' : d;
   
   el.innerHTML = `
-    <div style="display:flex;gap:8px;padding:12px;align-items:center">
+    <div style="display:flex;gap:8px;padding:10px 12px;align-items:center;flex-wrap:wrap">
       <div class="dpill ${tab==='active'?'active':''}" onclick="S.adminProductTab='active';renderAdminProducts()">Active (${active.length})</div>
       <div class="dpill ${tab==='inactive'?'active':''}" onclick="S.adminProductTab='inactive';renderAdminProducts()">Inactive (${inactive.length})</div>
       <div style="flex:1"></div>
       <button class="btn btn-gold btn-sm" onclick="showAddProductForm()">+ Add</button>
     </div>
-    <div class="search-wrap"><input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()"></div>
-    <div class="pad" style="padding-top:0">
-      ${filtered.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--td);font-size:12px">ไม่พบสินค้า</div>' :
-      filtered.map(p => {
-        const isAct = p.is_active === true || p.is_active === 'TRUE';
-        return `<div class="card" style="margin-bottom:4px">
-          <div class="card-row">
-            <div class="card-icon" style="background:var(--s2)">${prodEmoji(p.product_name)}</div>
-            <div class="card-body">
-              <div class="card-title">${p.product_name}</div>
-              <div class="card-desc">${p.cat_id||p.category_id||'-'} · ${p.unit} · min:${p.min_order} step:${p.order_step||1} · ${p.section_id||'-'}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center">
-              <div onclick="showEditProductForm('${p.product_id}')" style="cursor:pointer;font-size:9px;padding:4px 8px;border-radius:8px;background:var(--blue-bg);color:var(--blue);font-weight:600">✏️</div>
-              <div onclick="toggleProduct('${p.product_id}',${!isAct})" style="cursor:pointer;font-size:9px;padding:4px 10px;border-radius:10px;background:${isAct?'var(--green-bg)':'var(--red-bg)'};color:${isAct?'var(--green)':'var(--red)'};font-weight:600">${isAct?'✅ Active':'❌ Off'}</div>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
+    <div class="pm-filters">
+      <div class="pm-chip ${secFilter==='all'?'active':''}" onclick="S.adminProductSec='all';renderAdminProducts()">ทั้งหมด</div>
+      ${['sauce','cake','tart','bread'].map(s => 
+        `<div class="pm-chip ${secFilter===s?'active':''}" onclick="S.adminProductSec='${s}';renderAdminProducts()">${secEmoji(s)} ${s} ${secCounts[s]?'('+secCounts[s]+')':''}</div>`
+      ).join('')}
+      <input class="pm-search" placeholder="🔍 ค้นหา..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()">
+    </div>
+    <div style="padding:4px 12px;font-size:10px;color:var(--td)">แสดง ${list.length} รายการ · scroll ↔ ดู visibility</div>
+    <div class="pm-tscroll">
+      <table class="pm-tbl">
+        <thead><tr>
+          <th style="width:28px">#</th>
+          <th>ชื่อสินค้า</th>
+          <th>Section</th>
+          <th>Unit</th>
+          <th>Min</th>
+          <th>Stock</th>
+          ${cols.map(c => `<th>${c.store_id}<br>${shortD(c.dept_id)}</th>`).join('')}
+          <th>สถานะ</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          ${list.length === 0 ? `<tr><td colspan="${7+cols.length+1}" style="padding:30px;color:var(--td)">ไม่พบสินค้า</td></tr>` :
+          list.map((p, i) => {
+            const pAct = isAct(p);
+            const pVis = visMap[p.product_id] || new Set();
+            return `<tr>
+              <td style="color:#94a3b8;font-size:9px">${p.sort_order || i+1}</td>
+              <td title="${p.product_name}">${p.product_name}</td>
+              <td><span class="sec-badge sec-${p.section_id||'sauce'}">${p.section_id||'-'}</span></td>
+              <td style="font-size:9px">${p.unit||'pcs'}</td>
+              <td>${p.min_order||1}</td>
+              <td>${p.allow_stock ? '✓' : '—'}</td>
+              ${cols.map(c => {
+                const has = pVis.has(c.store_id + '|' + c.dept_id);
+                return `<td class="${has?'vis-y':'vis-n'}">${has?'✅':'—'}</td>`;
+              }).join('')}
+              <td><button class="pm-act ${pAct?'on':'off'}" onclick="toggleProduct('${p.product_id}',${!pAct})">${pAct?'✅':'❌'}</button></td>
+              <td><button class="pm-edit" onclick="showEditProductForm('${p.product_id}')">✏️</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
     </div>`;
 }
 
@@ -2937,6 +3018,7 @@ async function submitProductEdit(productId) {
     if (pid && visibility.length > 0) {
       try {
         await api('update_product_visibility', { product_id: pid, visibility });
+        S._allVisStale = true; // refresh table vis data
       } catch(e) { console.warn('Visibility update failed:', e); }
     }
     
