@@ -298,6 +298,9 @@ textarea.form-input{resize:none;min-height:72px}
 .pm-tscroll{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 240px);-webkit-overflow-scrolling:touch}
 .pm-tbl{width:100%;border-collapse:collapse;font-size:13px}
 .pm-tbl thead th{background:#1e3a5f;color:#fff;padding:8px 6px;text-align:center;font-weight:700;font-size:11px;position:sticky;top:0;z-index:2;white-space:nowrap}
+.pm-tbl thead th.sortable{cursor:pointer;user-select:none}
+.pm-tbl thead th.sortable:hover{background:#2d4f7a}
+.pm-tbl thead th.sorted{background:#f59e0b;color:#1e293b}
 .pm-tbl thead th:nth-child(2){text-align:left;min-width:130px}
 .pm-tbl tbody td{padding:8px 6px;border-bottom:1px solid #f1f5f9;vertical-align:middle;text-align:center}
 .pm-tbl tbody td:nth-child(2){text-align:left;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
@@ -2681,7 +2684,8 @@ async function renderAdminProducts() {
   if (!S.adminProductSearch) S.adminProductSearch = '';
   if (!S.adminProductTab) S.adminProductTab = 'active';
   if (!S.adminProductSec) S.adminProductSec = 'all';
-  if (!S._pmDirty) S._pmDirty = {}; // track changes: { "PRD-001|MNG|dessert": true/false }
+  if (!S._pmDirty) S._pmDirty = {}; // track changes
+  if (!S._pmSort) S._pmSort = { col: 'sort_order', dir: 'asc' };
   
   const tab = S.adminProductTab;
   const secFilter = S.adminProductSec;
@@ -2689,7 +2693,19 @@ async function renderAdminProducts() {
   if (secFilter !== 'all') list = list.filter(p => p.section_id === secFilter);
   const q = S.adminProductSearch.toLowerCase();
   if (q) list = list.filter(p => p.product_name.toLowerCase().includes(q));
-  list.sort((a,b) => (a.sort_order||999) - (b.sort_order||999));
+  list.sort((a,b) => {
+    const sc = S._pmSort;
+    let va, vb;
+    switch(sc.col) {
+      case 'name': va = (a.product_name||'').toLowerCase(); vb = (b.product_name||'').toLowerCase(); break;
+      case 'section': va = a.section_id||''; vb = b.section_id||''; break;
+      case 'stock': va = a.allow_stock ? 1 : 0; vb = b.allow_stock ? 1 : 0; break;
+      case 'active': va = isActFn(a) ? 1 : 0; vb = isActFn(b) ? 1 : 0; break;
+      default: va = a.sort_order||999; vb = b.sort_order||999;
+    }
+    const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+    return sc.dir === 'asc' ? cmp : -cmp;
+  });
   
   const secCounts = {};
   (tab === 'active' ? active : inactive).forEach(p => { secCounts[p.section_id] = (secCounts[p.section_id]||0) + 1; });
@@ -2697,6 +2713,9 @@ async function renderAdminProducts() {
   const cols = S._visCols || [];
   const shortD = d => d === 'dessert' ? 'des' : d === 'drink' ? 'drk' : d === 'front' ? 'frt' : d;
   const dirtyCount = Object.keys(S._pmDirty).length;
+  const sc = S._pmSort;
+  const sortIcon = (col) => sc.col === col ? (sc.dir === 'asc' ? ' ↑' : ' ↓') : '';
+  const sortCls = (col) => `sortable${sc.col===col?' sorted':''}`;
   
   el.innerHTML = `
     <div style="display:flex;gap:8px;padding:10px 12px;align-items:center;flex-wrap:wrap">
@@ -2712,16 +2731,16 @@ async function renderAdminProducts() {
       ).join('')}
       <input class="pm-search" placeholder="🔍 ค้นหาชื่อสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()">
     </div>
-    <div style="padding:6px 12px;font-size:11px;color:var(--td)">แสดง ${list.length} รายการ${cols.length ? ' · scroll ↔ ดู visibility · กด checkbox เพื่อเปิด/ปิดร้าน' : ''}</div>
+    <div style="padding:6px 12px;font-size:11px;color:var(--td)">แสดง ${list.length} รายการ${cols.length ? ' · scroll ↔ ดู visibility · กด checkbox เพื่อเปิด/ปิดร้าน' : ''} · กดหัวคอลัมน์เพื่อ sort</div>
     <div class="pm-tscroll">
       <table class="pm-tbl">
         <thead><tr>
-          <th style="width:30px">#</th>
-          <th>ชื่อสินค้า</th>
-          <th>Section</th>
-          <th>Stock</th>
+          <th class="${sortCls('sort_order')}" onclick="pmSort('sort_order')" style="width:30px">#${sortIcon('sort_order')}</th>
+          <th class="${sortCls('name')}" onclick="pmSort('name')">ชื่อสินค้า${sortIcon('name')}</th>
+          <th class="${sortCls('section')}" onclick="pmSort('section')">Section${sortIcon('section')}</th>
+          <th class="${sortCls('stock')}" onclick="pmSort('stock')">Stock${sortIcon('stock')}</th>
           ${cols.map(c => `<th style="min-width:42px">${c.store_id}<br>${shortD(c.dept_id)}</th>`).join('')}
-          <th>สถานะ</th>
+          <th class="${sortCls('active')}" onclick="pmSort('active')">สถานะ${sortIcon('active')}</th>
           <th>แก้ไข</th>
         </tr></thead>
         <tbody>
@@ -2759,6 +2778,16 @@ async function renderAdminProducts() {
         <button class="pm-save-btn" onclick="pmSaveVisibility()">💾 Save (${dirtyCount})</button>
       </div>
     </div>` : ''}`;
+}
+
+// Sort table column
+function pmSort(col) {
+  if (S._pmSort.col === col) {
+    S._pmSort.dir = S._pmSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    S._pmSort = { col, dir: 'asc' };
+  }
+  renderAdminProducts();
 }
 
 // Toggle visibility checkbox in table
