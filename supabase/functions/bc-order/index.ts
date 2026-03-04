@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // BC Order Module — Supabase Edge Function
-// Version 6.2 | Dashboard scope filtering + return order_id optional
+// Version 6.5 | Image upload + Module access override + Notif server sync
 // Siam Palette Group
 // ═══════════════════════════════════════════════════════════════
 // Deploy: supabase functions deploy bc-order --no-verify-jwt
@@ -1774,6 +1774,40 @@ async function h_createProduct(session: any, body: any) {
   return json({ success: true, message: `✅ เพิ่มสินค้า "${product_name}" เรียบร้อย`, data: { product_id: productId } });
 }
 
+async function h_uploadImage(session: any, body: any) {
+  if (!isAdmin(session)) return json({ success: false, error: 'ADMIN_ONLY' }, 403);
+
+  const { base64, filename, content_type } = body;
+  if (!base64 || !filename) return json({ success: false, error: 'MISSING_FIELDS', message: 'base64 and filename required' }, 400);
+
+  // Decode base64 to Uint8Array
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+  // Unique filename: timestamp + original name
+  const ext = filename.split('.').pop() || 'jpg';
+  const storagePath = `products/${Date.now()}_${filename.replace(/[^a-zA-Z0-9._-]/g, '')}`;
+
+  const { data, error } = await db.storage
+    .from('product-images')
+    .upload(storagePath, bytes, {
+      contentType: content_type || 'image/jpeg',
+      upsert: false,
+    });
+
+  if (error) return json({ success: false, error: 'UPLOAD_FAILED', message: error.message }, 500);
+
+  // Get public URL
+  const { data: urlData } = db.storage.from('product-images').getPublicUrl(storagePath);
+
+  return json({
+    success: true,
+    message: '✅ อัปโหลดรูปเรียบร้อย',
+    data: { url: urlData.publicUrl, path: storagePath },
+  });
+}
+
 async function h_updateProduct(session: any, body: any) {
   if (!isAdmin(session)) return json({ success: false, error: 'ADMIN_ONLY' }, 403);
 
@@ -1964,6 +1998,45 @@ async function h_removeModuleAccess(session: any, body: any) {
   return json({ success: true, message: `✅ ${account_id} → ใช้ Global Tier` });
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// 4C. NOTIFICATION READ STATE (cross-device persistence)
+// Table: bc_user_notif_state (user_id PK, dismissed_map jsonb, hidden_ids jsonb)
+// ═══════════════════════════════════════════════════════════════
+
+async function h_getNotifState(session: any) {
+  const { data } = await db.from('bc_user_notif_state')
+    .select('dismissed_map, hidden_ids')
+    .eq('user_id', session.user_id)
+    .single();
+
+  return json({
+    success: true,
+    data: data || { dismissed_map: {}, hidden_ids: [] },
+  });
+}
+
+async function h_saveNotifState(session: any, body: any) {
+  const { dismissed_map, hidden_ids } = body;
+  if (!dismissed_map && !hidden_ids) return json({ success: false, error: 'MISSING_FIELDS' }, 422);
+
+  const { error } = await db.from('bc_user_notif_state')
+    .upsert({
+      user_id: session.user_id,
+      dismissed_map: dismissed_map || {},
+      hidden_ids: hidden_ids || [],
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+  if (error) return json({ success: false, error: error.message }, 500);
+  return json({ success: true });
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// 5. MAIN ROUTER
+// ═══════════════════════════════════════════════════════════════
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
 
@@ -2046,12 +2119,17 @@ Deno.serve(async (req) => {
       case 'update_config':        return await h_updateConfig(session, body);
       case 'update_product':       return await h_updateProduct(session, body);
       case 'create_product':       return await h_createProduct(session, body);
+      case 'upload_image':         return await h_uploadImage(session, body);
       case 'get_product_visibility':  return await h_getProductVisibility(session, params);
       case 'update_product_visibility': return await h_updateProductVisibility(session, body);
       case 'get_audit_log':        return await h_getAuditLog(session, params);
       case 'get_module_access':    return await h_getModuleAccess(session);
       case 'set_module_access':    return await h_setModuleAccess(session, body);
       case 'remove_module_access': return await h_removeModuleAccess(session, body);
+      case 'get_notif_state':       return await h_getNotifState(session);
+      case 'save_notif_state':      return await h_saveNotifState(session, body);
+      case 'get_notif_state':      return await h_getNotifState(session);
+      case 'save_notif_state':     return await h_saveNotifState(session, body);
 
       default:
         return json({ success: false, error: 'UNKNOWN_ACTION', message: 'Unknown action: ' + action }, 400);

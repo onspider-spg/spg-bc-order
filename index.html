@@ -438,7 +438,7 @@ async function init() {
       }
       
       await Promise.all([
-        loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(), loadReturns(),
+        loadCategories(), loadProducts(), loadOrders(), loadNotifications(), loadMyPermissions(), loadReturns(), loadNotifState(),
       ]);
       await loadDashboard();  // after orders so fallback can compute from S.orders
       await routeToHome();
@@ -2705,12 +2705,19 @@ async function renderProductEditScreen() {
         <div id="imgPreview" style="width:120px;height:120px;border-radius:16px;margin:0 auto 8px;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed var(--b2)">
           ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(isEdit ? p.product_name : '')}'" />` : `<span style="font-size:48px">${isEdit ? prodEmoji(p.product_name) : '📦'}</span>`}
         </div>
+        <label style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:4px 12px;background:var(--blue-bg);color:var(--blue);border-radius:8px;cursor:pointer">
+          📷 เลือกรูป
+          <input type="file" accept="image/*" id="prdImageFile" style="display:none" onchange="handleProductImageFile(this)">
+        </label>
+        <div id="prdUploadStatus" style="font-size:9px;color:var(--td);margin-top:4px"></div>
       </div>
-      
-      <div class="form-group">
-        <label class="form-label">🖼️ Image URL</label>
-        <input class="form-input" id="prdImage" placeholder="https://example.com/image.jpg" value="${imgUrl}" oninput="previewProductImage(this.value)">
-        <div style="font-size:9px;color:var(--td);margin-top:2px">วาง URL รูปสินค้า จะแสดงในหน้าสั่งของ + Production Sheet</div>
+
+      <input type="hidden" id="prdImage" value="${imgUrl}">
+      <div style="margin-bottom:12px">
+        <div onclick="document.getElementById('prdUrlToggle').style.display=document.getElementById('prdUrlToggle').style.display==='none'?'block':'none'" style="font-size:9px;color:var(--blue);cursor:pointer;text-align:center">หรือวาง URL รูปแทน ▾</div>
+        <div id="prdUrlToggle" style="display:none;margin-top:4px">
+          <input class="form-input" id="prdImageUrl" placeholder="https://example.com/image.jpg" value="${imgUrl}" oninput="document.getElementById('prdImage').value=this.value;previewProductImage(this.value)" style="font-size:10px">
+        </div>
       </div>
       
       <div class="form-group">
@@ -2808,6 +2815,57 @@ function previewProductImage(url) {
   } else {
     const name = document.getElementById('prdName')?.value || '';
     preview.innerHTML = `<span style="font-size:48px">${prodEmoji(name) || '📦'}</span>`;
+  }
+}
+
+async function handleProductImageFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  // Validate
+  if (!file.type.startsWith('image/')) { toast('กรุณาเลือกไฟล์รูปภาพ', 'error'); return; }
+  if (file.size > 5 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 5MB', 'error'); return; }
+
+  const status = document.getElementById('prdUploadStatus');
+  const preview = document.getElementById('imgPreview');
+
+  // Preview locally first
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover" />`;
+  };
+  reader.readAsDataURL(file);
+
+  // Upload to server
+  status.innerHTML = '⏳ กำลังอัปโหลด...';
+  try {
+    // Read as base64
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(',')[1]);
+      r.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้'));
+      r.readAsDataURL(file);
+    });
+
+    const resp = await api('upload_image', {
+      base64,
+      filename: file.name,
+      content_type: file.type,
+    });
+
+    if (resp.success && resp.data?.url) {
+      document.getElementById('prdImage').value = resp.data.url;
+      const urlInput = document.getElementById('prdImageUrl');
+      if (urlInput) urlInput.value = resp.data.url;
+      status.innerHTML = '✅ อัปโหลดเรียบร้อย';
+      status.style.color = 'var(--green)';
+    } else {
+      status.innerHTML = '❌ ' + (resp.message || 'อัปโหลดไม่สำเร็จ');
+      status.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    status.innerHTML = '❌ ' + e.message;
+    status.style.color = 'var(--red)';
   }
 }
 
@@ -4902,57 +4960,98 @@ function printSlip80() {
 
 // ─── NOTIFICATIONS CHECK ─────────────────────────────────────
 // ─── NOTIFICATION DISMISS SYSTEM ─────────────────────────────
-// v6.4.4.4: Dismissed = {notif_id: timestamp} for 7-day expiry
-function getDismissedMap() {
+// v6.4.4.5: Server-synced via bc_user_notif_state (cross-device)
+// Memory = source of truth during session
+// Server = persistence across devices/logins
+// localStorage = fallback cache
+
+// In-memory state (loaded on init)
+let _notifDismissedMap = {};  // {notif_id: timestamp}
+let _notifHiddenIds = [];     // [notif_id, ...]
+let _notifStateLoaded = false;
+
+async function loadNotifState() {
+  // 1) Load from localStorage as immediate cache
   try {
-    const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
-    const raw = JSON.parse(localStorage.getItem(key) || '{}');
-    // Migrate: old array format → new object format
-    if (Array.isArray(raw)) {
-      const map = {};
-      raw.forEach(id => { map[id] = Date.now(); });
-      saveDismissedMap(map);
-      return map;
+    const lsKey = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
+    const raw = JSON.parse(localStorage.getItem(lsKey) || '{}');
+    _notifDismissedMap = Array.isArray(raw) ? {} : raw;
+  } catch { _notifDismissedMap = {}; }
+  try {
+    const hKey = 'bc_hidden_notifs_' + (S.session?.user_id || 'anon');
+    _notifHiddenIds = JSON.parse(localStorage.getItem(hKey) || '[]');
+  } catch { _notifHiddenIds = []; }
+
+  // 2) Fetch from server and merge
+  try {
+    const resp = await api('get_notif_state');
+    if (resp.success && resp.data) {
+      const serverMap = resp.data.dismissed_map || {};
+      const serverHidden = resp.data.hidden_ids || [];
+      // Merge: keep whichever has the newer timestamp
+      Object.keys(serverMap).forEach(id => {
+        if (!_notifDismissedMap[id] || serverMap[id] > _notifDismissedMap[id]) {
+          _notifDismissedMap[id] = serverMap[id];
+        }
+      });
+      // Merge hidden: union
+      serverHidden.forEach(id => {
+        if (!_notifHiddenIds.includes(id)) _notifHiddenIds.push(id);
+      });
+      // Save merged back to localStorage
+      _saveNotifToLocalStorage();
     }
-    return raw;
-  } catch { return {}; }
+  } catch(e) { console.warn('[notifState] server load failed, using localStorage:', e); }
+  _notifStateLoaded = true;
 }
 
-function saveDismissedMap(map) {
+function _saveNotifToLocalStorage() {
   try {
-    const key = 'bc_dismissed_notifs_' + (S.session?.user_id || 'anon');
-    localStorage.setItem(key, JSON.stringify(map));
+    const uid = S.session?.user_id || 'anon';
+    localStorage.setItem('bc_dismissed_notifs_' + uid, JSON.stringify(_notifDismissedMap));
+    localStorage.setItem('bc_hidden_notifs_' + uid, JSON.stringify(_notifHiddenIds));
   } catch {}
 }
 
-// Compat wrapper: returns array of dismissed IDs (still within 7 days)
+function _syncNotifToServer() {
+  // Fire and forget — non-blocking
+  api('save_notif_state', {
+    dismissed_map: _notifDismissedMap,
+    hidden_ids: _notifHiddenIds,
+  }).catch(e => console.warn('[notifState] server sync failed:', e));
+}
+
+function getDismissedMap() {
+  return _notifDismissedMap;
+}
+
+function saveDismissedMap(map) {
+  _notifDismissedMap = map;
+  _saveNotifToLocalStorage();
+  _syncNotifToServer();
+}
+
 function getDismissedIds() {
-  const map = getDismissedMap();
+  const map = _notifDismissedMap;
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
   return Object.keys(map).filter(id => (now - map[id]) < SEVEN_DAYS);
 }
 
-// Hidden = permanently deleted by user
 function getHiddenIds() {
-  try {
-    const key = 'bc_hidden_notifs_' + (S.session?.user_id || 'anon');
-    return JSON.parse(localStorage.getItem(key) || '[]');
-  } catch { return []; }
+  return _notifHiddenIds;
 }
 
 function saveHiddenIds(ids) {
-  try {
-    const key = 'bc_hidden_notifs_' + (S.session?.user_id || 'anon');
-    localStorage.setItem(key, JSON.stringify(ids));
-  } catch {}
+  _notifHiddenIds = ids;
+  _saveNotifToLocalStorage();
+  _syncNotifToServer();
 }
 
 function saveDismissedIds(ids) {
-  // Convert array calls to map format (set timestamp = now for new entries)
-  const map = getDismissedMap();
-  ids.forEach(id => { if (!map[id]) map[id] = Date.now(); });
-  saveDismissedMap(map);
+  ids.forEach(id => { if (!_notifDismissedMap[id]) _notifDismissedMap[id] = Date.now(); });
+  _saveNotifToLocalStorage();
+  _syncNotifToServer();
 }
 
 // v6.4.4: Generate live notifications from pending orders & returns
