@@ -2673,16 +2673,20 @@ async function renderProductEditScreen() {
       if (resp.success) S._editVisibility = resp.data || [];
     } catch(e) {}
   }
+
+  // Load visibility options from DB (stores × depts that can order)
+  if (!S._visOptions) {
+    el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+    try {
+      const resp = await api('get_visibility_options');
+      if (resp.success) S._visOptions = resp.data;
+    } catch(e) {}
+  }
+  const visStores = S._visOptions?.stores || [];
+  const visDepts = S._visOptions?.depts || [];
   
   const cats = S.categories || [];
   const sections = ['cake', 'sauce'];
-  const stores = [
-    { id:'MNG', name:'🥭 Mango Coco', depts:['dessert','drink'] },
-    { id:'ISH', name:'🍣 Issho Cafe', depts:['dessert','drink'] },
-    { id:'GB',  name:'🥞 Golden Brown', depts:['dessert','drink'] },
-    { id:'TMC', name:'🧀 Melting Cheese', depts:['dessert','drink'] },
-    { id:'RW',  name:'🍜 Red Wok', depts:['dessert','drink'] },
-  ];
   
   const imgUrl = isEdit ? (p.image_url || '') : '';
   
@@ -2769,16 +2773,18 @@ async function renderProductEditScreen() {
     <div class="sec-hd">👁️ ร้านที่เห็นสินค้านี้</div>
     <div class="pad" style="padding-top:0">
       <div style="font-size:10px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้</div>
-      ${stores.map(store => {
-        return store.depts.map(dept => {
-          const vis = S._editVisibility.find(v => v.store_id === store.id && v.dept_id === dept);
+      ${visStores.length === 0 || visDepts.length === 0
+        ? '<div style="padding:12px;color:var(--red);font-size:11px">⚠️ ไม่พบร้าน/แผนกที่เปิดใช้งาน — ตรวจสอบ Department Mapping</div>'
+        : visStores.map(store => {
+        return visDepts.map(dept => {
+          const vis = S._editVisibility.find(v => v.store_id === store.store_id && v.dept_id === dept);
           const checked = vis ? vis.is_active : (!isEdit); // new product = all checked by default
           return `
           <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2)">
-            <input type="checkbox" id="vis_${store.id}_${dept}" ${checked ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold)">
-            <label for="vis_${store.id}_${dept}" style="flex:1;font-size:12px;cursor:pointer">
-              <span style="font-weight:600">${store.name}</span>
-              <span style="color:var(--td);font-size:10px"> · ${dept}</span>
+            <input type="checkbox" id="vis_${store.store_id}_${dept}" ${checked ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold)">
+            <label for="vis_${store.store_id}_${dept}" style="flex:1;font-size:12px;cursor:pointer">
+              <span style="font-weight:600">${getStoreName(store.store_id)}</span>
+              <span style="color:var(--td);font-size:10px"> · ${getDeptName(dept)}</span>
             </label>
           </div>`;
         }).join('');
@@ -2883,12 +2889,12 @@ async function submitProductEdit(productId) {
   
   if (isEdit) body.product_id = productId;
   
-  // Collect visibility
-  const stores = ['MNG','ISH','GB','TMC','RW'];
-  const depts = ['dessert','drink'];
+  // Collect visibility from dynamic options
+  const visStores = (S._visOptions?.stores || []).map(s => s.store_id);
+  const visDepts = S._visOptions?.depts || [];
   const visibility = [];
-  stores.forEach(sid => {
-    depts.forEach(dept => {
+  visStores.forEach(sid => {
+    visDepts.forEach(dept => {
       const cb = document.getElementById('vis_' + sid + '_' + dept);
       if (cb) {
         visibility.push({ store_id: sid, dept_id: dept, is_active: cb.checked });
