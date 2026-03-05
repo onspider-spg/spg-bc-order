@@ -4058,7 +4058,7 @@ async function renderAdminTopProducts() {
     const trend = d.dailyTrend || [];
     if (trend.length > 0) {
       const maxDay = Math.max(...trend.map(t => t.qty), 1);
-      const recentTrend = trend.slice(-Math.min(S.topProdDays, 14));
+      const recentTrend = trend.slice(-14);
       html += `<div class="sec-hd">📈 แนวโน้มการสั่งรายวัน</div>
         <div class="pad" style="padding-top:0;overflow-x:auto">
           <div style="display:flex;align-items:flex-end;gap:3px;height:120px;min-width:${recentTrend.length * 24}px">`;
