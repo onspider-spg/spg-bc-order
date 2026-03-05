@@ -1690,7 +1690,7 @@ async function renderOrders() {
   
   // v6.6.1: date range state
   if (!S.orderDash) S.orderDash = { from: daysAgoStr(14), to: todaySydney(), store: 'ALL' };
-  const isMgmt = S.role === 'bc' || S.session?.access_level === 'super_admin' || S.session?.access_level === 'admin';
+  const isMgmt = isManagementUser();
   
   // Date range picker
   document.getElementById('orderDateRange').innerHTML = buildDashFilterBar({
@@ -2337,17 +2337,17 @@ async function renderReturnDashboard() {
 
     const d = resp.data;
     const bs = d.byStatus || {};
-    const isMgmt = d.is_management;
+    const isMgmt = isManagementUser();
 
     // Filter bar
+    const rFrom = d.from_date || from;
+    const rTo = d.to_date || to;
     let html = buildDashFilterBar({
       stateKey: 'returnDash', renderFn: 'renderReturnDashboard',
-      fromDate: d.from_date, toDate: d.to_date, storeId: store, isMgmt,
+      fromDate: rFrom, toDate: rTo, storeId: store, isMgmt,
     });
-
-    // Update state with actual dates from backend
-    S.returnDash.from = d.from_date;
-    S.returnDash.to = d.to_date;
+    S.returnDash.from = rFrom;
+    S.returnDash.to = rTo;
 
     // Summary cards
     html += `
@@ -3774,19 +3774,20 @@ async function renderAdminWasteDashboard() {
     
     const d = resp.data;
     const sm = d.summary;
-    const isMgmt = d.is_management;
+    const isMgmt = isManagementUser();
     const reasonColors = { Expired:'#ef4444', Damaged:'#f97316', Return:'#8b5cf6', Other:'#6b7280' };
     const reasonLabels = { Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
     
     // Filter bar
+    // Use backend dates if available, else use frontend state
+    const wFrom = d.from_date || from;
+    const wTo = d.to_date || to;
     let html = buildDashFilterBar({
       stateKey: 'wasteDash', renderFn: 'renderAdminWasteDashboard',
-      fromDate: d.from_date, toDate: d.to_date, storeId: store, isMgmt,
+      fromDate: wFrom, toDate: wTo, storeId: store, isMgmt,
     });
-    
-    // Update state with actual dates from backend (may be capped)
-    S.wasteDash.from = d.from_date;
-    S.wasteDash.to = d.to_date;
+    S.wasteDash.from = wFrom;
+    S.wasteDash.to = wTo;
     
     // Summary cards
     const totalDays = Math.max(1, Math.round((new Date(d.to_date) - new Date(d.from_date)) / 86400000) + 1);
@@ -3919,7 +3920,7 @@ async function renderAdminTopProducts() {
   // v6.6.1: date range state
   if (!S.topProdDash) S.topProdDash = { from: daysAgoStr(30), to: todaySydney(), store: 'ALL' };
   const { from: tpFrom, to: tpTo, store: tpStore } = S.topProdDash;
-  const tpIsMgmt = S.role === 'bc' || S.session?.access_level === 'super_admin' || S.session?.access_level === 'admin';
+  const tpIsMgmt = isManagementUser();
   
   try {
     const qp = { from_date: tpFrom, to_date: tpTo };
@@ -5821,6 +5822,15 @@ function daysAgoStr(n) {
   const d = sydneyNow();
   d.setDate(d.getDate() - n);
   return formatDate(d);
+}
+
+
+// v6.6.1: Shared management check
+function isManagementUser() {
+  const dm = S.deptMapping;
+  return S.role === 'bc' || 
+    (dm && (dm.module_role === 'bc_management' || dm.module_role === 'all')) ||
+    S.session?.access_level === 'super_admin' || S.session?.access_level === 'admin';
 }
 
 function buildDashFilterBar(opts) {
