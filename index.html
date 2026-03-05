@@ -622,11 +622,14 @@ async function loadDashboard() {
 }
 
 async function loadOrders(status = '') {
-  const params = { limit: '100' };
+  const params = { limit: '200' };
   if (status && status !== 'all') params.status = status;
   
-  // S-06: Store users see last 14 days by default
-  if (S.role === 'store') {
+  // v6.6.1: Use date range from state if available
+  if (S.orderDash) {
+    params.date_from = S.orderDash.from;
+    params.date_to = S.orderDash.to;
+  } else if (S.role === 'store') {
     const d = sydneyNow();
     d.setDate(d.getDate() - 14);
     params.date_from = formatDate(d);
@@ -862,6 +865,7 @@ function renderApp() {
         <div class="topbar-back" onclick="showScreen('home')">←</div>
         <div class="topbar-title">ประวัติออเดอร์</div>
       </div>
+      <div id="orderDateRange"></div>
       <div class="filter-bar" id="orderFilters" style="padding-top:8px"></div>
       <div class="content" id="orderList"></div>
     </div>
@@ -933,13 +937,17 @@ function renderApp() {
         <div class="topbar-title" style="color:var(--blue)">📋 ออเดอร์<div class="topbar-sub" id="bcOrderSub"></div></div>
         <div class="topbar-action" onclick="showScreen('bc-print')" title="พิมพ์">🖨️</div>
       </div>
-      <div style="padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <label style="font-size:11px;color:var(--td);white-space:nowrap">📅 ส่ง:</label>
-        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px;min-width:120px" onchange="S.bcDateFilter=this.value;renderBcOrderFilters();renderBcOrderList()" id="bcDateInput" onclick="this.showPicker?.()">
-        <div style="display:flex;gap:4px">
-          <div class="filter-chip" style="font-size:10px;padding:4px 8px" onclick="setBcDate('today')">วันนี้</div>
-          <div class="filter-chip" style="font-size:10px;padding:4px 8px" onclick="setBcDate('tomorrow')">พรุ่งนี้</div>
-          <div class="filter-chip" style="font-size:10px;padding:4px 8px" onclick="setBcDate('all')">ทุกวัน</div>
+      <div style="padding:8px 12px">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+          <div class="filter-chip" style="font-size:10px;padding:5px 10px" onclick="setBcDate('today')">วันนี้</div>
+          <div class="filter-chip" style="font-size:10px;padding:5px 10px" onclick="setBcDate('tomorrow')">พรุ่งนี้</div>
+          <div class="filter-chip" style="font-size:10px;padding:5px 10px" onclick="setBcDate('week')">7 วัน</div>
+          <div class="filter-chip" style="font-size:10px;padding:5px 10px" onclick="setBcDate('all')">ทั้งหมด</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="date" id="bcDateFrom" style="flex:1;padding:6px 8px;border:1px solid var(--b2);border-radius:8px;font-size:11px;background:var(--bg)" onchange="setBcDateRange()">
+          <span style="font-size:10px;color:var(--td)">ถึง</span>
+          <input type="date" id="bcDateTo" style="flex:1;padding:6px 8px;border:1px solid var(--b2);border-radius:8px;font-size:11px;background:var(--bg)" onchange="setBcDateRange()">
         </div>
       </div>
       <div class="filter-bar" id="bcOrderFilters"></div>
@@ -998,6 +1006,7 @@ function renderApp() {
         <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" onchange="S.bcPrintDate=this.value;renderBcPrint()" id="bcPrintDateInput">
       </div>
       <div class="filter-bar" id="bcPrintTabs"></div>
+      <div id="bcPrintSections" class="no-print"></div>
       <div class="content" id="bcPrintContent"></div>
       <div class="bottomnav bc-nav" id="bcPrintNav"></div>
     </div>
@@ -1284,7 +1293,7 @@ function renderHomeDashboard() {
       </div>` : ''}
     </div>
     ${adminMenus}
-    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.5</div>
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.6.1</div>
   `;
 }
 
@@ -1679,9 +1688,19 @@ async function renderOrders() {
   const content = document.getElementById('orderList');
   content.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   
+  // v6.6.1: date range state
+  if (!S.orderDash) S.orderDash = { from: daysAgoStr(14), to: todaySydney(), store: 'ALL' };
+  const isMgmt = S.role === 'bc' || S.session?.access_level === 'super_admin' || S.session?.access_level === 'admin';
+  
+  // Date range picker
+  document.getElementById('orderDateRange').innerHTML = buildDashFilterBar({
+    stateKey: 'orderDash', renderFn: 'renderOrders',
+    fromDate: S.orderDash.from, toDate: S.orderDash.to, storeId: S.orderDash.store, isMgmt
+  });
+  
   try { await loadOrders(); } catch(e) {}
   
-  // Filters
+  // Status filters
   document.getElementById('orderFilters').innerHTML = `
     <div class="filter-chip ${S.orderFilter==='all'?'active':''}" onclick="S.orderFilter='all';filterOrders()">All</div>
     <div class="filter-chip ${S.orderFilter==='Pending'?'active':''}" onclick="S.orderFilter='Pending';filterOrders()">⏳ Pending</div>
@@ -2501,7 +2520,7 @@ function renderBcHome() {
       </div>
     </div>
     ${bcAdminMenus}
-    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.5.5</div>`;
+    <div style="text-align:center;padding:8px 0 16px;font-size:9px;color:var(--td);opacity:.5">v6.6.1</div>`;
 }
 function getBcAdminMenus() {
   const s = S.session || {};
@@ -3897,12 +3916,14 @@ async function renderAdminTopProducts() {
   const el = document.getElementById('adminTopProdContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
-  if (!S.topProdDays) S.topProdDays = 30;
-  if (!S.topProdStore) S.topProdStore = 'ALL';
+  // v6.6.1: date range state
+  if (!S.topProdDash) S.topProdDash = { from: daysAgoStr(30), to: todaySydney(), store: 'ALL' };
+  const { from: tpFrom, to: tpTo, store: tpStore } = S.topProdDash;
+  const tpIsMgmt = S.role === 'bc' || S.session?.access_level === 'super_admin' || S.session?.access_level === 'admin';
   
   try {
-    const qp = { days: String(S.topProdDays) };
-    if (S.topProdStore !== 'ALL') qp.store = S.topProdStore;
+    const qp = { from_date: tpFrom, to_date: tpTo };
+    if (tpStore !== 'ALL') qp.store = tpStore;
     const resp = await api('get_top_products', null, qp);
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
     
@@ -3910,24 +3931,15 @@ async function renderAdminTopProducts() {
     const sectionIcons = { cake:'🎂', sauce:'🫕', baked:'🍞', other:'📦' };
     const sectionColors = { cake:'#f59e0b', sauce:'#8b5cf6', baked:'#f97316', other:'#6b7280' };
     
-    // Period selector
-    let html = `
-      <div class="filter-bar">
-        <div class="filter-chip ${S.topProdDays===7?'active':''}" onclick="S.topProdDays=7;renderAdminTopProducts()">7 วัน</div>
-        <div class="filter-chip ${S.topProdDays===14?'active':''}" onclick="S.topProdDays=14;renderAdminTopProducts()">14 วัน</div>
-        <div class="filter-chip ${S.topProdDays===30?'active':''}" onclick="S.topProdDays=30;renderAdminTopProducts()">30 วัน</div>
-      </div>
-      ${S.role === 'bc' ? `<div class="filter-bar" style="margin-top:0">
-        <div class="filter-chip ${S.topProdStore==='ALL'?'active':''}" onclick="S.topProdStore='ALL';renderAdminTopProducts()">ทุกร้าน</div>
-        <div class="filter-chip ${S.topProdStore==='MNG'?'active':''}" onclick="S.topProdStore='MNG';renderAdminTopProducts()">MNG</div>
-        <div class="filter-chip ${S.topProdStore==='ISH'?'active':''}" onclick="S.topProdStore='ISH';renderAdminTopProducts()">ISH</div>
-        <div class="filter-chip ${S.topProdStore==='GB'?'active':''}" onclick="S.topProdStore='GB';renderAdminTopProducts()">GB</div>
-        <div class="filter-chip ${S.topProdStore==='TMC'?'active':''}" onclick="S.topProdStore='TMC';renderAdminTopProducts()">TMC</div>
-      </div>` : ''}`;
+    // v6.6.1: Date range filter
+    let html = buildDashFilterBar({
+      stateKey: 'topProdDash', renderFn: 'renderAdminTopProducts',
+      fromDate: tpFrom, toDate: tpTo, storeId: tpStore, isMgmt: tpIsMgmt
+    });
     
     // Summary cards
     html += `
-      <div class="sec-hd">📊 สรุปภาพรวม (${S.topProdDays} วัน)</div>
+      <div class="sec-hd">📊 สรุปภาพรวม</div>
       <div class="sum-grid">
         <div class="sum-card" style="border-left:3px solid var(--blue)">
           <div class="sum-val" style="color:var(--blue)">${d.total_orders}</div>
@@ -4304,20 +4316,27 @@ async function confirmDeleteAnnouncement(notifId) {
 // ─── B2: BC ORDER LIST ──────────────────────────────────────
 async function renderBcOrders() {
   try { await loadOrders(); } catch(e) { console.warn('loadOrders failed:', e); }
-  // Smart default: today if has orders, else tomorrow, else all
-  if (!S.bcDateFilter) {
+  // v6.6.1: date range state
+  if (!S.bcDateFrom || !S.bcDateTo) {
     const today = todaySydney();
     const tmr = tomorrowSydney();
     const scope = S.deptMapping ? S.deptMapping.section_scope : [];
     const todayN = filterOrdersByDateAndScope(today, scope).length;
-    const tmrN = filterOrdersByDateAndScope(tmr, scope).length;
-    S.bcDateFilter = todayN > 0 ? today : tmrN > 0 ? tmr : (S.orders.length > 0 ? 'all' : today);
+    // Default: today→tomorrow if has orders, else just today
+    S.bcDateFrom = today;
+    S.bcDateTo = todayN > 0 ? today : tmr;
   }
   
-  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  
-  document.getElementById('bcDateInput').value = S.bcDateFilter === 'all' ? '' : S.bcDateFilter;
+  document.getElementById('bcDateFrom').value = S.bcDateFrom;
+  document.getElementById('bcDateTo').value = S.bcDateTo;
   document.getElementById('bcOrderSub').textContent = getScopeLabel();
+  renderBcOrderFilters();
+  renderBcOrderList();
+}
+
+function setBcDateRange() {
+  S.bcDateFrom = document.getElementById('bcDateFrom').value;
+  S.bcDateTo = document.getElementById('bcDateTo').value;
   renderBcOrderFilters();
   renderBcOrderList();
 }
@@ -4325,7 +4344,7 @@ async function renderBcOrders() {
 function renderBcOrderFilters() {
   // Count orders by status for this date
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  const dated = filterOrdersByDateAndScope(S.bcDateFilter, scope);
+  const dated = filterOrdersByDateRange(S.bcDateFrom, S.bcDateTo, scope);
   const counts = { all:dated.length, Pending:0, Ordered:0, InProgress:0, Fulfilled:0, Delivered:0 };
   dated.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
 
@@ -4343,12 +4362,28 @@ function renderBcOrderFilters() {
 }
 
 function setBcDate(mode) {
-  if (mode === 'today') S.bcDateFilter = todaySydney();
-  else if (mode === 'tomorrow') S.bcDateFilter = tomorrowSydney();
-  else S.bcDateFilter = 'all';
-  document.getElementById('bcDateInput').value = S.bcDateFilter === 'all' ? '' : S.bcDateFilter;
+  const today = todaySydney();
+  const tmr = tomorrowSydney();
+  if (mode === 'today') { S.bcDateFrom = today; S.bcDateTo = today; }
+  else if (mode === 'tomorrow') { S.bcDateFrom = tmr; S.bcDateTo = tmr; }
+  else if (mode === 'week') { S.bcDateFrom = today; S.bcDateTo = daysAgoStr(-7); }
+  else { S.bcDateFrom = daysAgoStr(30); S.bcDateTo = daysAgoStr(-7); }
+  document.getElementById('bcDateFrom').value = S.bcDateFrom;
+  document.getElementById('bcDateTo').value = S.bcDateTo;
   renderBcOrderFilters();
   renderBcOrderList();
+}
+
+function filterOrdersByDateRange(fromDate, toDate, scope) {
+  let orders = S.orders.filter(o => o.delivery_date >= fromDate && o.delivery_date <= toDate);
+  if (scope && scope.length > 0) {
+    orders = orders.filter(o => {
+      if (!o.items) return true;
+      if (o.items.length === 0) return true;
+      return o.items.some(it => scope.includes(it.section_id));
+    });
+  }
+  return orders;
 }
 
 function filterOrdersByDateAndScope(date, scope) {
@@ -4367,7 +4402,7 @@ function filterOrdersByDateAndScope(date, scope) {
 
 function renderBcOrderList() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  let orders = filterOrdersByDateAndScope(S.bcDateFilter, scope);
+  let orders = filterOrdersByDateRange(S.bcDateFrom, S.bcDateTo, scope);
 
   // Status filter
   if (S.bcStatusFilter !== 'all') {
@@ -4953,13 +4988,51 @@ async function renderBcPrint() {
     <div class="filter-chip ${S.bcPrintTab==='production'?'bc-active':''}" onclick="S.bcPrintTab='production';renderBcPrint()">📄 Production Sheet</div>
     <div class="filter-chip ${S.bcPrintTab==='slip'?'bc-active':''}" onclick="S.bcPrintTab='slip';renderBcPrint()">🧾 Delivery Slip</div>`;
 
+  // v6.6.1: Section selector
+  const dm = S.deptMapping;
+  const isMgmt = dm && (dm.module_role === 'bc_management' || dm.module_role === 'all');
+  const allSections = ['cake','sauce','tart','bread'];
+  const availSections = isMgmt ? allSections : (dm?.section_scope || allSections);
+  if (!S.bcPrintSections) S.bcPrintSections = [...availSections]; // default: all available
+  
+  const secEl = document.getElementById('bcPrintSections');
+  secEl.innerHTML = `
+    <div style="padding:6px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--b1)">
+      <span style="font-size:10px;color:var(--td);font-weight:600">Section:</span>
+      <label style="font-size:10px;cursor:pointer;display:flex;align-items:center;gap:3px">
+        <input type="checkbox" ${S.bcPrintSections.length===availSections.length?'checked':''} onchange="togglePrintAllSections(this.checked)"> ทั้งหมด
+      </label>
+      ${availSections.map(s => `
+        <label style="font-size:10px;cursor:pointer;display:flex;align-items:center;gap:3px">
+          <input type="checkbox" ${S.bcPrintSections.includes(s)?'checked':''} onchange="togglePrintSection('${s}',this.checked)"> ${secEmoji(s)} ${s}
+        </label>`).join('')}
+    </div>`;
+
   if (S.bcPrintTab === 'production') renderProductionSheet();
   else renderDeliverySlip();
 }
 
+function togglePrintSection(sec, checked) {
+  if (checked) {
+    if (!S.bcPrintSections.includes(sec)) S.bcPrintSections.push(sec);
+  } else {
+    S.bcPrintSections = S.bcPrintSections.filter(s => s !== sec);
+  }
+  if (S.bcPrintTab === 'production') renderProductionSheet();
+  else renderDeliverySlip();
+}
+
+function togglePrintAllSections(checked) {
+  const dm = S.deptMapping;
+  const isMgmt = dm && (dm.module_role === 'bc_management' || dm.module_role === 'all');
+  const allSections = ['cake','sauce','tart','bread'];
+  S.bcPrintSections = checked ? [...(isMgmt ? allSections : (dm?.section_scope || allSections))] : [];
+  renderBcPrint();
+}
+
 // ─── B8: PRODUCTION SHEET ───
 function renderProductionSheet() {
-  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
+  const scope = S.bcPrintSections || (S.deptMapping ? S.deptMapping.section_scope : []);
   const orders = filterOrdersByDateAndScope(S.bcPrintDate, scope);
 
   // Collect all items across orders, filter by scope
@@ -5086,7 +5159,7 @@ function renderProductionSheet() {
 
 // ─── B9: DELIVERY SLIP ───
 function renderDeliverySlip() {
-  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
+  const scope = S.bcPrintSections || (S.deptMapping ? S.deptMapping.section_scope : []);
   const orders = filterOrdersByDateAndScope(S.bcPrintDate, scope);
 
   // Get unique stores
