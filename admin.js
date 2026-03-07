@@ -1,4 +1,4 @@
-// Version 7.1.3 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.4 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -175,7 +175,7 @@ async function renderAdminProducts() {
           const catObj = (S.categories||[]).find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id));
           const catName = catObj ? (catObj.cat_name||catObj.category_name) : (p.cat_id||'—');
           return `<tr>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(p.product_name)} ${p.product_name}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${p.product_name}</td>
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${catName}</td>
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
