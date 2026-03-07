@@ -1,4 +1,4 @@
-// Version 7.1.2 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.3 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -359,7 +359,7 @@ async function renderProductEditScreen() {
         </tr></thead>
         <tbody>${stores.map(store => {
           return store.depts.map(dept => {
-            const vis = S._editVisibility.find(v => v.store_id === store.id && v.dept_id === dept);
+            const vis = (S._editVisibility||[]).find(v => v.store_id === store.id && v.dept_id === dept);
             const checked = vis ? vis.is_active : (!isEdit);
             return `<tr>
               <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${store.name}</td>
