@@ -10,6 +10,23 @@
 const API_URL = 'https://ahvzblrfzhtrjhvbzdhg.supabase.co/functions/v1/bc-order';
 const HOME_URL = 'https://onspider-spg.github.io/spg-home/';
 
+// ─── CLIENT CACHE (localStorage + TTL) ──────────────────────
+const _C = {
+  get(k) {
+    try {
+      const r = JSON.parse(localStorage.getItem('bc_c_' + k));
+      return r && Date.now() < r.x ? r.d : null;
+    } catch { return null; }
+  },
+  set(k, d, mins) { 
+    try { localStorage.setItem('bc_c_' + k, JSON.stringify({ d, x: Date.now() + mins * 60000 })); }
+    catch {}
+  },
+  del(prefix) {
+    Object.keys(localStorage).filter(k => k.startsWith('bc_c_' + (prefix||''))).forEach(k => localStorage.removeItem(k));
+  }
+};
+
 // ─── STATE ───────────────────────────────────────────────────
 const S = {
   token: '',
@@ -245,13 +262,17 @@ async function api(action, body = null, extraParams = {}) {
 
 // ─── DATA LOADERS ────────────────────────────────────────────
 async function loadCategories() {
+  const cached = _C.get('cats');
+  if (cached) { S.categories = cached; return; }
   const resp = await api('get_categories');
-  if (resp.success) S.categories = resp.data;
+  if (resp.success) { S.categories = resp.data; _C.set('cats', resp.data, 1440); }
 }
 
 async function loadProducts() {
+  const cached = _C.get('prods');
+  if (cached) { S.products = cached; return; }
   const resp = await api('get_products', null, { include_stock: 'true' });
-  if (resp.success) S.products = resp.data;
+  if (resp.success) { S.products = resp.data; _C.set('prods', resp.data, 60); }
 }
 
 async function loadDashboard() {
@@ -537,6 +558,7 @@ function showProfileInfo() {
 function doLogout() {
   closeHamburger();
   localStorage.removeItem('spg_token');
+  _C.del(); // clear all BC cache
   S.token = null;
   S.session = {};
   location.href = HOME_URL;
