@@ -1,4 +1,4 @@
-// Version 7.1.4 | 7 MAR 2026 | Siam Palette Group
+// Version 7.2 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -41,21 +41,21 @@ function renderAdminDashboard() {
     <!-- Row 1: KPI -->
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
       <div style="padding:12px;background:var(--gold-bg);border-radius:var(--rd2)">
-        <div style="font-size:7px;color:var(--gold);font-weight:600;text-transform:uppercase">Total Orders</div>
+        <div style="font-size:11px;color:var(--gold);font-weight:600;text-transform:uppercase">Total Orders</div>
         <div style="font-size:28px;font-weight:800;color:var(--gold)">${total}</div>
-        <div style="display:flex;gap:4px;margin-top:4px;font-size:7px"><span style="color:var(--red);font-weight:600">⏳ ${bs.Pending||0}</span><span style="color:var(--blue)">📦 ${bs.Ordered||0}</span><span style="color:var(--orange)">🔄 ${bs.InProgress||0}</span><span style="color:var(--green)">✅ ${done}</span></div>
+        <div style="display:flex;gap:4px;margin-top:4px;font-size:11px"><span style="color:var(--red);font-weight:600">⏳ ${bs.Pending||0}</span><span style="color:var(--blue)">📦 ${bs.Ordered||0}</span><span style="color:var(--orange)">🔄 ${bs.InProgress||0}</span><span style="color:var(--green)">✅ ${done}</span></div>
       </div>
       <div style="padding:12px;background:var(--green-bg);border-radius:var(--rd2);text-align:center">
-        <div style="font-size:7px;color:var(--green);font-weight:600">FULFILMENT</div>
+        <div style="font-size:11px;color:var(--green);font-weight:600">FULFILMENT</div>
         <div style="font-size:26px;font-weight:800;color:var(--green)">${fulfilRate}%</div>
         <div style="height:4px;background:#c8e6c9;border-radius:2px;margin-top:3px"><div style="width:${fulfilRate}%;height:100%;background:var(--green);border-radius:2px"></div></div>
       </div>
       <div style="padding:12px;background:var(--red-bg);border-radius:var(--rd2);text-align:center">
-        <div style="font-size:7px;color:var(--red);font-weight:600">CUTOFF</div>
+        <div style="font-size:11px;color:var(--red);font-weight:600">CUTOFF</div>
         <div style="font-size:26px;font-weight:800;color:var(--red)">${d.cutoff_violations_today||0}</div>
       </div>
       <div style="padding:12px;background:var(--orange-bg);border-radius:var(--rd2);text-align:center">
-        <div style="font-size:7px;color:var(--orange);font-weight:600">URGENT</div>
+        <div style="font-size:11px;color:var(--orange);font-weight:600">URGENT</div>
         <div style="font-size:26px;font-weight:800;color:var(--orange)">${d.urgent_items||0}</div>
       </div>
     </div>
@@ -63,60 +63,60 @@ function renderAdminDashboard() {
     <!-- Row 2: Store Health + Status Distribution -->
     <div style="display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-bottom:8px">
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-        <div style="font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏪 Store Health</div>
-        ${Object.keys(stores).length === 0 ? '<div style="font-size:9px;color:var(--td);padding:8px 0">ยังไม่มีออเดอร์</div>' :
+        <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏪 Store Health</div>
+        ${Object.keys(stores).length === 0 ? '<div style="font-size:13px;color:var(--td);padding:8px 0">ยังไม่มีออเดอร์</div>' :
           Object.entries(stores).map(([sid, s]) => {
             const worst = s.pending > 0 ? 'var(--red)' : s.ordered > 0 ? 'var(--blue)' : s.progress > 0 ? 'var(--orange)' : 'var(--green)';
             const donePct = s.total > 0 ? Math.round((s.done/s.total)*100) : 0;
-            return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px"><span style="font-weight:600">${getStoreName(sid)}</span><span>${s.total} orders</span></div>
+            return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span style="font-weight:600">${getStoreName(sid)}</span><span>${s.total} orders</span></div>
               <div style="height:4px;background:var(--s2);border-radius:2px"><div style="width:${donePct}%;height:100%;background:${worst};border-radius:2px"></div></div>
-              <div style="display:flex;gap:4px;font-size:7px;color:var(--t3);margin-top:1px">${s.pending?`<span style="color:var(--red)">●${s.pending} pending</span>`:''}${s.ordered?`<span style="color:var(--blue)">●${s.ordered} ordered</span>`:''}${s.progress?`<span style="color:var(--orange)">●${s.progress} progress</span>`:''}${s.done?`<span style="color:var(--green)">●${s.done} done</span>`:''}</div></div>`;
+              <div style="display:flex;gap:4px;font-size:11px;color:var(--t3);margin-top:1px">${s.pending?`<span style="color:var(--red)">●${s.pending} pending</span>`:''}${s.ordered?`<span style="color:var(--blue)">●${s.ordered} ordered</span>`:''}${s.progress?`<span style="color:var(--orange)">●${s.progress} progress</span>`:''}${s.done?`<span style="color:var(--green)">●${s.done} done</span>`:''}</div></div>`;
           }).join('')}
       </div>
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-        <div style="font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">📊 Status Distribution</div>
+        <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">📊 Status Distribution</div>
         <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:8px">${total>0?`<div style="width:${statusPct(bs.Pending||0)}%;background:var(--red)"></div><div style="width:${statusPct(bs.Ordered||0)}%;background:var(--blue)"></div><div style="width:${statusPct(bs.InProgress||0)}%;background:var(--orange)"></div><div style="width:${statusPct(done)}%;background:var(--green)"></div>`:'<div style="width:100%;background:var(--s2)"></div>'}</div>
-        <div style="font-size:8px;line-height:2"><div style="display:flex;justify-content:space-between"><span><span style="color:var(--red)">●</span> Pending</span><span style="font-weight:700">${bs.Pending||0} (${statusPct(bs.Pending||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--blue)">●</span> Ordered</span><span style="font-weight:700">${bs.Ordered||0} (${statusPct(bs.Ordered||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--orange)">●</span> In Progress</span><span style="font-weight:700">${bs.InProgress||0} (${statusPct(bs.InProgress||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--green)">●</span> Done</span><span style="font-weight:700">${done} (${statusPct(done)}%)</span></div></div>
+        <div style="font-size:12px;line-height:2"><div style="display:flex;justify-content:space-between"><span><span style="color:var(--red)">●</span> Pending</span><span style="font-weight:700">${bs.Pending||0} (${statusPct(bs.Pending||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--blue)">●</span> Ordered</span><span style="font-weight:700">${bs.Ordered||0} (${statusPct(bs.Ordered||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--orange)">●</span> In Progress</span><span style="font-weight:700">${bs.InProgress||0} (${statusPct(bs.InProgress||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--green)">●</span> Done</span><span style="font-weight:700">${done} (${statusPct(done)}%)</span></div></div>
       </div>
     </div>
 
     <!-- Row 3: Needs Attention -->
     ${(pendingOrders.length + urgentOrders.length + outStock.length) > 0 ? `
     <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px;margin-bottom:8px">
-      <div style="font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:6px">⚠️ Needs Attention</div>
-      ${pendingOrders.map(o => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:var(--red-bg);font-size:9px;color:var(--red);margin-bottom:3px;cursor:pointer" onclick="showBcAccept('${o.order_id}')">🚨 <b>${o.order_id} ${o.store_id}</b> — pending accept${o.is_cutoff_violation?' · cutoff ⚠️':''}</div>`).join('')}
-      ${urgentOrders.slice(0,3).map(o => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:#fef3c7;font-size:9px;color:#92400e;margin-bottom:3px">⚡ <b>${o.order_id} ${o.store_id}</b> — urgent items</div>`).join('')}
-      ${outStock.slice(0,3).map(s => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:var(--blue-bg);font-size:9px;color:var(--blue);margin-bottom:3px">📦 <b>${s.product_name}</b> — stock OUT</div>`).join('')}
+      <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:6px">⚠️ Needs Attention</div>
+      ${pendingOrders.map(o => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:var(--red-bg);font-size:13px;color:var(--red);margin-bottom:3px;cursor:pointer" onclick="showBcAccept('${o.order_id}')">🚨 <b>${o.order_id} ${o.store_id}</b> — pending accept${o.is_cutoff_violation?' · cutoff ⚠️':''}</div>`).join('')}
+      ${urgentOrders.slice(0,3).map(o => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:#fef3c7;font-size:13px;color:#92400e;margin-bottom:3px">⚡ <b>${o.order_id} ${o.store_id}</b> — urgent items</div>`).join('')}
+      ${outStock.slice(0,3).map(s => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:var(--blue-bg);font-size:13px;color:var(--blue);margin-bottom:3px">📦 <b>${s.product_name}</b> — stock OUT</div>`).join('')}
     </div>` : ''}
 
     <!-- Row 4: Waste + Returns Today -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase">🗑️ Waste Today</div><div style="font-size:7px;color:var(--t4);cursor:pointer" onclick="showScreen('admin-waste-dashboard')">ดูทั้งหมด →</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase">🗑️ Waste Today</div><div style="font-size:11px;color:var(--t4);cursor:pointer" onclick="showScreen('admin-waste-dashboard')">ดูทั้งหมด →</div></div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${todayWaste.length}</div><div style="font-size:7px;color:var(--red)">items</div></div>
-          <div style="flex:1;padding:6px;background:var(--s1);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800">${wasteQty}</div><div style="font-size:7px;color:var(--t3)">ชิ้น</div></div>
+          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${todayWaste.length}</div><div style="font-size:11px;color:var(--red)">items</div></div>
+          <div style="flex:1;padding:6px;background:var(--s1);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800">${wasteQty}</div><div style="font-size:11px;color:var(--t3)">ชิ้น</div></div>
         </div>
-        ${todayWaste.slice(0,3).map(w => { const pn = ((S.products||[]).find(p=>p.product_id===w.product_id)||{}).product_name||w.product_id; return `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--bd2);font-size:8px"><span>● ${pn} ×${w.quantity}</span><span style="color:var(--red)">${w.reason}</span></div>`; }).join('')}
+        ${todayWaste.slice(0,3).map(w => { const pn = ((S.products||[]).find(p=>p.product_id===w.product_id)||{}).product_name||w.product_id; return `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--bd2);font-size:12px"><span>● ${pn} ×${w.quantity}</span><span style="color:var(--red)">${w.reason}</span></div>`; }).join('')}
       </div>
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:8px;font-weight:700;color:var(--orange);text-transform:uppercase">↩️ Returns</div><div style="font-size:7px;color:var(--t4);cursor:pointer" onclick="showScreen('return-dashboard')">ดูทั้งหมด →</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase">↩️ Returns</div><div style="font-size:11px;color:var(--t4);cursor:pointer" onclick="showScreen('return-dashboard')">ดูทั้งหมด →</div></div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-          <div style="flex:1;padding:6px;background:var(--orange-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--orange)">${todayReturns.length}</div><div style="font-size:7px;color:var(--orange)">today</div></div>
-          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${openReturns.length}</div><div style="font-size:7px;color:var(--red)">open</div></div>
+          <div style="flex:1;padding:6px;background:var(--orange-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--orange)">${todayReturns.length}</div><div style="font-size:11px;color:var(--orange)">today</div></div>
+          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${openReturns.length}</div><div style="font-size:11px;color:var(--red)">open</div></div>
         </div>
       </div>
     </div>
 
     <!-- Row 5: Quick Links -->
     <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-      <div style="font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🔗 Quick Links</div>
+      <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🔗 Quick Links</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:9px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:9px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:9px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:9px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-announcements')"><div style="display:flex;align-items:center;gap:6px"><span>📢</span><span style="font-size:9px;font-weight:600">Announcements</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:13px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:13px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:13px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:13px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-announcements')"><div style="display:flex;align-items:center;gap:6px"><span>📢</span><span style="font-size:13px;font-weight:600">Announcements</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
       </div>
     </div>
   </div>`;
@@ -157,18 +157,18 @@ async function renderAdminProducts() {
 
       ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' : `
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:700px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
         <tbody>${filtered.map(p => {
           const isAct = p.is_active === true || p.is_active === 'TRUE';
@@ -183,7 +183,7 @@ async function renderAdminProducts() {
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:9px">Hidden</span>'}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:13px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:13px">Hidden</span>'}</td>
             <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
           </tr>`;
         }).join('')}</tbody>
@@ -255,10 +255,10 @@ async function renderProductEditScreen() {
           ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(p?.product_name||'')}'" />` : `<span>${isEdit ? prodEmoji(p.product_name) : '📦'}</span>`}
         </div>
         <div style="flex:1;padding-top:4px">
-          <div style="font-size:10px;color:var(--t3)">${isEdit ? '' : 'Preview — กรอกข้อมูลด้านล่าง'}</div>
+          <div style="font-size:13px;color:var(--t3)">${isEdit ? '' : 'Preview — กรอกข้อมูลด้านล่าง'}</div>
           <div style="font-size:14px;font-weight:700;color:var(--t1);margin-top:2px" id="prdPreviewName">${isEdit ? p.product_name : 'ชื่อสินค้า...'}</div>
-          <div style="font-size:9px;color:var(--t3);margin-top:2px" id="prdPreviewMeta">${isEdit ? `${catLabel} · ${p.section_id} · ${p.unit}` : 'Category · Section · Unit'}</div>
-          ${isEdit ? `<div style="margin-top:4px"><span style="background:${isAct?'var(--green-bg)':'var(--red-bg)'};color:${isAct?'var(--green)':'var(--red)'};padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600">${isAct?'Active':'Hidden'}</span></div>` : ''}
+          <div style="font-size:13px;color:var(--t3);margin-top:2px" id="prdPreviewMeta">${isEdit ? `${catLabel} · ${p.section_id} · ${p.unit}` : 'Category · Section · Unit'}</div>
+          ${isEdit ? `<div style="margin-top:4px"><span style="background:${isAct?'var(--green-bg)':'var(--red-bg)'};color:${isAct?'var(--green)':'var(--red)'};padding:2px 8px;border-radius:10px;font-size:13px;font-weight:600">${isAct?'Active':'Hidden'}</span></div>` : ''}
         </div>
       </div>
 
@@ -331,11 +331,11 @@ async function renderProductEditScreen() {
             ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" />` : '📷'}
           </div>
           <div>
-            <label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--bd);border-radius:var(--rd2);font-size:11px;cursor:pointer;background:var(--bg)">
+            <label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--bd);border-radius:var(--rd2);font-size:14px;cursor:pointer;background:var(--bg)">
               📁 เลือกไฟล์
               <input type="file" accept="image/*" style="display:none" onchange="handleProductImage(this)">
             </label>
-            <div style="font-size:9px;color:var(--t4);margin-top:2px">JPG, PNG · max 2MB · auto compress</div>
+            <div style="font-size:13px;color:var(--t4);margin-top:2px">JPG, PNG · max 2MB · auto compress</div>
           </div>
         </div>
         <input type="hidden" id="prdImage" value="${imgUrl}">
@@ -343,19 +343,19 @@ async function renderProductEditScreen() {
 
       <!-- Popup Notice -->
       <div class="form-group">
-        <label class="form-label">⓫ Popup Notice <span style="font-size:9px;color:var(--t4)">(แสดงตอนเพิ่มลงตะกร้า)</span></label>
+        <label class="form-label">⓫ Popup Notice <span style="font-size:13px;color:var(--t4)">(แสดงตอนเพิ่มลงตะกร้า)</span></label>
         <input class="form-input" id="prdPopupNotice" placeholder="เช่น สั่งล่วงหน้า 2 วัน" value="${isEdit ? p.popup_notice||'' : ''}">
       </div>
 
       <!-- Visibility Section -->
       <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin:16px 0 4px">👁️ ร้านที่เห็นสินค้านี้</div>
-      <div style="font-size:10px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้ — สินค้าใหม่เปิดทุกร้านเป็น default</div>
+      <div style="font-size:13px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้ — สินค้าใหม่เปิดทุกร้านเป็น default</div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Department</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Visible?</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Department</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Visible?</th>
         </tr></thead>
         <tbody>${stores.map(store => {
           return store.depts.map(dept => {
@@ -373,7 +373,7 @@ async function renderProductEditScreen() {
         }).join('')}</tbody>
       </table>
 
-      <div style="display:flex;gap:8px;font-size:10px;margin-bottom:12px">
+      <div style="display:flex;gap:8px;font-size:13px;margin-bottom:12px">
         <span style="color:var(--blue);cursor:pointer" onclick="toggleAllVis(true)">✅ เลือกทั้งหมด</span>
         <span style="color:var(--red);cursor:pointer" onclick="toggleAllVis(false)">❌ ยกเลิกทั้งหมด</span>
       </div>
@@ -493,9 +493,9 @@ async function renderAdminAccess() {
     const tiers = ['T1','T2','T3','T4','T5','T6','T7'];
     
     el.innerHTML = `
-      <div style="padding:8px 12px;font-size:10px;color:var(--td)">กดเพื่อ toggle ON/OFF — เฉพาะ T1/T2 เท่านั้น</div>
+      <div style="padding:8px 12px;font-size:13px;color:var(--td)">กดเพื่อ toggle ON/OFF — เฉพาะ T1/T2 เท่านั้น</div>
       <div style="overflow-x:auto;padding:0 8px">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:500px">
           <thead>
             <tr style="background:var(--s2)">
               <th style="padding:8px;text-align:left;font-weight:600;position:sticky;left:0;background:var(--s2);z-index:1">Function</th>
@@ -504,7 +504,7 @@ async function renderAdminAccess() {
           </thead>
           <tbody>
             ${functions.map(fn => `<tr style="border-bottom:1px solid var(--s2)">
-              <td style="padding:6px 8px;font-weight:500;position:sticky;left:0;background:var(--bg);z-index:1;font-size:10px" title="${fn.description||''}">${fn.function_name || fn.function_id}</td>
+              <td style="padding:6px 8px;font-weight:500;position:sticky;left:0;background:var(--bg);z-index:1;font-size:13px" title="${fn.description||''}">${fn.function_name || fn.function_id}</td>
               ${tiers.map(t => {
                 const allowed = matrix[fn.function_id] && matrix[fn.function_id][t];
                 return `<td style="padding:6px;text-align:center">
@@ -545,24 +545,24 @@ async function renderAdminDeptMapping() {
     const roleColors = { store:'var(--blue)', bc_production:'var(--green)', bc_management:'var(--gold)', all:'var(--purple)' };
     
     el.innerHTML = `<div style="padding:14px 18px">
-      <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏢 Department → Module Role Mapping (${mappings.length})</div>
-      <table style="width:100%;border-collapse:collapse;font-size:9px">
+      <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏢 Department → Module Role Mapping (${mappings.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Dept</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Module Role</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section Scope</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Dept</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Module Role</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section Scope</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
         <tbody>${mappings.map(m => {
           const roleColor = roleColors[m.module_role] || 'var(--td)';
           const isNA = m.module_role === 'not_applicable';
           return `<tr style="${m.is_active?'':'opacity:.5'}">
             <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${m.dept_id}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${roleColor}20;color:${roleColor};padding:1px 5px;border-radius:3px;font-size:8px;font-weight:600">${m.module_role}</span></td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${roleColor}20;color:${roleColor};padding:1px 5px;border-radius:3px;font-size:12px;font-weight:600">${m.module_role}</span></td>
             <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${m.section_scope||'—'}</td>
             <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;color:${m.is_active?'var(--green)':'var(--red)'};cursor:pointer" onclick="toggleDeptActive('${m.dept_id}',${!m.is_active})">${m.is_active?'ON':'OFF'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:7px" onclick="editDeptMapping('${m.dept_id}','${m.module_role}','${m.section_scope||''}',${!!m.is_active})">✏️</button></td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:11px" onclick="editDeptMapping('${m.dept_id}','${m.module_role}','${m.section_scope||''}',${!!m.is_active})">✏️</button></td>
           </tr>`;
         }).join('')}</tbody>
       </table>
@@ -633,10 +633,10 @@ async function renderAdminConfig() {
   ];
   
   el.innerHTML = `<div style="padding:14px 18px">
-    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⚙️ System Configuration</div>
+    <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⚙️ System Configuration</div>
     ${items.map(i => `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
-      <div><div style="font-size:10px;font-weight:500">${i.label}</div><div style="font-size:7px;color:var(--t3)">${i.desc}</div></div>
-      <div style="font-size:13px;font-weight:700;color:var(--gold)">${config[i.key]||'—'} <span style="font-size:8px;color:var(--blue);cursor:pointer" onclick="editConfig('${i.key}','${config[i.key]||''}','${i.type}')">✏️</span></div>
+      <div><div style="font-size:13px;font-weight:500">${i.label}</div><div style="font-size:11px;color:var(--t3)">${i.desc}</div></div>
+      <div style="font-size:13px;font-weight:700;color:var(--gold)">${config[i.key]||'—'} <span style="font-size:12px;color:var(--blue);cursor:pointer" onclick="editConfig('${i.key}','${config[i.key]||''}','${i.type}')">✏️</span></div>
     </div>`).join('')}
   </div>`;
 }
@@ -693,14 +693,14 @@ async function renderAdminNotifSettings() {
     ];
     
     el.innerHTML = `<div style="padding:14px 18px">
-      <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:2px">🔔 Notification Settings</div>
-      <div style="font-size:8px;color:var(--t3);margin-bottom:6px">กดเพื่อ toggle ON/OFF</div>
+      <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:2px">🔔 Notification Settings</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:6px">กดเพื่อ toggle ON/OFF</div>
       ${groups.map(g => `
-        <div style="font-size:9px;font-weight:600;color:var(--t3);margin:8px 0 4px">${g.title}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--t3);margin:8px 0 4px">${g.title}</div>
         ${g.items.map(i => {
           const on = settings[i.key] !== false;
           return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
-            <div><div style="font-size:10px;font-weight:500">${i.label}</div><div style="font-size:7px;color:var(--t3)">${i.desc}</div></div>
+            <div><div style="font-size:13px;font-weight:500">${i.label}</div><div style="font-size:11px;color:var(--t3)">${i.desc}</div></div>
             <div onclick="toggleNotifSetting('${i.key}',${!on})" style="cursor:pointer;width:32px;height:18px;border-radius:9px;background:${on?'var(--green)':'var(--bd)'};position:relative;flex-shrink:0">
               <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${on?'right:2px':'left:2px'};box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
             </div>
@@ -727,21 +727,21 @@ function renderAdminCutoff() {
   const violations = orders.filter(o => o.is_cutoff_violation);
 
   document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:14px 18px">
-    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⏰ Cutoff Violations (${violations.length})</div>
+    <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⏰ Cutoff Violations (${violations.length})</div>
     ${violations.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี violation</div></div>' : `
-    <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:8px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
       <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งเมื่อ</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันส่ง</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งโดย</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งเมื่อ</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันส่ง</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งโดย</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
       </tr></thead>
       <tbody>${violations.map(o => `<tr style="cursor:pointer;border-left:3px solid var(--red)" onclick="viewOrderDetail('${o.order_id}')">
         <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
         <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${getStoreName(o.store_id)}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${o.created_at ? new Date(o.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—'}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${o.created_at ? new Date(o.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—'}</td>
         <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
         <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${o.display_name||o.created_by||'—'}</td>
         <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
@@ -783,23 +783,23 @@ async function renderAdminAudit() {
       </div>
 
       ${logs.length === 0 ? '<div class="empty"><div class="empty-icon">📝</div><div class="empty-title">ยังไม่มีบันทึก</div></div>' : `
-      <table style="width:100%;border-collapse:collapse;font-size:9px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เวลา</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Action</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Target</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนจาก</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนเป็น</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เวลา</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Action</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Target</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนจาก</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนเป็น</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
         </tr></thead>
         <tbody>${logs.map(l => {
           const tc = typeColors[l.action_type] || { bg:'var(--s2)', color:'var(--td)', label:l.action_type };
           return `<tr>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${l.changed_at ? new Date(l.changed_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${tc.bg};color:${tc.color};padding:1px 4px;border-radius:3px;font-size:7px;font-weight:600">${tc.label}</span></td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${l.target_id||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--red);font-size:8px">${truncate(l.old_value,30)||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--green);font-size:8px">${truncate(l.new_value,30)||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${l.changed_at ? new Date(l.changed_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${tc.bg};color:${tc.color};padding:1px 4px;border-radius:3px;font-size:11px;font-weight:600">${tc.label}</span></td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${l.target_id||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--red);font-size:12px">${truncate(l.old_value,30)||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--green);font-size:12px">${truncate(l.new_value,30)||'—'}</td>
             <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${l.changed_by_name||l.changed_by||'—'}</td>
           </tr>`;
         }).join('')}</tbody>
