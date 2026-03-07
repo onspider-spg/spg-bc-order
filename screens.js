@@ -1,4 +1,4 @@
-// Version 7.1 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.2 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -474,7 +474,7 @@ function renderHomeDashboard() {
   }
 
   document.getElementById('homeContent').innerHTML = `
-    <div style="padding:14px 18px;max-width:850px">
+    <div style="padding:14px 18px">
       <!-- KPI Pills -->
       <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
         <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--green-bg)"><div style="font-size:7px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--green)">Done</div><div style="font-size:16px;font-weight:800;color:var(--green)">${done}</div></div>
@@ -969,7 +969,7 @@ async function viewOrder(orderId) {
   const items = S.currentOrder?.items || [];
   
   content.innerHTML = `
-    <div style="padding:14px 18px;max-width:850px">
+    <div style="padding:14px 18px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button class="btn btn-outline btn-sm" onclick="showScreen(S.role==='bc'?'bc-orders':'orders')">← กลับ</button><div style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</div></div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">

@@ -1,4 +1,4 @@
-// Version 7.1.1 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.2 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -335,7 +335,7 @@ async function renderAdminAnnouncements() {
     const scheduled = notifs.filter(n => n.is_active && n.start_date && n.start_date > today);
     const expired = notifs.filter(n => !n.is_active || (n.end_date && n.end_date < today));
     
-    el.innerHTML = `<div style="padding:14px 18px;max-width:900px">
+    el.innerHTML = `<div style="padding:14px 18px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase">📢 Announcements</div>
         <button class="btn btn-green btn-sm" onclick="showAnnouncementForm()">+ สร้างประกาศ</button>
@@ -714,7 +714,7 @@ function renderBcAccept() {
   const orderTime = o.created_at ? o.created_at.split('T')[1].substring(0, 5) : '—';
 
   const el = document.getElementById('bcAcceptContent');
-  el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  el.innerHTML = `<div style="padding:14px 18px">
     <div style="padding:8px 10px;background:var(--red-bg);border-radius:var(--rd2);margin-bottom:8px;font-size:9px;color:var(--red);font-weight:600">
       ${o.order_id} · ${getStoreName(o.store_id)} · ${o.display_name||o.user_id} · ส่ง ${formatDateAU(o.delivery_date)} ${o.is_cutoff_violation ? '· <span class="status st-pending">cutoff violation</span>' : ''}
     </div>
@@ -823,7 +823,7 @@ function renderBcFulfil() {
   const partialMissingNote = S.fulfilmentItems.some(i => i.ful_status === 'partial' && !i.ful_note);
   const isFulfilled = o.status === 'Fulfilled';
 
-  let html = `<div style="padding:14px 18px;max-width:850px">
+  let html = `<div style="padding:14px 18px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><button class="btn btn-outline btn-sm" onclick="showScreen('bc-orders')">←</button><div style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</div><span class="status ${statusClass(o.status)}" style="margin-left:auto">${o.status === 'InProgress' ? 'In Progress' : o.status}</span></div>
     <div style="font-size:9px;color:var(--t3);margin-bottom:6px">${getStoreName(o.store_id)} · ${o.display_name||o.user_id} · ส่ง ${formatDateAU(o.delivery_date)}</div>
     ${o.header_note ? `<div style="background:var(--s1);border-radius:6px;padding:6px;margin-bottom:6px;font-size:9px">📝 ${o.header_note}</div>` : ''}
@@ -975,7 +975,7 @@ function renderBcStock() {
   const cats = [...new Set(items.map(s => s.section_id))];
 
   const el = document.getElementById('bcStockContent');
-  el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  el.innerHTML = `<div style="padding:14px 18px">
     <!-- Scope indicator -->
     <div style="padding:6px 10px;background:var(--blue-bg);border-radius:var(--rd2);margin-bottom:8px;font-size:8px;color:var(--blue);display:flex;justify-content:space-between">
       <span>👤 ${S.session?.display_name||''} · <b>${S.deptMapping?.module_role||''}</b> · scope: <b>${getScopeLabel()}</b></span>

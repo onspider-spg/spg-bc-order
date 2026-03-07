@@ -1,4 +1,4 @@
-// Version 7.1 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.2 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -31,7 +31,7 @@ function renderWasteList() {
 
   const reasonColor = r => r === 'Expired' ? 'var(--red)' : r === 'Damaged' ? 'var(--orange)' : r === 'Production Error' ? 'var(--purple)' : 'var(--td)';
 
-  content.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  content.innerHTML = `<div style="padding:14px 18px">
     <!-- Filter Chips -->
     <div style="display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap">
       <span style="font-size:8px;padding:3px 10px;border-radius:14px;border:1px solid ${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'var(--gold)':'var(--bd)'};color:${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'#fff':'var(--t3)'};background:${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'var(--gold)':'#fff'};cursor:pointer" onclick="S.wasteSelectedCat='all';renderWasteList()">ทั้งหมด</span>
@@ -226,7 +226,7 @@ function renderReturnsScreen() {
   const borderMap = { Reported:'var(--orange)', Received:'var(--blue)', Returning:'var(--orange)', Reworked:'var(--green)', Wasted:'var(--red)' };
   const isResolved = st => st === 'Reworked' || st === 'Wasted';
 
-  content.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  content.innerHTML = `<div style="padding:14px 18px">
     <button class="btn btn-gold" style="margin-bottom:10px" onclick="showReturnForm()">➕ แจ้ง Return ใหม่</button>
     <div style="font-size:10px;font-weight:700;margin-bottom:6px">📋 รายการ Return (${items.length})</div>
 
@@ -573,7 +573,7 @@ function renderBcHome() {
   if (bs.Pending > 0) alerts.push(`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);margin-bottom:2px;font-size:9px;font-weight:500;background:var(--red-bg);color:var(--red)">🚨 ${bs.Pending} order pending accept</div>`);
   if (d.urgent_items > 0) alerts.push(`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);margin-bottom:2px;font-size:9px;font-weight:500;background:#fef3c7;color:#92400e">⚡ ${d.urgent_items} urgent items</div>`);
 
-  document.getElementById('bcHomeContent').innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  document.getElementById('bcHomeContent').innerHTML = `<div style="padding:14px 18px">
     <!-- KPI Pills -->
     <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
       <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--red-bg)"><div style="font-size:7px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--red)">Pending</div><div style="font-size:16px;font-weight:800;color:var(--red)">${bs.Pending||0}</div></div>

@@ -1,4 +1,4 @@
-// Version 7.1.1 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.2 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -37,7 +37,7 @@ function renderAdminDashboard() {
   const todayReturns = (S.returns||[]).filter(r => (r.created_at||'').startsWith(todayStr));
   const openReturns = (S.returns||[]).filter(r => r.status === 'Reported' || r.status === 'Received');
 
-  document.getElementById('adminDashboardContent').innerHTML = `<div style="padding:14px 18px;max-width:900px">
+  document.getElementById('adminDashboardContent').innerHTML = `<div style="padding:14px 18px">
     <!-- Row 1: KPI -->
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
       <div style="padding:12px;background:var(--gold-bg);border-radius:var(--rd2)">
@@ -146,7 +146,7 @@ async function renderAdminProducts() {
   const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
   
   el.innerHTML = `
-    <div style="padding:14px 18px;max-width:900px">
+    <div style="padding:14px 18px">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <div class="filter-chip ${tab==='active'?'active':''}" onclick="S.adminProductTab='active';renderAdminProducts()">Active (${active.length})</div>
         <div class="filter-chip ${tab==='inactive'?'active':''}" onclick="S.adminProductTab='inactive';renderAdminProducts()">Inactive (${inactive.length})</div>
@@ -248,7 +248,7 @@ async function renderProductEditScreen() {
   const isAct = isEdit && (p.is_active === true || p.is_active === 'TRUE');
 
   el.innerHTML = `
-    <div style="padding:14px 18px;max-width:900px">
+    <div style="padding:14px 18px">
       <!-- Preview Area -->
       <div style="display:flex;gap:12px;margin-bottom:16px">
         <div id="imgPreview" style="width:80px;height:80px;background:${isEdit?'var(--gold-bg)':'var(--s2)'};border:2px solid ${isEdit?'var(--gold)':'var(--bd)'};border-radius:var(--rd2);display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;overflow:hidden">
@@ -544,7 +544,7 @@ async function renderAdminDeptMapping() {
     const mappings = resp.data || [];
     const roleColors = { store:'var(--blue)', bc_production:'var(--green)', bc_management:'var(--gold)', all:'var(--purple)' };
     
-    el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+    el.innerHTML = `<div style="padding:14px 18px">
       <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏢 Department → Module Role Mapping (${mappings.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:9px">
         <thead><tr style="background:var(--s1)">
@@ -632,7 +632,7 @@ async function renderAdminConfig() {
     { key:'auto_refresh_seconds', label:'🔄 Auto Refresh (วินาที)', desc:'รีเฟรชอัตโนมัติ', type:'number' },
   ];
   
-  el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  el.innerHTML = `<div style="padding:14px 18px">
     <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⚙️ System Configuration</div>
     ${items.map(i => `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
       <div><div style="font-size:10px;font-weight:500">${i.label}</div><div style="font-size:7px;color:var(--t3)">${i.desc}</div></div>
@@ -692,7 +692,7 @@ async function renderAdminNotifSettings() {
       ]},
     ];
     
-    el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+    el.innerHTML = `<div style="padding:14px 18px">
       <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:2px">🔔 Notification Settings</div>
       <div style="font-size:8px;color:var(--t3);margin-bottom:6px">กดเพื่อ toggle ON/OFF</div>
       ${groups.map(g => `
@@ -726,7 +726,7 @@ function renderAdminCutoff() {
   const orders = S.orders || [];
   const violations = orders.filter(o => o.is_cutoff_violation);
 
-  document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:14px 18px;max-width:850px">
+  document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:14px 18px">
     <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⏰ Cutoff Violations (${violations.length})</div>
     ${violations.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี violation</div></div>' : `
     <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:8px">
@@ -773,7 +773,7 @@ async function renderAdminAudit() {
       update_product: { bg:'rgba(8,145,178,.1)', color:'var(--blue)', label:'📦 product' },
     };
 
-    el.innerHTML = `<div style="padding:14px 18px;max-width:900px">
+    el.innerHTML = `<div style="padding:14px 18px">
       <div style="display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap">
         <span class="filter-chip ${filter==='all'?'active':''}" onclick="S.auditFilter='all';renderAdminAudit()">ทั้งหมด</span>
         <span class="filter-chip ${filter==='permission'?'active':''}" onclick="S.auditFilter='permission';renderAdminAudit()">🔒 สิทธิ์</span>

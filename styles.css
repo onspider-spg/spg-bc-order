@@ -1,4 +1,4 @@
-/* Version 7.0.5 | 7 MAR 2026 | Siam Palette Group */
+/* Version 7.0.6 | 7 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Warm Light Theme + Sidebar Layout */
 /* Fix: sidebar desktop toggle, larger base font */
 
@@ -323,8 +323,7 @@ textarea.form-input{resize:none;min-height:72px}
 
 /* Desktop */
 @media(min-width:1024px){
-  .plist{max-width:800px;margin:0 auto}
-  .pad,.sec-hd{max-width:960px}
+  /* Full width — no max-width constraint */
 }
 
 /*═══ PRINT MEDIA ═══*/
