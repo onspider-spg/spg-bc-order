@@ -1,6 +1,6 @@
-/* Version 7.0.1 | 7 MAR 2026 | Siam Palette Group */
+/* Version 7.0.3 | 7 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Warm Light Theme + Sidebar Layout */
-/* Fix: sidebar toggle, larger base font */
+/* Fix: sidebar desktop toggle, larger base font */
 
 /*═══ VARIABLES ═══*/
 :root{
@@ -322,9 +322,10 @@ textarea.form-input{resize:none;min-height:72px}
   .sb-overlay.show{display:block}
 }
 
-/* Tablet+ : sidebar always visible */
+/* Tablet+ : sidebar visible by default, but can toggle closed */
 @media(min-width:768px){
-  .sb{margin-left:0!important}
+  .sb{margin-left:0;transition:margin-left .25s ease}
+  .sb.closed{margin-left:calc(var(--sb-w) * -1)}
   .sb-overlay{display:none!important}
   .sum-grid{grid-template-columns:1fr 1fr 1fr 1fr}
 }
