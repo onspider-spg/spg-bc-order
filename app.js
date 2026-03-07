@@ -1,5 +1,6 @@
-// Version 7.0 | 7 MAR 2026 | Siam Palette Group
+// Version 7.0.2 | 7 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
+// Fix: sidebar toggle, footer icons, avatar profile, font sizing, logout URL
 
 // ═══════════════════════════════════════════════════════════════
 // BC Order Module — Frontend SPA
@@ -9,6 +10,7 @@
 // ─── CONFIG ──────────────────────────────────────────────────
 const API_URL = 'https://ahvzblrfzhtrjhvbzdhg.supabase.co/functions/v1/bc-order';
 const HOME_URL = 'https://onspider-spg.github.io/spg-home/';
+const LOGOUT_URL = 'https://onspider-spg.github.io/spg-home/#logout';
 
 // ─── CLIENT CACHE (localStorage + TTL) ──────────────────────
 const _C = {
@@ -453,19 +455,23 @@ function renderSidebar() {
   const avClass = isBc ? ' bc' : '';
 
   let sectionsHtml = '';
-  cfg.forEach(g => {
+  cfg.forEach((g, gi) => {
     const itemsHtml = g.items.map(it => {
       const isActive = it.scr === S.currentScreen;
       const badge = it.badgeKey ? getBadgeCount(it.badgeKey) : 0;
       return `<div class="sb-item${isActive ? ' act' : ''}" data-scr="${it.scr}" onclick="${it.action ? it.action + '()' : "showScreen('" + it.scr + "')"};closeSidebar()">${it.lbl}${badge > 0 ? `<span class="sb-badge">${badge}</span>` : ''}</div>`;
     }).join('');
-    sectionsHtml += `<details class="sb-sec"${g.open ? ' open' : ''}><summary>${g.sec}</summary><div>${itemsHtml}</div></details><div class="sb-divider"></div>`;
+    const isOpen = g.open;
+    sectionsHtml += `<div class="sb-sec${isOpen ? ' open' : ''}">
+      <div class="sb-sec-hd" onclick="this.parentElement.classList.toggle('open')">${g.sec}<span class="sb-arrow">▾</span></div>
+      <div class="sb-sec-body">${itemsHtml}</div>
+    </div><div class="sb-divider"></div>`;
   });
 
   el.innerHTML = `
     <div class="sb-hd"><div class="sb-profile"><div class="sb-av${avClass}">${(s.display_name||'?').charAt(0)}</div><div><div class="sb-name">${s.display_name || 'User'}</div><div class="sb-meta">${s.tier_id||''} · ${getStoreName(s.store_id)} ${s.dept_id ? '· '+s.dept_id : ''}</div></div></div></div>
     <div class="sb-body">${sectionsHtml}</div>
-    <div class="sb-ft"><div class="sb-ft-item" onclick="location.href='${HOME_URL}'">🏠 Home</div><div class="sb-ft-item logout" onclick="doLogout()">🚪 Log out</div></div>`;
+    <div class="sb-ft"><div class="sb-ft-item" onclick="location.href='${HOME_URL}'">Home</div><div class="sb-ft-item logout" onclick="doLogout()">Log out</div></div>`;
 }
 
 function getBadgeCount(key) {
@@ -499,7 +505,7 @@ function renderGlobalTopbar() {
     <div class="g-tb-logo">SPG</div>
     <div class="g-tb-title">สั่งของเบเกอรี่ <span style="color:var(--t4);font-weight:400">:</span> <span style="color:var(--gold)" id="gtbScreenTitle">${title}</span><div class="g-tb-sub">${s.display_name || ''} · ${s.tier_id || ''}</div></div>
     <div class="g-tb-bell" onclick="showNotifPanel()">🔔${hasNotif ? '<span class="g-tb-dot"></span>' : ''}</div>
-    <div class="g-tb-av${avClass}">${(s.display_name||'?').charAt(0)}</div>`;
+    <div class="g-tb-av${avClass}" onclick="showProfileInfo()" style="cursor:pointer">${(s.display_name||'?').charAt(0)}</div>`;
 }
 
 function updateTopbarTitle(screenName) {
@@ -555,7 +561,7 @@ function doLogout() {
   _C.del();
   S.token = null;
   S.session = {};
-  location.href = HOME_URL;
+  location.href = LOGOUT_URL;
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────
