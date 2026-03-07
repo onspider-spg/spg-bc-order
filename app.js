@@ -1,4 +1,4 @@
-// Version 7.0.4 | 7 MAR 2026 | Siam Palette Group
+// Version 7.0.5 | 7 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -519,22 +519,12 @@ function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('sbOverlay');
   if (!sb) return;
-  const isMobile = window.innerWidth < 768;
-
-  if (isMobile) {
-    // Mobile: overlay mode — toggle 'open'
-    const isOpen = sb.classList.contains('open');
-    sb.classList.toggle('open', !isOpen);
-    if (ov) ov.classList.toggle('show', !isOpen);
-  } else {
-    // Desktop: inline mode — toggle 'closed'
-    sb.classList.toggle('closed');
-  }
+  const isOpen = sb.classList.contains('open');
+  sb.classList.toggle('open', !isOpen);
+  if (ov) ov.classList.toggle('show', !isOpen);
 }
 
 function closeSidebar() {
-  // Only close on mobile (overlay mode) — desktop stays open
-  if (window.innerWidth >= 768) return;
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('sbOverlay');
   if (sb) sb.classList.remove('open');
