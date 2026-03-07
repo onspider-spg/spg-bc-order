@@ -1,6 +1,5 @@
-// Version 7.1 | 7 MAR 2026 | Siam Palette Group
+// Version 6.6.0 | 6 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
-// Phase 2: Store Screens UI overhaul (wireframe match)
 
 // ─── SCREEN RENDERER ─────────────────────────────────────────
 function renderApp() {
@@ -300,9 +299,6 @@ function renderApp() {
 async function showScreen(name, param) {
   S.currentScreen = name;
   S.currentParam = param || null;
-  // ★ v7.0: Update sidebar active + topbar title
-  updateSidebarActive(name);
-  updateTopbarTitle(name);
   // Update hash for navigable screens (skip loading/error screens)
   if (HASH_SCREENS.has(name)) {
     setHash(name, param);
@@ -429,11 +425,32 @@ function renderBcSubNav(currentScreen) {
 function renderHome() {
   const s = S.session;
   if (!s) return;
-  // v7.1: userBadge + bottomNav hidden by CSS, sidebar handles navigation
+  
+  // User badge
+  document.getElementById('userBadge').innerHTML = `
+    <div class="user-badge">
+      <div class="user-avatar">${s.display_name.charAt(0)}</div>
+      <div class="user-info">
+        <div class="user-name">${s.display_name}</div>
+        <div class="user-meta">${getStoreName(s.store_id)} · ${getDeptName(s.dept_id)}</div>
+      </div>
+      <span class="user-tier">${s.tier_id}</span>
+    </div>`;
+  
+  // Bottom nav — v6.0: dashboard-focused tabs
+  document.getElementById('bottomNav').innerHTML = `
+    <div class="nav-item active" onclick="navTo('dashboard')"><span class="ni">🏠</span>Main Menu</div>
+    <div class="nav-item" onclick="showScreen('admin-top-products')"><span class="ni">🏆</span>Top Products</div>
+    <div class="nav-item" onclick="showScreen('return-dashboard')"><span class="ni">↩️</span>Returns</div>
+    <div class="nav-item" onclick="showScreen('admin-waste-dashboard')"><span class="ni">🗑️</span>Waste</div>
+  `;
+  
   renderHomeDashboard();
 }
 
 function navTo(tab) {
+  document.querySelectorAll('.nav-item').forEach((n,i) => n.classList.toggle('active', 
+    (tab==='dashboard' && i===0) || (tab==='order' && i===1) || (tab==='history' && i===2) || (tab==='stock' && i===3) || (tab==='waste' && i===4)));
   if (tab === 'dashboard') renderHomeDashboard();
 }
 
@@ -441,11 +458,9 @@ function renderHomeDashboard() {
   const d = S.dashboard || { today_total:0, by_status:{Pending:0,Ordered:0,Fulfilled:0,Delivered:0}, cutoff_violations_today:0, urgent_items:0 };
   const bs = d.by_status || {};
   const s = S.session || {};
-  const done = (bs.Fulfilled||0) + (bs.Delivered||0);
-  const total = d.today_total || 1;
-  const pct = Math.round((done / total) * 100);
-
-  // Admin menus (permission-gated)
+  const tierLevel = s.tier_level || 99;
+  
+  // Admin menus based on permissions
   const storeAdminItems = [
     { screen:'bc-orders', icon:'📋', bg:'var(--blue-bg)', title:'All Orders', desc:'ออเดอร์ทุกร้าน ทุก section', perm:'fn_view_all_orders' },
     { screen:'bc-stock', icon:'📦', bg:'var(--green-bg)', title:'Manage Stock', desc:'เพิ่ม/ลดสต็อก ทุก section', perm:'fn_add_stock' },
@@ -460,52 +475,38 @@ function renderHomeDashboard() {
         <div class="card-row"><div class="card-icon" style="background:${m.bg}">${m.icon}</div><div class="card-body"><div class="card-title">${m.title}</div><div class="card-desc">${m.desc}</div></div><div class="card-right">→</div></div>
       </div>`).join('')}
     </div>` : '';
-
-  // Alerts
-  const alerts = [];
-  if (bs.Pending > 0) {
-    const pendingOrders = (S.orders||[]).filter(o=>o.status==='Pending');
-    pendingOrders.forEach(o => {
-      alerts.push(`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);margin-bottom:2px;font-size:9px;font-weight:500;background:var(--red-bg);color:var(--red)">🚨 ${o.order_id} ${getStoreName(o.store_id)} — pending accept${o.is_cutoff_violation?' · cutoff ⚠️':''}</div>`);
-    });
-  }
-  if (d.urgent_items > 0) {
-    alerts.push(`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);margin-bottom:2px;font-size:9px;font-weight:500;background:#fef3c7;color:#92400e">⚡ ${d.urgent_items} urgent items</div>`);
-  }
-
+  
   document.getElementById('homeContent').innerHTML = `
-    <div style="padding:14px 18px;max-width:850px">
-      <!-- KPI Pills -->
-      <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
-        <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--green-bg)"><div style="font-size:7px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--green)">Done</div><div style="font-size:16px;font-weight:800;color:var(--green)">${done}</div></div>
-        <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--blue-bg)"><div style="font-size:7px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--blue)">ผลิต</div><div style="font-size:16px;font-weight:800;color:var(--blue)">${(bs.Ordered||0)+(bs.InProgress||0)}</div></div>
-        <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--red-bg)"><div style="font-size:7px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--red)">Pending</div><div style="font-size:16px;font-weight:800;color:var(--red)">${bs.Pending||0}</div></div>
-        <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--orange-bg)"><div style="font-size:7px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--orange)">Urgent</div><div style="font-size:16px;font-weight:800;color:var(--orange)">${d.urgent_items||0}</div></div>
-      </div>
-
-      <!-- Progress bar -->
-      <div style="display:flex;justify-content:space-between;font-size:7px;color:var(--t3);font-weight:600;margin-bottom:2px"><span><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--green);margin-right:2px;animation:pulse 2s infinite"></span>Today</span><span style="color:var(--green)">${done}/${d.today_total}</span></div>
-      <div style="height:4px;border-radius:2px;background:var(--s2);overflow:hidden;margin-bottom:8px"><div style="height:100%;border-radius:2px;width:${pct}%;background:linear-gradient(90deg,var(--green),#2ecc71)"></div></div>
-
-      <!-- Alerts -->
-      ${alerts.length > 0 ? `<div style="margin-bottom:8px">${alerts.join('')}</div>` : ''}
-
-      <!-- Orders Quick Menu (2-col grid) -->
-      <div class="sec-hd" style="padding-left:0">Orders</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
-        ${hasPerm('fn_create_order') ? `<div class="card" style="border-left:3px solid var(--gold)" onclick="startOrder()"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📝</div><div style="flex:1"><div class="card-title" style="font-size:10px">Create Order</div><div class="card-desc" style="font-size:7px">สั่งเค้ก ซอสไปที่ร้าน</div></div><div class="card-right" style="font-size:10px">→</div></div></div>` : ''}
-        ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📋</div><div style="flex:1"><div class="card-title" style="font-size:10px">View Orders</div><div class="card-desc" style="font-size:7px">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right" style="font-size:10px">→</div></div></div>` : ''}
-        ${hasPerm('fn_view_stock') ? `<div class="card" onclick="showScreen('stock')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📦</div><div style="flex:1"><div class="card-title" style="font-size:10px">View Stock</div><div class="card-desc" style="font-size:7px">สินค้าพร้อมส่ง</div></div><div class="card-right" style="font-size:10px">→</div></div></div>` : ''}
-      </div>
-
-      <!-- Records Quick Menu -->
-      <div class="sec-hd" style="padding-left:0">Records</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
-        ${hasPerm('fn_log_waste') ? `<div class="card" onclick="showScreen('waste')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🗑️</div><div style="flex:1"><div class="card-title" style="font-size:10px">Record Waste</div><div class="card-desc" style="font-size:7px">สินค้าหมดอายุ / เสียหาย</div></div><div class="card-right" style="font-size:10px">→</div></div></div>` : ''}
-        ${hasPerm('fn_create_return') ? `<div class="card" onclick="showScreen('returns')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">↩️</div><div style="flex:1"><div class="card-title" style="font-size:10px">Return / Feedback</div><div class="card-desc" style="font-size:7px">แจ้งปัญหาคุณภาพสินค้า</div></div><div class="card-right" style="font-size:10px">→</div></div></div>` : ''}
-      </div>
-      ${adminMenus}
+    <div class="sec-hd">📊 Today Delivery</div>
+    <div class="sum-grid">
+      <div class="sum-card sum-gold"><div class="sum-num">${d.today_total}</div><div class="sum-label">ออเดอร์ทั้งหมด</div></div>
+      <div class="sum-card sum-green"><div class="sum-num">${(bs.Fulfilled||0)+(bs.Delivered||0)}</div><div class="sum-label">เสร็จแล้ว</div></div>
+      <div class="sum-card sum-blue"><div class="sum-num">${bs.Ordered||0}</div><div class="sum-label">กำลังผลิต</div></div>
+      <div class="sum-card ${d.cutoff_violations_today>0?'sum-red':''}"><div class="sum-num">${bs.Pending||0}</div><div class="sum-label">รอ BC ยืนยัน</div></div>
     </div>
+    
+    ${d.urgent_items > 0 ? `<div style="padding:0 16px 8px"><div class="tag tag-red" style="font-size:12px;padding:6px 14px">⚡ URGENT: ${d.urgent_items} รายการ</div></div>` : ''}
+    ${d.cutoff_violations_today > 0 ? `<div style="padding:0 16px 12px"><div class="tag tag-orange" style="font-size:11px;padding:5px 12px">⚠️ Cutoff violation: ${d.cutoff_violations_today} ครั้ง</div></div>` : ''}
+    
+    <div class="sec-hd">⚡ Quick Menu</div>
+    <div class="pad" style="padding-top:0">
+      ${hasPerm('fn_create_order') ? `<div class="card" onclick="startOrder()">
+        <div class="card-row"><div class="card-icon" style="background:var(--gold-bg)">📝</div><div class="card-body"><div class="card-title">Create Order</div><div class="card-desc">สั่ง Cake / Sauce ไปร้าน</div></div><div class="card-right">→</div></div>
+      </div>` : ''}
+      ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')">
+        <div class="card-row"><div class="card-icon" style="background:var(--blue-bg)">📋</div><div class="card-body"><div class="card-title">View Orders</div><div class="card-desc">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right">→</div></div>
+      </div>` : ''}
+      ${hasPerm('fn_view_stock') ? `<div class="card" onclick="showScreen('stock')">
+        <div class="card-row"><div class="card-icon" style="background:var(--green-bg)">📦</div><div class="card-body"><div class="card-title">View Stock</div><div class="card-desc">สินค้าพร้อมส่ง</div></div><div class="card-right">→</div></div>
+      </div>` : ''}
+      ${hasPerm('fn_log_waste') ? `<div class="card" onclick="showScreen('waste')">
+        <div class="card-row"><div class="card-icon" style="background:var(--purple-bg)">🗑️</div><div class="card-body"><div class="card-title">Record Waste</div><div class="card-desc">สินค้าหมดอายุ / เสียหาย</div></div><div class="card-right">→</div></div>
+      </div>` : ''}
+      ${hasPerm('fn_create_return') ? `<div class="card" onclick="showScreen('returns')">
+        <div class="card-row"><div class="card-icon" style="background:var(--red-bg)">↩️</div><div class="card-body"><div class="card-title">Return / Feedback</div><div class="card-desc">แจ้งปัญหาคุณภาพ</div></div><div class="card-right">→</div></div>
+      </div>` : ''}
+    </div>
+    ${adminMenus}
   `;
 }
 
@@ -586,42 +587,47 @@ function catEmoji(name) {
 
 function renderProducts() {
   let prods = S.products.filter(p => p.is_active === true || p.is_active === 'TRUE');
-  if (S.productFilter !== 'all') prods = prods.filter(p => p.cat_id === S.productFilter);
-  if (S.productSearch) { const q = S.productSearch.toLowerCase(); prods = prods.filter(p => p.product_name.toLowerCase().includes(q)); }
-
+  
+  if (S.productFilter !== 'all') {
+    prods = prods.filter(p => p.cat_id === S.productFilter);
+  }
+  
+  if (S.productSearch) {
+    const q = S.productSearch.toLowerCase();
+    prods = prods.filter(p => p.product_name.toLowerCase().includes(q));
+  }
+  
   const grid = document.getElementById('productGrid');
   if (prods.length === 0) {
     grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">ไม่พบสินค้า</div></div>';
-    updateCartFooter(); return;
+    updateCartFooter();
+    return;
   }
-
-  grid.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;padding:0 4px 120px">${prods.map(p => {
+  
+  grid.innerHTML = prods.map(p => {
     const inCart = S.cart.find(c => c.product_id === p.product_id);
     const qty = inCart ? inCart.qty : 0;
     const sa = p.stock_available || 0;
-    const stockColor = sa === 0 ? 'var(--red)' : (sa <= (p.min_order || 1) * 2 ? 'var(--orange)' : 'var(--green)');
-    const stockText = sa === 0 ? `📦 0 ${p.unit} — ผลิตใหม่` : `📦 ${sa} ${p.unit}`;
+    const stockClass = sa === 0 ? 'out' : (sa <= (p.min_order || 1) * 2 ? 'low' : 'ok');
+    const stockIcon = sa === 0 ? '🚫' : (stockClass === 'low' ? '⚠️' : '📦');
     const canMinus = qty > 0;
-    const borderStyle = inCart ? 'border:1px solid #c8e6c9;background:var(--green-bg)' : 'border:1px solid var(--bd2);background:#fff';
-    const btnBorder = inCart ? 'var(--green)' : 'var(--bd)';
-    const btnColor = inCart ? 'var(--green)' : 'var(--t4)';
-
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;${borderStyle};border-radius:var(--rd)">
-      <div style="width:44px;height:44px;background:${inCart?'#fff':'var(--s1)'};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${prodEmoji(p.product_name)}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700">${p.product_name}</div>
-        <div style="font-size:9px;color:${stockColor}">${stockText}</div>
-        <div style="font-size:8px;color:var(--t4)">min: ${p.min_order||1} | step: ${p.order_step||1}</div>
+    
+    return `<div class="plist-item ${inCart?'in-cart':''}">
+      <div class="plist-img">${prodEmoji(p.product_name)}</div>
+      <div class="plist-info">
+        <div class="plist-name">${p.product_name}</div>
+        <div class="plist-stock ${stockClass}">${stockIcon} ${sa} ${p.unit}</div>
+        <div class="plist-meta">min: ${p.min_order || 1} | step: ${p.order_step || 1}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${canMinus?btnBorder:'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:14px;color:${canMinus?btnColor:'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
-        <div style="font-size:16px;font-weight:800;min-width:20px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
-        <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${btnBorder};display:flex;align-items:center;justify-content:center;font-size:14px;color:${inCart?btnColor:'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
-        ${inCart ? `<div style="width:28px;height:28px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;${inCart.is_urgent?'':'opacity:.4'}" onclick="toggleUrgentBrowse('${p.product_id}')" title="⚡ Urgent">⚡</div>` : ''}
+      <div class="plist-ctrl">
+        <div class="plist-btn ${canMinus?'active':'disabled'}" onclick="removeFromBrowse('${p.product_id}')">−</div>
+        <div class="plist-qty">${qty}</div>
+        <div class="plist-btn ${sa>0?'':'disabled'}" onclick="addToCart('${p.product_id}')">+</div>
+        ${inCart ? `<div class="plist-urgent ${inCart.is_urgent?'on':''}" onclick="toggleUrgentBrowse('${p.product_id}')" title="ด่วน">⚡</div>` : ''}
       </div>
     </div>`;
-  }).join('')}</div>`;
-
+  }).join('');
+  
   updateCartFooter();
 }
 
@@ -700,70 +706,63 @@ function renderCart() {
   document.getElementById('cartCount').textContent = S.cart.length + ' รายการ';
   const content = document.getElementById('cartContent');
   const submitBtn = document.getElementById('submitOrderBtn');
-
+  
+  // Edit mode indicator
   if (S.editingOrderId) {
     submitBtn.innerHTML = '💾 บันทึกการแก้ไข';
     document.getElementById('cartCount').textContent = S.cart.length + ' รายการ · ✏️ ' + S.editingOrderId;
   } else {
     submitBtn.innerHTML = '📤 สั่งเลย';
   }
-
+  
   if (S.cart.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">ตะกร้าว่าง</div><div class="empty-desc">กดสินค้าเพื่อเพิ่ม</div></div>';
-    submitBtn.disabled = true; submitBtn.style.display = 'none'; return;
+    document.getElementById('submitOrderBtn').disabled = true;
+    document.getElementById('submitOrderBtn').style.display = 'none';
+    return;
   }
-  submitBtn.disabled = false; submitBtn.style.display = '';
-
-  const totalPcs = S.cart.reduce((s,c) => s + c.qty, 0);
-  const urgentCount = S.cart.filter(c => c.is_urgent).length;
-
+  document.getElementById('submitOrderBtn').disabled = false;
+  document.getElementById('submitOrderBtn').style.display = '';
+  
   content.innerHTML = `
-    <div style="padding:14px 18px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <div class="date-badge">📅 ส่งวันที่ ${formatDateThai(S.deliveryDate)}</div>
-        <button class="btn btn-outline btn-sm" onclick="changeDeliveryDate()">เปลี่ยน</button>
-      </div>
-      ${S.editingOrderId && S.deliveryDate === todaySydney() ? `<div style="padding:8px 10px;background:var(--orange-bg);border:1px solid #f0d8a0;border-radius:var(--rd2);font-size:8px;color:var(--orange);margin-bottom:10px">⚠️ <b>หมายเหตุ:</b> ถ้าแก้ไข order หลัง cutoff time → status จะเปลี่ยนจาก <b>Ordered → Pending</b> โดยอัตโนมัติ</div>` : ''}
-
-      <!-- Cart Items -->
-      ${S.cart.map((item, idx) => {
-        const isFulfilled = S.editingOrderId && item.fulfilment_status;
-        return `<div style="padding:12px 0;border-bottom:1px solid var(--bd2)">
-          <div style="display:flex;align-items:flex-start;gap:10px">
-            <div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${prodEmoji(item.product_name)}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:700">${item.product_name}${isFulfilled ? ' <span style="font-size:8px;padding:2px 6px;border-radius:6px;background:var(--green-bg);color:var(--green)">✅ ทำแล้ว</span>' : ''}</div>
-              <div style="font-size:9px;color:var(--t3)">${item.unit} · ขั้นต่ำ ${item.min_order}${item.order_step>1?' · step '+item.order_step:''}${isFulfilled ? ' · sent:'+item.qty_sent : ''}</div>
-              ${isFulfilled ? '<div style="font-size:10px;color:var(--red);margin-top:2px">🔒 แก้ไขไม่ได้ — BC ทำแล้ว</div>' : `<div style="display:flex;align-items:center;gap:6px;margin-top:6px">
-                <div style="padding:3px 10px;${item.is_urgent?'background:var(--red);color:#fff':'background:#fff;border:1.5px solid var(--bd);color:var(--t3)'};border-radius:6px;font-size:8px;font-weight:${item.is_urgent?'700':'600'};cursor:pointer" onclick="toggleUrgent(${idx})">⚡ URGENT</div>
-                <input class="form-input" style="flex:1;padding:4px 8px;font-size:9px;max-width:180px" placeholder="โน้ต..." value="${item.note||''}" onchange="S.cart[${idx}].note=this.value">
-              </div>`}
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-              ${isFulfilled ? `<div style="font-size:18px;font-weight:800">${item.qty}</div>` : `<div style="display:flex;align-items:center;gap:6px">
-                <div style="width:30px;height:30px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--t2);cursor:pointer;font-weight:700" onclick="adjustQty(${idx},-1)">−</div>
-                <div style="font-size:18px;font-weight:800;min-width:24px;text-align:center">${item.qty}</div>
-                <div style="width:30px;height:30px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--t2);cursor:pointer;font-weight:700" onclick="adjustQty(${idx},1)">+</div>
-              </div>
-              <div style="font-size:8px;color:var(--red);cursor:pointer;margin-top:2px" onclick="removeFromCart(${idx})">ลบ</div>`}
-            </div>
+    <div style="padding:12px 16px;display:flex;align-items:center;gap:8px">
+      <div class="date-badge">📅 ส่งวันที่ ${formatDateThai(S.deliveryDate)}</div>
+      <button class="btn btn-outline btn-sm" onclick="changeDeliveryDate()">เปลี่ยน</button>
+    </div>
+    ${S.editingOrderId && S.deliveryDate === todaySydney() ? `
+    <div style="padding:0 16px 8px"><div style="background:var(--red-bg);border:1px solid #fecaca;border-radius:8px;padding:10px;font-size:11px;color:var(--red)">
+      ⚠️ <b>วันส่งเป็นวันนี้</b> — ถ้าเลย cutoff (05:00) order จะเปลี่ยนเป็น <b>Pending</b> ต้องรอ BC ยืนยันใหม่
+    </div></div>` : ''}
+    ${S.cart.map((item, idx) => {
+      const isFulfilled = S.editingOrderId && item.fulfilment_status;
+      return `
+      <div class="cart-item" ${isFulfilled ? 'style="opacity:.6;background:var(--s2)"' : ''}>
+        <div style="font-size:24px">${prodEmoji(item.product_name)}</div>
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.product_name} ${isFulfilled ? '<span class="tag tag-green" style="font-size:8px">✅ ทำแล้ว</span>' : ''}</div>
+          <div class="cart-item-meta">${item.unit} · ขั้นต่ำ ${item.min_order}${item.order_step>1?' · ×'+item.order_step:''}${isFulfilled ? ' · sent:'+item.qty_sent : ''}</div>
+          ${isFulfilled ? '<div style="font-size:10px;color:var(--red);margin-top:2px">🔒 แก้ไขไม่ได้ — BC ทำแล้ว</div>' : `
+          <div class="cart-item-actions">
+            <span class="urgent-chip ${item.is_urgent?'on':''}" onclick="toggleUrgent(${idx})">⚡ URGENT</span>
+            <input class="note-mini" placeholder="โน้ต..." value="${item.note}" onchange="S.cart[${idx}].note=this.value" style="max-width:160px">
+          </div>`}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          ${isFulfilled ? `<div class="qty-num" style="font-size:16px">${item.qty}</div>` : `
+          <div class="qty-sel">
+            <div class="qty-btn" onclick="adjustQty(${idx},-1)">−</div>
+            <div class="qty-num">${item.qty}</div>
+            <div class="qty-btn" onclick="adjustQty(${idx},1)">+</div>
           </div>
-        </div>`;
-      }).join('')}
-
-      <!-- Order Note -->
-      <div style="margin-top:14px">
-        <div style="font-size:10px;color:var(--t3);margin-bottom:4px">📝 โน้ตสำหรับ Order ทั้งหมด</div>
-        <textarea class="form-input" rows="2" placeholder="เช่น ส่งตอน 10:30" style="resize:vertical;font-size:10px" onchange="S.headerNote=this.value">${S.headerNote}</textarea>
-      </div>
-
-      <!-- Summary + Submit -->
-      <div style="padding:8px 10px;background:var(--s1);border-radius:var(--rd2);display:flex;justify-content:space-between;font-size:10px;font-weight:600;margin:10px 0 8px"><span>${S.cart.length} รายการ · ${totalPcs} ชิ้น</span>${urgentCount > 0 ? `<span style="color:var(--red)">${urgentCount} urgent</span>` : ''}</div>
-      <div style="display:flex;gap:5px">
-        <button class="btn btn-gold" style="flex:1;padding:10px;font-size:12px" onclick="submitOrder()">📤 ${S.editingOrderId ? 'บันทึกการแก้ไข' : 'สั่งเลย'}</button>
-        <button class="btn btn-outline" style="flex:0.5;padding:10px;font-size:10px" onclick="${S.editingOrderId ? "showScreen('orders')" : "showScreen('browse')"}">← ${S.editingOrderId ? 'ยกเลิก' : 'เลือกเพิ่ม'}</button>
-      </div>
-    </div>`;
+          <div style="font-size:9px;color:var(--red);cursor:pointer" onclick="removeFromCart(${idx})">ลบ</div>`}
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="form-group" style="padding:12px 16px">
+      <label class="form-label">📝 โน้ตสำหรับ Order ทั้งหมด</label>
+      <input class="form-input" placeholder="เช่น ส่งตอน 10:30" value="${S.headerNote}" onchange="S.headerNote=this.value">
+    </div>
+  `;
 }
 
 function adjustQty(idx, delta) {
@@ -889,19 +888,18 @@ async function submitOrder() {
 async function renderOrders() {
   const content = document.getElementById('orderList');
   content.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  
   try { await loadOrders(); } catch(e) {}
-
-  // Status counts
-  const all = S.orders;
-  const counts = { all:all.length, Pending:all.filter(o=>o.status==='Pending').length, Ordered:all.filter(o=>o.status==='Ordered').length, Fulfilled:all.filter(o=>o.status==='Fulfilled').length, Delivered:all.filter(o=>o.status==='Delivered').length };
-
+  
+  // Filters
   document.getElementById('orderFilters').innerHTML = `
-    <div class="filter-chip ${S.orderFilter==='all'?'active':''}" onclick="S.orderFilter='all';filterOrders()">All (${counts.all})</div>
-    <div class="filter-chip ${S.orderFilter==='Pending'?'active':''}" onclick="S.orderFilter='Pending';filterOrders()">⏳ Pending (${counts.Pending})</div>
-    <div class="filter-chip ${S.orderFilter==='Ordered'?'active':''}" onclick="S.orderFilter='Ordered';filterOrders()">📦 Ordered (${counts.Ordered})</div>
-    <div class="filter-chip ${S.orderFilter==='Fulfilled'?'active':''}" onclick="S.orderFilter='Fulfilled';filterOrders()">✅ Fulfilled (${counts.Fulfilled})</div>
-    <div class="filter-chip ${S.orderFilter==='Delivered'?'active':''}" onclick="S.orderFilter='Delivered';filterOrders()">🚚 Delivered (${counts.Delivered})</div>`;
-
+    <div class="filter-chip ${S.orderFilter==='all'?'active':''}" onclick="S.orderFilter='all';filterOrders()">All</div>
+    <div class="filter-chip ${S.orderFilter==='Pending'?'active':''}" onclick="S.orderFilter='Pending';filterOrders()">⏳ Pending</div>
+    <div class="filter-chip ${S.orderFilter==='Ordered'?'active':''}" onclick="S.orderFilter='Ordered';filterOrders()">📦 Ordered</div>
+    <div class="filter-chip ${S.orderFilter==='Fulfilled'?'active':''}" onclick="S.orderFilter='Fulfilled';filterOrders()">✅ Fulfilled</div>
+    <div class="filter-chip ${S.orderFilter==='Delivered'?'active':''}" onclick="S.orderFilter='Delivered';filterOrders()">🚚 Delivered</div>
+  `;
+  
   filterOrders();
 }
 
@@ -909,43 +907,29 @@ function filterOrders() {
   const content = document.getElementById('orderList');
   let orders = S.orders;
   if (S.orderFilter !== 'all') orders = orders.filter(o => o.status === S.orderFilter);
-
+  
+  // Update active filter
   document.querySelectorAll('#orderFilters .filter-chip').forEach(c => {
     c.classList.toggle('active', c.textContent.includes(S.orderFilter === 'all' ? 'All' : S.orderFilter));
   });
-
+  
   if (orders.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">ไม่มีออเดอร์</div></div>';
     return;
   }
-
-  const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)' };
-
-  content.innerHTML = `<div style="padding:8px 16px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:9px">
-      <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;letter-spacing:.2px;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order Date</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
-      </tr></thead>
-      <tbody>${orders.map(o => {
-        const bdr = bdrMap[o.status] || 'var(--bd)';
-        const isDone = o.status === 'Fulfilled' || o.status === 'Delivered';
-        const itemsSummary = (o.items||[]).map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ') || '—';
-        return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}" onclick="viewOrder('${o.order_id}')">
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${itemsSummary}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px;color:var(--t3)">${o.is_cutoff_violation?'<span style="font-size:7px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span> ':''}${o.header_note||'—'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>
-    <div style="font-size:8px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders · 30 วัน</div>
+  
+  content.innerHTML = `<div class="pad" style="padding-top:8px">${orders.map(o => `
+    <div class="card" onclick="viewOrder('${o.order_id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</span>
+        <span class="status ${statusClass(o.status)}">${o.status}</span>
+      </div>
+      <div style="font-size:11px;color:var(--td)">📅 Order Date : ${formatDateAU(o.order_date)} · Delivery By : ${formatDateAU(o.delivery_date)}</div>
+      ${o.is_cutoff_violation ? '<div class="tag tag-orange" style="margin-top:4px;font-size:9px">⚠️ Cutoff Violation</div>' : ''}
+      ${o.header_note ? `<div style="font-size:10px;color:var(--td);margin-top:4px">📝 ${o.header_note}</div>` : ''}
+    </div>
+  `).join('')}
+  ${S.role === 'store' ? `<div style="text-align:center;padding:16px;color:var(--tm);font-size:11px">แสดง 14 วันล่าสุด (${orders.length} orders)</div>` : ''}
   </div>`;
 }
 
@@ -969,45 +953,37 @@ async function viewOrder(orderId) {
   const items = S.currentOrder?.items || [];
   
   content.innerHTML = `
-    <div style="padding:14px 18px;max-width:850px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button class="btn btn-outline btn-sm" onclick="showScreen(S.role==='bc'?'bc-orders':'orders')">← กลับ</button><div style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</div></div>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span class="status ${statusClass(o.status)}" style="font-size:10px;padding:4px 10px">${o.status}</span>
-        ${o.is_cutoff_violation ? '<span style="font-size:7px;background:var(--orange-bg);color:var(--orange);padding:2px 6px;border-radius:4px">⚠️ Cutoff Violation</span>' : ''}
+    <div class="pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="status ${statusClass(o.status)}" style="font-size:12px;padding:5px 14px">${o.status}</span>
+        ${o.is_cutoff_violation ? '<span class="tag tag-orange">⚠️ Cutoff</span>' : ''}
       </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
-        <div><div style="font-size:8px;color:var(--t3)">สั่งเมื่อ</div><div style="font-size:10px;font-weight:600">${formatDateThai(o.order_date)}</div></div>
-        <div><div style="font-size:8px;color:var(--t3)">วันส่ง</div><div style="font-size:10px;font-weight:600">${formatDateThai(o.delivery_date)}</div></div>
-        <div><div style="font-size:8px;color:var(--t3)">สั่งโดย</div><div style="font-size:10px;font-weight:600">${o.display_name||o.user_id||'—'}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div><div style="font-size:10px;color:var(--tm)">สั่งเมื่อ</div><div style="font-size:12px;font-weight:600">${formatDateThai(o.order_date)}</div></div>
+        <div><div style="font-size:10px;color:var(--tm)">วันส่ง</div><div style="font-size:12px;font-weight:600">${formatDateThai(o.delivery_date)}</div></div>
       </div>
-
-      ${o.header_note ? `<div style="background:var(--s1);border-radius:6px;padding:7px;margin-bottom:8px;font-size:10px">📝 ${o.header_note}</div>` : ''}
-
-      <div style="font-size:10px;font-weight:700;margin-bottom:6px">รายการสินค้า (${items.length})</div>
-      <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:8px">
-        <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">⚡</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Fulfilment</th>
-        </tr></thead>
-        <tbody>${items.length > 0 ? items.map(item => `<tr>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(item.product_name)} ${item.product_name||item.product_id}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${item.qty_ordered} ${item.unit||''}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${item.is_urgent?'⚡':'—'}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${item.item_note||'—'}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center">${item.fulfilment_status ? `<span style="color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'};font-weight:600">${item.fulfilment_status} (${item.qty_sent||0})</span>` : '—'}</td>
-        </tr>`).join('') : '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--tm)">ไม่มีรายการ</td></tr>'}</tbody>
-      </table>
-
+      ${o.header_note ? `<div style="background:var(--s1);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px">📝 ${o.header_note}</div>` : ''}
+      
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">รายการสินค้า (${items.length})</div>
+      ${items.length > 0 ? items.map(item => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1)">
+          <div style="font-size:20px">${prodEmoji(item.product_name)}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${item.product_name||item.product_id}</div>
+            <div style="font-size:10px;color:var(--td)">${item.unit||''} ${item.is_urgent?'<span class="tag tag-red" style="font-size:8px">⚡ URGENT</span>':''}</div>
+            ${item.item_note ? `<div style="font-size:10px;color:var(--td)">📝 ${item.item_note}</div>` : ''}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:14px;font-weight:700">${item.qty_ordered}</div>
+            ${item.fulfilment_status ? `<div style="font-size:10px;color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'}">${item.fulfilment_status} (${item.qty_sent||0})</div>` : ''}
+          </div>
+        </div>
+      `).join('') : '<div style="font-size:12px;color:var(--tm);padding:16px 0">ไม่มีรายการ</div>'}
+      
       ${['Pending','Ordered'].includes(o.status) ? `
-        <div style="padding:8px 10px;background:var(--orange-bg);border:1px solid #f0d8a0;border-radius:var(--rd2);font-size:8px;color:var(--orange);margin-bottom:10px">⚠️ <b>หมายเหตุ:</b> ถ้าแก้ไข order หลัง cutoff time → status จะเปลี่ยนจาก <b>Ordered → Pending</b> โดยอัตโนมัติ</div>
-        <div style="display:flex;gap:5px">
+        <div style="margin-top:16px;display:flex;gap:8px">
           <button class="btn btn-outline" style="flex:1" onclick="editOrder('${o.order_id}')">✏️ แก้ไข</button>
-          <button class="btn btn-red btn-sm" style="padding:7px 10px" onclick="deleteOrder('${o.order_id}')">🗑️ ลบ</button>
+          <button class="btn btn-red btn-sm" onclick="deleteOrder('${o.order_id}')">🗑️ ลบ</button>
         </div>
       ` : ''}
     </div>
@@ -1088,39 +1064,26 @@ function renderStock(search) {
   const content = document.getElementById('stockContent');
   let items = S.stock;
   if (search) items = items.filter(s => s.product_name.toLowerCase().includes(search.toLowerCase()));
-
+  
   if (items.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่มีข้อมูลสต็อก</div></div>';
     return;
   }
-
-  content.innerHTML = `<div style="padding:8px 16px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:9px">
-      <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-        <th style="padding:5px 7px;text-align:right;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Actual</th>
-        <th style="padding:5px 7px;text-align:right;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Available</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สถานะ</th>
-      </tr></thead>
-      <tbody>${items.map(s => {
-        const sa = s.stock_available || 0;
-        const actual = s.stock_actual || sa;
-        const min2 = (s.min_order || 1) * 2;
-        const statusLbl = sa === 0 ? 'OUT' : (sa <= min2 ? 'LOW' : 'OK');
-        const statusCls = sa === 0 ? 'background:var(--red-bg);color:var(--red)' : (sa <= min2 ? 'background:#fef3c7;color:#92400e' : 'background:var(--green-bg);color:var(--green)');
-        const numColor = sa === 0 ? 'var(--red)' : (sa <= min2 ? 'var(--orange)' : 'var(--green)');
-        return `<tr>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(s.product_name)} ${s.product_name}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:right">${sa}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><span style="font-size:7px;font-weight:600;padding:2px 6px;border-radius:6px;${statusCls}">${statusLbl}</span></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>
-  </div>`;
+  
+  content.innerHTML = `<div class="pad" style="padding-top:4px">${items.map(s => `
+    <div class="card">
+      <div class="card-row">
+        <div style="font-size:24px">${prodEmoji(s.product_name)}</div>
+        <div class="card-body">
+          <div class="card-title">${s.product_name}</div>
+          <div class="card-desc">${s.unit} · ${getCatName(s.section_id)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:800;color:${s.stock_available>5?'var(--green)':s.stock_available>0?'var(--orange)':'var(--red)'}">${s.stock_available}</div>
+          <div style="font-size:9px;color:var(--td)">Available</div>
+        </div>
+      </div>
+    </div>
+  `).join('')}</div>`;
 }
 

@@ -1,6 +1,5 @@
-// Version 7.1 | 7 MAR 2026 | Siam Palette Group
-// BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
-// Phase 4: BC Screens UI overhaul (wireframe match)
+// Version 6.5.5 | 6 MAR 2026 | Siam Palette Group
+// BC Order — admin2.js: Dashboards, Announcements, BC Orders, Manage Products
 
 // ─── B-04: WASTE DASHBOARD ──────────────────────────────────
 async function renderAdminWasteDashboard() {
@@ -181,25 +180,27 @@ async function renderAdminTopProducts() {
         <div class="filter-chip ${S.topProdStore==='TMC'?'active':''}" onclick="S.topProdStore='TMC';renderAdminTopProducts()">TMC</div>
       </div>` : ''}`;
     
-    // Summary cards — wireframe 3-col KPI
+    // Summary cards
     html += `
-      <div style="padding:0 16px 10px"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-        <div style="padding:10px;background:var(--gold-bg);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:7px;color:var(--gold);font-weight:600">Total Ordered</div>
-          <div style="font-size:22px;font-weight:800;color:var(--gold)">${(d.total_qty||0).toLocaleString()}</div>
-          <div style="font-size:7px;color:var(--gold)">ชิ้น · ${S.topProdDays} วัน</div>
+      <div class="sec-hd">📊 สรุปภาพรวม (${S.topProdDays} วัน)</div>
+      <div class="sum-grid">
+        <div class="sum-card" style="border-left:3px solid var(--blue)">
+          <div class="sum-val" style="color:var(--blue)">${d.total_orders}</div>
+          <div class="sum-lbl">ออเดอร์ทั้งหมด</div>
         </div>
-        <div style="padding:10px;background:var(--s1);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:7px;color:var(--t3);font-weight:600">Total Orders</div>
-          <div style="font-size:22px;font-weight:800">${d.total_orders||0}</div>
-          <div style="font-size:7px;color:var(--t3)">orders</div>
+        <div class="sum-card" style="border-left:3px solid var(--green)">
+          <div class="sum-val" style="color:var(--green)">${d.total_qty}</div>
+          <div class="sum-lbl">จำนวนสั่งรวม</div>
         </div>
-        <div style="padding:10px;background:var(--blue-bg);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:7px;color:var(--blue);font-weight:600">Products Active</div>
-          <div style="font-size:22px;font-weight:800;color:var(--blue)">${(d.products||[]).length}</div>
-          <div style="font-size:7px;color:var(--blue)">of ${S.products.length}</div>
+        <div class="sum-card" style="border-left:3px solid var(--gold)">
+          <div class="sum-val">${d.products.length}</div>
+          <div class="sum-lbl">สินค้าที่มีการสั่ง</div>
         </div>
-      </div></div>`;
+        <div class="sum-card" style="border-left:3px solid var(--orange)">
+          <div class="sum-val">${d.total_orders > 0 ? Math.round(d.total_qty / d.total_orders) : 0}</div>
+          <div class="sum-lbl">เฉลี่ย/ออเดอร์</div>
+        </div>
+      </div>`;
     
     // Top Products Ranked
     const topP = d.products || [];
@@ -219,17 +220,24 @@ async function renderAdminTopProducts() {
         const pct = Math.round((p.qty_ordered / maxQty) * 100);
         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#'+(idx+1);
         const secIcon = sectionIcons[p.section] || '📦';
-        const storeBreakdown = (p.by_store || []).map(s =>
-          `<span style="background:var(--s1);color:var(--t3);padding:1px 5px;border-radius:3px;font-size:7px">${s.store_id}: ${s.qty}</span>`
-        ).join('');
+        const secColor = sectionColors[p.section] || '#6b7280';
+        const fulfilPct = p.qty_ordered > 0 ? Math.round((p.qty_sent / p.qty_ordered) * 100) : 0;
         html += `
-          <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
-              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px">${medal}</span><span style="font-size:11px;font-weight:700">${p.name}</span><span style="font-size:7px;color:var(--t4)">${p.section} · ${p.unit}</span></div>
-              <div style="text-align:right"><span style="font-size:14px;font-weight:800;color:var(--gold)">${p.qty_ordered}</span><span style="font-size:8px;color:var(--t3)"> ชิ้น · ${p.order_count} orders</span></div>
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+              <span style="font-size:12px">${medal} <strong>${p.name}</strong></span>
+              <span style="font-size:11px;color:var(--green);font-weight:600">${p.qty_ordered} ${p.unit}</span>
             </div>
-            <div style="height:8px;background:var(--s2);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--gold),#e8a820);border-radius:4px;transition:width .5s"></div></div>
-            ${storeBreakdown ? `<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">${storeBreakdown}</div>` : ''}
+            <div style="background:var(--s2);border-radius:4px;height:14px;overflow:hidden;margin-bottom:3px">
+              <div style="background:${secColor};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s"></div>
+            </div>
+            <div style="display:flex;gap:8px;font-size:9px;color:var(--td)">
+              <span>${secIcon} ${p.section}</span>
+              <span>📋 ${p.order_count} orders</span>
+              <span>🏪 ${p.store_count} stores</span>
+              <span>📤 ส่ง ${fulfilPct}%</span>
+              ${p.urgent_count > 0 ? `<span style="color:var(--red)">⚡ ${p.urgent_count} urgent</span>` : ''}
+            </div>
           </div>`;
       });
     }
@@ -335,38 +343,36 @@ async function renderAdminAnnouncements() {
     const scheduled = notifs.filter(n => n.is_active && n.start_date && n.start_date > today);
     const expired = notifs.filter(n => !n.is_active || (n.end_date && n.end_date < today));
     
-    el.innerHTML = `<div style="padding:14px 18px;max-width:900px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase">📢 Announcements</div>
-        <button class="btn btn-green btn-sm" onclick="showAnnouncementForm()">+ สร้างประกาศ</button>
-      </div>
-
-      ${notifs.length === 0 ? '<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">ยังไม่มีประกาศ</div></div>' : `
-      <table style="width:100%;border-collapse:collapse;font-size:9px">
-        <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Title</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Priority</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Target</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Expires</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
-        </tr></thead>
-        <tbody>${notifs.map(n => {
-          const isAct = n.is_active && (!n.end_date || n.end_date >= today);
-          const priColor = n.type === 'urgent' || n.priority === 'high' ? 'var(--red)' : 'var(--blue)';
-          const priLabel = n.type === 'urgent' || n.priority === 'high' ? 'High' : 'Normal';
-          const targetLabel = n.audience === 'all' ? 'all' : n.audience === 'store' ? 'store' : n.audience === 'bakery' ? 'bc' : n.audience || '—';
-          return `<tr style="${!isAct?'opacity:.6':''}">
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${n.title||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="color:${priColor};font-weight:600">${priLabel}</span></td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${targetLabel}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${n.end_date ? formatDateAU(n.end_date) : '—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;color:${isAct?'var(--green)':'var(--td)'}">${isAct?'✓':'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:7px" onclick="showAnnouncementForm('${n.notif_id}')">✏️</button></td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>`}
-    </div>`;
+    let html = `
+      <div class="pad">
+        <button class="btn btn-gold" style="width:100%" onclick="showAnnouncementForm()">➕ สร้างประกาศใหม่</button>
+      </div>`;
+    
+    // Active
+    html += `<div class="sec-hd">📢 กำลังแสดง (${active.length})</div>`;
+    if (active.length === 0) {
+      html += '<div style="text-align:center;padding:16px;color:var(--td);font-size:12px">ไม่มีประกาศที่แสดงอยู่</div>';
+    } else {
+      html += '<div class="pad" style="padding-top:0">';
+      active.forEach(n => { html += renderAnnouncementCard(n, 'active'); });
+      html += '</div>';
+    }
+    
+    // Scheduled
+    if (scheduled.length > 0) {
+      html += `<div class="sec-hd">⏰ ตั้งเวลาไว้ (${scheduled.length})</div><div class="pad" style="padding-top:0">`;
+      scheduled.forEach(n => { html += renderAnnouncementCard(n, 'scheduled'); });
+      html += '</div>';
+    }
+    
+    // Expired / Inactive
+    if (expired.length > 0) {
+      html += `<div class="sec-hd">🔇 หมดอายุ / ปิดแล้ว (${expired.length})</div><div class="pad" style="padding-top:0">`;
+      expired.forEach(n => { html += renderAnnouncementCard(n, 'expired'); });
+      html += '</div>';
+    }
+    
+    el.innerHTML = html;
   } catch(e) {
     el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
   }
@@ -618,6 +624,7 @@ function renderBcOrderList() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
   let orders = filterOrdersByDateAndScope(S.bcDateFilter, scope);
 
+  // Status filter
   if (S.bcStatusFilter !== 'all') {
     if (S.bcStatusFilter === 'Fulfilled') {
       orders = orders.filter(o => o.status === 'Fulfilled' || o.status === 'Delivered');
@@ -629,54 +636,61 @@ function renderBcOrderList() {
   const el = document.getElementById('bcOrderList');
   if (!orders.length) {
     const totalLoaded = S.orders ? S.orders.length : 0;
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">ไม่มีออเดอร์</div>
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">ไม่มีออเดอร์</div>
+      <div class="empty-desc">ไม่พบออเดอร์สำหรับ${S.bcDateFilter === 'all' ? 'ช่วงนี้' : 'วันที่ ' + formatDateThai(S.bcDateFilter)}</div>
       ${totalLoaded > 0 && S.bcDateFilter !== 'all' ? `<div style="margin-top:12px"><button class="btn btn-outline btn-sm" onclick="S.bcDateFilter='all';document.getElementById('bcDateInput').value='';renderBcOrderFilters();renderBcOrderList()">📋 ดูทั้งหมด (${totalLoaded} orders)</button></div>` : ''}
-      <div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="renderBcOrders()">🔄 โหลดใหม่</button></div></div>`;
+      <div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="renderBcOrders()">🔄 โหลดใหม่</button></div>
+    </div>`;
     return;
   }
 
-  const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)' };
+  // Group by store
+  const byStore = {};
+  orders.forEach(o => { if (!byStore[o.store_id]) byStore[o.store_id] = []; byStore[o.store_id].push(o); });
 
-  el.innerHTML = `<div style="padding:4px 16px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:9px">
-      <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
-      </tr></thead>
-      <tbody>${orders.map(o => {
-        const bdr = bdrMap[o.status] || 'var(--bd)';
-        const isDone = o.status === 'Fulfilled' || o.status === 'Delivered';
-        const isRejected = o.status === 'Rejected';
-        let items = o.items || [];
-        if (scope.length > 0) items = items.filter(it => scope.includes(it.section_id));
-        const itemsSummary = items.map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ') || '—';
+  let html = '';
+  Object.keys(byStore).sort().forEach(sid => {
+    html += `<div class="ord-store-hd">🏪 ${getStoreName(sid)} (${sid})</div>`;
+    byStore[sid].forEach(o => {
+      const bdr = 'bdr-' + o.status.toLowerCase().replace('inprogress','progress');
+      // Filter items by section_scope for display
+      let items = o.items || [];
+      if (scope.length > 0) items = items.filter(it => scope.includes(it.section_id));
 
-        let tapAction;
-        if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
-        else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
-        else tapAction = `viewOrderDetail('${o.order_id}')`;
+      // Tap → Pending goes to accept, Ordered/InProgress to fulfilment, Done to detail
+      let tapAction;
+      if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
+      else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
+      else tapAction = `viewOrderDetail('${o.order_id}')`;
 
-        return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}${isRejected?'opacity:.5':''}" onclick="${tapAction}">
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${o.store_id}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${itemsSummary}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status === 'InProgress' ? 'In Progress' : o.status}</span></td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center">${o.is_cutoff_violation?'<span style="font-size:7px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span>':'—'}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${o.display_name||o.user_id||'—'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>
-    <div style="font-size:8px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders · 30 วัน · ทุกร้าน</div>
-  </div>`;
+      html += `<div class="ord-card" onclick="${tapAction}">
+        <div class="ord-left ${bdr}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:11px;font-weight:600">${getDeptName(o.dept_id)} — ${o.display_name || o.user_id}</div>
+              <div style="font-size:9px;color:var(--td)">${o.order_id}</div>
+            </div>
+            <span class="status ${statusClass(o.status)}">${o.status === 'InProgress' ? 'In Progress' : o.status}</span>
+          </div>
+          ${o.header_note ? `<div style="font-size:9px;color:var(--cyan);margin-top:3px">📝 ${o.header_note}</div>` : ''}
+          ${o.is_cutoff_violation ? '<div class="tag tag-orange" style="margin-top:3px;font-size:9px">⚠️ Cutoff violation</div>' : ''}
+          ${items.length ? `<div style="margin-top:6px;border-top:1px solid var(--b1);padding-top:6px">` +
+            items.map(it =>
+              `<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0">
+                <span>${it.product_name}${it.is_urgent ? ' <span style="color:var(--red)">⚡</span>' : ''}</span>
+                <span style="font-weight:700">×${it.qty_ordered}</span>
+              </div>` +
+              (it.note ? `<div style="font-size:9px;color:var(--cyan);padding-left:4px">📝 ${it.note}</div>` : '')
+            ).join('') + `</div>` : ''}
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
 
+  // Also update filter counts
   renderBcOrderFilters();
 }
 
@@ -714,33 +728,34 @@ function renderBcAccept() {
   const orderTime = o.created_at ? o.created_at.split('T')[1].substring(0, 5) : '—';
 
   const el = document.getElementById('bcAcceptContent');
-  el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
-    <div style="padding:8px 10px;background:var(--red-bg);border-radius:var(--rd2);margin-bottom:8px;font-size:9px;color:var(--red);font-weight:600">
-      ${o.order_id} · ${getStoreName(o.store_id)} · ${o.display_name||o.user_id} · ส่ง ${formatDateAU(o.delivery_date)} ${o.is_cutoff_violation ? '· <span class="status st-pending">cutoff violation</span>' : ''}
+  el.innerHTML = `<div class="pad">
+    <div style="padding:10px 14px;background:var(--red-bg);border-radius:8px;font-size:11px;color:var(--red);margin-bottom:14px">
+      ⚠️ ออเดอร์นี้สั่งหลัง 5AM <strong>(${orderTime})</strong> สำหรับส่งวันนี้<br>กรุณา Accept หรือ Reject
     </div>
-    ${o.header_note ? `<div style="background:var(--s1);border-radius:6px;padding:7px;margin-bottom:8px;font-size:10px">📝 ${o.header_note}</div>` : ''}
 
-    <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:8px">
-      <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">⚡</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
-      </tr></thead>
-      <tbody>${items.map(it => `<tr>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(it.product_name)} ${it.product_name}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${it.section_id||''}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${it.qty_ordered} ${it.unit||''}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${it.is_urgent?'⚡ YES':'—'}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${it.item_note||it.note||'—'}</td>
-      </tr>`).join('')}</tbody>
-    </table>
+    <div class="card" style="border-left:3px solid var(--red)">
+      <div style="font-size:14px;font-weight:700">${o.order_id}</div>
+      <div style="font-size:11px;color:var(--td);margin-top:4px">
+        ${getStoreName(o.store_id)}-${getDeptName(o.dept_id)} · ${o.display_name || o.user_id}
+      </div>
+      <div style="font-size:10px;color:var(--td);margin-top:2px">
+        สั่ง: ${orderTime} · ส่ง: ${formatDateThai(o.delivery_date)}
+      </div>
+      ${o.header_note ? `<div style="font-size:10px;color:var(--cyan);margin-top:4px">📝 ${o.header_note}</div>` : ''}
 
-    <div style="display:flex;gap:5px;margin-top:8px">
-      <button class="btn btn-green" style="flex:1" id="btnAccept" onclick="acceptPending('${o.order_id}')">✓ Accept ทั้งหมด</button>
-      <button class="btn btn-red" style="flex:1" onclick="rejectPending('${o.order_id}')">✕ Reject</button>
-      <button class="btn btn-outline" onclick="showScreen('bc-orders')">← กลับ</button>
+      ${items.length ? `<div style="margin-top:8px;border-top:1px solid var(--b1);padding-top:8px">` +
+        items.map(it =>
+          `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">
+            <span>${prodEmoji(it.product_name)} ${it.product_name}${it.is_urgent ? ' <span style="color:var(--red)">⚡</span>' : ''}</span>
+            <span style="font-weight:700">×${it.qty_ordered}</span>
+          </div>` +
+          (it.note ? `<div style="font-size:9px;color:var(--cyan);padding-left:24px">📝 ${it.note}</div>` : '')
+        ).join('') + `</div>` : ''}
+    </div>
+
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-green" id="btnAccept" onclick="acceptPending('${o.order_id}')">✅ Accept — รับออเดอร์</button>
+      <button class="btn btn-outline" style="color:var(--red)" onclick="rejectPending('${o.order_id}')">❌ Reject — ปฏิเสธ</button>
     </div>
   </div>`;
 }
@@ -817,69 +832,71 @@ function renderBcFulfil() {
 
   const done = S.fulfilmentItems.filter(i => i.ful_status).length;
   const total = S.fulfilmentItems.length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const allDone = done === total && total > 0;
-  const allFull = S.fulfilmentItems.every(i => i.ful_status === 'full');
-  const partialMissingNote = S.fulfilmentItems.some(i => i.ful_status === 'partial' && !i.ful_note);
-  const isFulfilled = o.status === 'Fulfilled';
 
-  let html = `<div style="padding:14px 18px;max-width:850px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><button class="btn btn-outline btn-sm" onclick="showScreen('bc-orders')">←</button><div style="font-size:12px;font-weight:700;color:var(--gold)">${o.order_id}</div><span class="status ${statusClass(o.status)}" style="margin-left:auto">${o.status === 'InProgress' ? 'In Progress' : o.status}</span></div>
-    <div style="font-size:9px;color:var(--t3);margin-bottom:6px">${getStoreName(o.store_id)} · ${o.display_name||o.user_id} · ส่ง ${formatDateAU(o.delivery_date)}</div>
-    ${o.header_note ? `<div style="background:var(--s1);border-radius:6px;padding:6px;margin-bottom:6px;font-size:9px">📝 ${o.header_note}</div>` : ''}
-
-    <!-- Progress -->
-    <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:700;margin-bottom:3px"><span>${done} / ${total} items</span><span style="color:var(--green)">${pct}%</span></div>
-    <div style="height:5px;border-radius:3px;background:var(--s2);overflow:hidden;margin-bottom:10px"><div style="height:100%;border-radius:3px;width:${pct}%;background:linear-gradient(90deg,var(--green),#2ecc71);transition:width .3s"></div></div>
+  let html = `<div class="pad" style="padding-bottom:8px">
+    <div style="font-size:12px;font-weight:600">${getStoreName(o.store_id)}-${getDeptName(o.dept_id)} · ${o.display_name || o.user_id}</div>
+    <div style="font-size:10px;color:var(--td)">${o.order_id} · ส่ง ${formatDateThai(o.delivery_date)}</div>
+    ${o.header_note ? `<div style="font-size:10px;color:var(--cyan);margin-top:3px">📝 ${o.header_note}</div>` : ''}
+    <div class="form-group" style="margin-top:10px;margin-bottom:0">
+      <label class="form-label" style="color:var(--cyan)">ส่งโดย (Fulfilled by)</label>
+      <select class="form-input" style="font-size:12px" onchange="S.fulfilmentBy=this.value">
+        <option value="${S.session.user_id}">${S.session.display_name} (${S.session.dept_id})</option>
+      </select>
+    </div>
   </div>`;
 
-  // Items
-  html += `<div style="padding:0 18px">`;
   S.fulfilmentItems.forEach((item, i) => {
     const isFull = item.ful_status === 'full';
     const isPart = item.ful_status === 'partial';
-    const borderColor = isFull ? 'var(--green)' : isPart ? 'var(--orange)' : 'var(--bd)';
 
-    html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${isFull?'var(--green-bg)':'#fff'};border-left:4px solid ${borderColor};border-radius:0 var(--rd2) var(--rd2) 0;border:1px solid var(--bd2);border-left:4px solid ${borderColor};margin-bottom:4px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700">${item.product_name} ${item.is_urgent?'<span style="color:var(--red)">⚡</span>':''}</div>
-        ${item.note||item.item_note ? `<div style="font-size:8px;color:var(--t3)">📝 ${item.note||item.item_note}</div>` : ''}
-      </div>
-      <div style="text-align:center;min-width:50px">
-        <div style="font-size:20px;font-weight:800">${isFull ? item.qty_ordered : isPart ? item.qty_sent : item.qty_ordered}</div>
-        <div style="font-size:7px;color:${isPart?'var(--orange)':'var(--t3)'}">${isPart ? '/ '+item.qty_ordered+' '+item.unit : item.unit}</div>
-      </div>
-      ${isFull ? `<div style="background:var(--green);color:#fff;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:700;min-width:32px;text-align:center;cursor:pointer" onclick="setFulfilment(${i},'full')">✓</div>` :
-        isPart ? `<div style="background:var(--orange);color:#fff;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:700;min-width:32px;text-align:center;cursor:pointer" onclick="setFulfilment(${i},'partial')">✕</div>` :
-        `<div style="display:flex;gap:3px">
-          <div style="background:var(--green);color:#fff;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;min-width:38px;text-align:center" onclick="setFulfilment(${i},'full')">✓</div>
-          <div style="background:var(--orange);color:#fff;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;min-width:38px;text-align:center" onclick="setFulfilment(${i},'partial')">✕</div>
-        </div>`}
-    </div>`;
+    html += `<div class="ful-item" style="border-left:3px solid ${isFull ? 'var(--green)' : isPart ? 'var(--red)' : 'var(--b2)'}">
+      <div class="ful-head">
+        <div class="ful-info">
+          <div style="font-size:13px;font-weight:600">${prodEmoji(item.product_name)} ${item.product_name}${item.is_urgent ? ' <span style="color:var(--red)">⚡</span>' : ''}</div>
+          <div style="font-size:10px;color:var(--td)">สั่ง: ${item.qty_ordered} ${item.unit}</div>
+          ${item.note ? `<div style="font-size:9px;color:var(--cyan)">📝 ${item.note}</div>` : ''}
+        </div>
+        <div class="ful-btns">
+          <div class="ful-btn ${isFull ? 'sel-full' : ''}" onclick="setFulfilment(${i},'full')" title="ส่งครบ">✓</div>
+          <div class="ful-btn ${isPart ? 'sel-part' : ''}" onclick="setFulfilment(${i},'partial')" title="ส่งไม่ครบ/ไม่ได้">✗</div>
+        </div>
+      </div>`;
 
+    if (isFull) {
+      html += `<div class="ful-ok">✅ ส่งครบ: ${item.qty_ordered} ${item.unit}</div>`;
+    }
     if (isPart) {
-      html += `<div style="padding:8px 14px;margin-bottom:4px;background:var(--orange-bg);border-radius:var(--rd2)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <label style="font-size:9px;font-weight:600;color:var(--orange)">จำนวนจริง:</label>
-          <div style="display:flex;align-items:center;gap:6px">
-            <div style="width:28px;height:28px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;font-weight:700" onclick="fulQty(${i},-1)">−</div>
-            <div style="font-size:16px;font-weight:800;color:var(--red);min-width:24px;text-align:center">${item.qty_sent}</div>
-            <div style="width:28px;height:28px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;font-weight:700" onclick="fulQty(${i},1)">+</div>
-            <span style="font-size:8px;color:var(--t3)">/ ${item.qty_ordered} ${item.unit}</span>
+      html += `<div class="ful-partial">
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">จำนวนที่ส่งจริง *</label>
+          <div class="qty-sel" style="justify-content:flex-start">
+            <div class="qty-btn" onclick="fulQty(${i},-1)">−</div>
+            <div class="qty-num" style="color:var(--red)">${item.qty_sent}</div>
+            <div class="qty-btn" onclick="fulQty(${i},1)">+</div>
+            <span style="font-size:10px;color:var(--td);margin-left:4px">/ ${item.qty_ordered} ${item.unit}</span>
           </div>
         </div>
-        <input class="form-input" style="font-size:10px;border-color:var(--orange)" value="${item.ful_note}" 
-          oninput="S.fulfilmentItems[${i}].ful_note=this.value" placeholder="เหตุผล (จำเป็น)...">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">เหตุผล *</label>
+          <input class="form-input" style="border-color:var(--red);font-size:12px" value="${item.ful_note}" 
+            oninput="S.fulfilmentItems[${i}].ful_note=this.value;const b=document.getElementById('btnFulfilSubmit');if(b)b.disabled=S.fulfilmentItems.some(x=>!x.ful_status)||S.fulfilmentItems.some(x=>x.ful_status==='partial'&&!x.ful_note)" placeholder="เช่น หมด flour ทำได้แค่ 2">
+        </div>
       </div>`;
     }
+    html += `</div>`;
   });
-  html += `</div>`;
 
-  // Bottom actions
-  html += `<div style="padding:14px 18px;display:flex;flex-direction:column;gap:5px">
-    <button class="btn btn-blue" onclick="submitFulfilment()">💾 บันทึกระหว่างทาง</button>
-    <button class="btn btn-green" onclick="submitFulfilment()" ${!allDone || partialMissingNote ? 'disabled' : ''}>✅ Fulfil ครบ${!allDone ? ' (ต้อง mark ทุกตัว)' : ''}</button>
-    <button class="btn btn-outline" style="color:var(--purple);border-color:var(--purple);${!isFulfilled?'opacity:.4':''}" ${!isFulfilled?'disabled':''} onclick="markDelivered('${o.order_id}')">🚚 Mark as Delivered</button>
+  // Submit area
+  const canSubmit = done === total && total > 0;
+  const partialMissingNote = S.fulfilmentItems.some(i => i.ful_status === 'partial' && !i.ful_note);
+
+  html += `<div class="pad">
+    <div style="font-size:10px;color:var(--td);margin-bottom:8px">อัพเดทแล้ว: ${done}/${total} items</div>
+    <button class="btn btn-blue" id="btnFulfilSubmit" onclick="submitFulfilment()" 
+      ${!canSubmit || partialMissingNote ? 'disabled' : ''}>
+      💾 บันทึก
+    </button>
+    ${partialMissingNote ? '<div style="font-size:10px;color:var(--red);margin-top:6px;text-align:center">⚠️ กรุณากรอกเหตุผลสำหรับรายการที่ส่งไม่ครบ</div>' : ''}
   </div>`;
 
   document.getElementById('bcFulfilContent').innerHTML = html;
@@ -941,138 +958,89 @@ async function submitFulfilment() {
   setTimeout(() => showScreen('bc-orders'), 800);
 }
 
-// v7.1: Mark Delivered (UI stub — connects to existing API)
-async function markDelivered(orderId) {
-  if (!confirm('ยืนยัน Mark as Delivered สำหรับ ' + orderId + ' ?')) return;
-  try {
-    const r = await api('mark_delivered', { order_id: orderId });
-    toast(r.message || '🚚 Delivered!', r.success ? 'success' : 'error');
-  } catch(e) {
-    toast('🚚 Delivered! (Demo)', 'success');
-  }
-  const o = S.orders.find(x => x.order_id === orderId);
-  if (o) o.status = 'Delivered';
-  setTimeout(() => showScreen('bc-orders'), 800);
-}
-
 // ─── B5: BC STOCK MANAGEMENT ────────────────────────────────
 function renderBcStock() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
+  document.getElementById('bcStockSub').textContent = getScopeLabel();
 
+  // Load stock if empty
   if (!S.stock.length) {
     S.stock = S.products.filter(p => p.allow_stock).map(p => ({
       product_id: p.product_id, product_name: p.product_name,
-      unit: p.unit, section_id: p.section_id, cat_id: p.cat_id,
+      unit: p.unit, section_id: p.section_id,
       stock_actual: p.stock_available || 0, stock_available: p.stock_available || 0,
     }));
   }
 
+  // Filter by scope
   let items = S.stock;
   if (scope.length > 0) items = items.filter(s => scope.includes(s.section_id));
+
+  // Sort: low stock first
   items.sort((a, b) => a.stock_actual - b.stock_actual);
 
-  // Category chips
-  const cats = [...new Set(items.map(s => s.section_id))];
+  // Product dropdown options
+  const opts = items.map(p =>
+    `<option value="${p.product_id}" ${p.product_id === S.bcStockProduct ? 'selected' : ''}>${prodEmoji(p.product_name)} ${p.product_name} (${p.stock_actual} ${p.unit})</option>`
+  ).join('');
 
   const el = document.getElementById('bcStockContent');
-  el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
-    <!-- Scope indicator -->
-    <div style="padding:6px 10px;background:var(--blue-bg);border-radius:var(--rd2);margin-bottom:8px;font-size:8px;color:var(--blue);display:flex;justify-content:space-between">
-      <span>👤 ${S.session?.display_name||''} · <b>${S.deptMapping?.module_role||''}</b> · scope: <b>${getScopeLabel()}</b></span>
-      <span>allow_stock · ${items.length} สินค้า</span>
-    </div>
-
-    <input class="search-input" placeholder="🔍 ค้นหาชื่อสินค้า..." oninput="filterBcStock(this.value)" style="margin-bottom:8px;width:100%">
-
-    <div id="bcStockTable"></div>
-
-    <button class="btn btn-blue" style="margin-top:8px" onclick="showBcStockPopup()">+ เพิ่ม/ลดสต็อก</button>
-  </div>`;
-
-  renderBcStockTable(items);
-}
-
-function filterBcStock(q) {
-  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  let items = S.stock;
-  if (scope.length > 0) items = items.filter(s => scope.includes(s.section_id));
-  if (q) items = items.filter(s => s.product_name.toLowerCase().includes(q.toLowerCase()));
-  renderBcStockTable(items);
-}
-
-function renderBcStockTable(items) {
-  const el = document.getElementById('bcStockTable');
-  if (!el) return;
   el.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:9px">
-      <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-        <th style="padding:5px 7px;text-align:right;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Actual</th>
-        <th style="padding:5px 7px;text-align:right;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Available</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
-      </tr></thead>
-      <tbody>${items.map(s => {
-        const sa = s.stock_available || 0;
-        const actual = s.stock_actual || sa;
-        const min2 = 4;
-        const statusLbl = actual === 0 ? 'OUT' : (actual <= min2 ? 'LOW' : 'OK');
-        const statusCls = actual === 0 ? 'background:var(--red-bg);color:var(--red)' : (actual <= min2 ? 'background:#fef3c7;color:#92400e' : 'background:var(--green-bg);color:var(--green)');
-        const numColor = actual === 0 ? 'var(--red)' : (actual <= min2 ? 'var(--orange)' : 'var(--green)');
-        return `<tr>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(s.product_name)} ${s.product_name}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:right">${sa}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><span style="font-size:7px;font-weight:600;padding:2px 6px;border-radius:6px;${statusCls}">${statusLbl}</span></td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:7px" onclick="showBcStockPopup('${s.product_id}')">+/−</button></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
-}
-
-function showBcStockPopup(preselect) {
-  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  let items = S.stock;
-  if (scope.length > 0) items = items.filter(s => scope.includes(s.section_id));
-
-  S.bcStockProduct = preselect || '';
-  S.bcStockQty = 1;
-  S.bcStockAction = 'add';
-  S.bcStockNote = '';
-
-  showDialog(`
-    <div style="font-size:16px;font-weight:700;margin-bottom:12px">📦 เพิ่ม/ลดสต็อก</div>
-    <div class="form-group">
-      <label class="form-label">สินค้า</label>
-      <select class="form-input" onchange="S.bcStockProduct=this.value" id="bcStockSelect">
-        <option value="">— เลือกสินค้า —</option>
-        ${items.map(p => `<option value="${p.product_id}" ${p.product_id===preselect?'selected':''}>${prodEmoji(p.product_name)} ${p.product_name} (${p.stock_actual} ${p.unit})</option>`).join('')}
-      </select>
+    <div class="pad" style="padding-bottom:8px">
+      <div class="sec-hd" style="padding-left:0">สต็อกจริง (Actual)</div>
     </div>
-    <div class="form-group">
-      <label class="form-label">ประเภท</label>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-green" style="flex:1;padding:8px" id="bcStAdd" onclick="S.bcStockAction='add';document.getElementById('bcStAdd').className='btn btn-green';document.getElementById('bcStRm').className='btn btn-outline'">➕ เพิ่ม</button>
-        <button class="btn btn-outline" style="flex:1;padding:8px" id="bcStRm" onclick="S.bcStockAction='remove';document.getElementById('bcStRm').className='btn btn-red';document.getElementById('bcStAdd').className='btn btn-outline'">➖ ลด</button>
+    <div style="padding:0 16px 12px">
+      ${items.map(s => {
+        const color = s.stock_actual <= 5 ? 'var(--red)' : s.stock_actual <= 15 ? 'var(--orange)' : 'var(--t)';
+        return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b1);font-size:12px">
+          <span>${prodEmoji(s.product_name)} ${s.product_name}</span>
+          <span style="font-weight:700;color:${color}">${s.stock_actual} ${s.unit}</span>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="pad" style="padding-top:4px">
+      <div class="sec-hd" style="padding-left:0">เพิ่ม/ลด สต็อก</div>
+      <div class="form-group">
+        <label class="form-label">สินค้า</label>
+        <select class="form-input" onchange="S.bcStockProduct=this.value;S.bcStockQty=1">
+          <option value="">— เลือกสินค้า —</option>
+          ${opts}
+        </select>
       </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">จำนวน</label>
-      <input class="form-input" type="number" min="1" value="1" id="bcStQtyInput" style="font-size:16px" oninput="S.bcStockQty=parseInt(this.value)||0">
-    </div>
-    <div class="form-group">
-      <label class="form-label">หมายเหตุ</label>
-      <input class="form-input" placeholder="เช่น Morning batch" onchange="S.bcStockNote=this.value">
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ยกเลิก</button>
-      <button class="btn btn-gold" style="flex:1" onclick="submitBcStock();closeDialog()">💾 บันทึก</button>
-    </div>
-  `);
+
+      <div class="form-group">
+        <label class="form-label">ประเภท</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn ${S.bcStockAction==='add'?'btn-green':'btn-outline'}" style="flex:1;padding:8px" 
+            onclick="S.bcStockAction='add';renderBcStock()">➕ เพิ่ม</button>
+          <button class="btn ${S.bcStockAction==='remove'?'btn-red':'btn-outline'}" style="flex:1;padding:8px" 
+            onclick="S.bcStockAction='remove';renderBcStock()">➖ ลด</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">จำนวน</label>
+        <div class="qty-sel" style="justify-content:flex-start">
+          <div class="qty-btn" onclick="bcStockQty(-1)">−</div>
+          <div class="qty-num" style="color:${S.bcStockAction==='remove'?'var(--red)':'var(--green)'}">${S.bcStockQty}</div>
+          <div class="qty-btn" onclick="bcStockQty(1)">+</div>
+          <div class="qty-btn" onclick="bcStockQty(5)" style="font-size:11px;width:36px;border-radius:6px">+5</div>
+          <div class="qty-btn" onclick="bcStockQty(10)" style="font-size:11px;width:36px;border-radius:6px">+10</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">หมายเหตุ</label>
+        <input class="form-input" placeholder="เช่น Morning batch, นับสต็อก" 
+          value="${S.bcStockNote}" onchange="S.bcStockNote=this.value">
+      </div>
+
+      <button class="btn ${S.bcStockAction==='add'?'btn-green':'btn-red'}" id="btnBcStock"
+        onclick="submitBcStock()" ${!S.bcStockProduct||S.bcStockQty<1?'disabled':''}>
+        💾 บันทึก ${S.bcStockAction==='add'?'เพิ่ม':'ลด'}สต็อก
+      </button>
+    </div>`;
 }
 
 function bcStockQty(d) {
@@ -1114,81 +1082,58 @@ async function submitBcStock() {
 
 // ─── B7: BC RETURNS MANAGEMENT ──────────────────────────────
 function renderBcReturns() {
+  document.getElementById('bcReturnSub').textContent = getScopeLabel();
+
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
   let items = S.returns || [];
   if (scope.length > 0) items = items.filter(r => scope.includes(r.section_id));
 
+  // Counts
   const open = items.filter(r => r.status === 'Reported' || r.status === 'Received');
-  const resolved = items.filter(r => r.status === 'Reworked' || r.status === 'Wasted');
+  const countOpen = open.length;
+  const countAll = items.length;
 
+  // Filter chips
   document.getElementById('bcReturnFilters').innerHTML = `
-    <div class="filter-chip ${S.bcReturnFilter==='open'?'active':''}" onclick="S.bcReturnFilter='open';renderBcReturns()">Open (${open.length})</div>
-    <div class="filter-chip ${S.bcReturnFilter==='resolved'?'active':''}" onclick="S.bcReturnFilter='resolved';renderBcReturns()">Resolved (${resolved.length})</div>
-    <div class="filter-chip ${S.bcReturnFilter==='all'?'active':''}" onclick="S.bcReturnFilter='all';renderBcReturns()">ทั้งหมด (${items.length})</div>`;
+    <div class="filter-chip ${S.bcReturnFilter==='open'?'bc-active':''}" onclick="S.bcReturnFilter='open';renderBcReturns()">Open (${countOpen})</div>
+    <div class="filter-chip ${S.bcReturnFilter==='all'?'bc-active':''}" onclick="S.bcReturnFilter='all';renderBcReturns()">ทั้งหมด (${countAll})</div>`;
 
+  // Apply filter
   if (S.bcReturnFilter === 'open') items = open;
-  else if (S.bcReturnFilter === 'resolved') items = resolved;
-  items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const borderMap = { Reported:'var(--orange)', Received:'var(--blue)', Reworked:'var(--green)', Wasted:'var(--red)' };
+  // Sort newest first
+  items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const el = document.getElementById('bcReturnList');
   if (!items.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">↩️</div><div class="empty-title">ไม่มีสินค้าคืน</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">↩️</div><div class="empty-title">ไม่มีสินค้าคืน</div><div class="empty-desc">ยังไม่มีรายการสำหรับ section นี้</div></div>';
     return;
   }
 
-  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;padding:0 16px 16px">${items.map(r => {
-    const bdr = borderMap[r.status] || 'var(--bd)';
+  el.innerHTML = items.map(r => {
+    const borderColor = r.status === 'Returning' ? 'var(--red)' : r.status === 'Received' ? 'var(--blue)' : 'var(--green)';
     const statusTag = returnStatusTag(r.status);
-    const pName = r.product_name || r.product_id;
 
     let actions = '';
     if (r.status === 'Reported') {
-      actions = `<div style="display:flex;gap:4px;margin-top:6px">
-        <button class="btn btn-green btn-sm" style="padding:5px 14px;font-size:10px" onclick="showReceivePopup('${r.return_id}')">📦 Receive</button>
-        <button class="btn btn-outline btn-sm" style="padding:5px 10px;font-size:9px" onclick="showReturnDetail('${r.return_id}')">👁️ Detail</button>
+      actions = `<div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-blue btn-sm" style="flex:1" onclick="receiveReturn('${r.return_id}')">📥 รับของ (Receive)</button>
       </div>`;
     } else if (r.status === 'Received') {
-      actions = `<div style="display:flex;gap:4px;margin-top:6px">
-        <button class="btn btn-green btn-sm" style="padding:5px 14px;font-size:10px" onclick="resolveReturn('${r.return_id}','Reworked')">✅ Rework</button>
-        <button class="btn btn-red btn-sm" style="padding:5px 14px;font-size:10px" onclick="resolveReturn('${r.return_id}','Wasted')">🗑️ Waste</button>
-        <button class="btn btn-outline btn-sm" style="padding:5px 10px;font-size:9px" onclick="showReturnDetail('${r.return_id}')">👁️ Detail</button>
-      </div>`;
-    } else {
-      actions = `<div style="display:flex;gap:4px;margin-top:6px">
-        <button class="btn btn-outline btn-sm" style="padding:5px 10px;font-size:9px" onclick="showReturnDetail('${r.return_id}')">👁️ Detail</button>
+      actions = `<div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-green btn-sm" style="flex:1" onclick="resolveReturn('${r.return_id}','Reworked')">🔧 ทำใหม่</button>
+        <button class="btn btn-red btn-sm" style="flex:1" onclick="resolveReturn('${r.return_id}','Wasted')">🗑️ ทิ้ง</button>
       </div>`;
     }
 
-    return `<div style="padding:10px 12px;border:1px solid var(--bd2);border-left:4px solid ${bdr};border-radius:0 var(--rd2) var(--rd2) 0">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-        <span style="font-size:10px;font-weight:700;color:var(--gold)">${r.return_id}</span>
-        ${statusTag}
-      </div>
-      <div style="font-size:12px;font-weight:700">${prodEmoji(pName)} ${pName} ×${r.quantity||r.qty} ${r.unit||''}</div>
-      <div style="font-size:8px;color:var(--t3);margin-top:2px">จาก <b>${getStoreName(r.store_id)}</b> · ${r.issue_type||''} · ${r.action === 'return_to_bakery' ? 'ส่งคืน BC' : r.action === 'discard_at_store' ? 'ทิ้งที่ร้าน' : ''} · ${formatDateAU(r.created_at)}</div>
-      ${r.failure_reason ? `<div style="font-size:8px;color:var(--td);margin-top:3px">📋 ${r.failure_reason}</div>` : ''}
+    return `<div style="margin:0 16px 8px;padding:12px;border:1px solid var(--b1);border-radius:var(--radius);border-left:3px solid ${borderColor}">
+      <div style="font-size:12px;font-weight:600">${r.return_id} · ${prodEmoji(r.product_name)} ${r.product_name} ×${r.qty}</div>
+      <div style="font-size:10px;color:var(--td);margin-top:3px">${getStoreName(r.store_id)}-${getDeptName(r.dept_id)} · ${r.reported_by} · ${r.reason}: ${r.detail}</div>
+      <div style="margin-top:6px">${statusTag}</div>
+      ${r.failure_reason ? `<div style="font-size:9px;color:var(--td);margin-top:4px">📋 ${r.failure_reason}</div>` : ''}
       ${actions}
     </div>`;
-  }).join('')}</div>`;
-}
-
-// Receive popup (BC clicks "📦 Receive")
-function showReceivePopup(returnId) {
-  const r = (S.returns || []).find(x => x.return_id === returnId);
-  if (!r) return;
-  const pName = r.product_name || r.product_id;
-  showDialog(`
-    <div style="font-size:14px;font-weight:700;margin-bottom:6px">📦 Receive Return</div>
-    <div style="font-size:10px;font-weight:600;margin-bottom:4px">${prodEmoji(pName)} ${pName} ×${r.quantity||r.qty} ${r.unit||''} — ${r.return_id}</div>
-    <div style="font-size:9px;color:var(--t3);margin-bottom:8px">จาก ${getStoreName(r.store_id)} · ${r.issue_type||''} · ${formatDateAU(r.created_at)}</div>
-    <div style="padding:6px 8px;background:var(--blue-bg);border-radius:var(--rd2);font-size:9px;color:var(--blue);margin-bottom:8px">ยืนยันว่า BC ได้รับสินค้าคืนแล้ว → status จะเปลี่ยนเป็น <b>Received</b></div>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-outline" style="flex:1" onclick="closeDialog()">ยกเลิก</button>
-      <button class="btn btn-green" style="flex:1" onclick="receiveReturn('${r.return_id}');closeDialog()">📦 ยืนยันรับ</button>
-    </div>
-  `);
+  }).join('');
 }
 
 function returnStatusTag(s) {

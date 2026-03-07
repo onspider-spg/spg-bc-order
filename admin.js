@@ -1,76 +1,125 @@
-// Version 6.5.5 | 6 MAR 2026 | Siam Palette Group
+// Version 7.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
+// Phase 5: Report screens UI overhaul (wireframe match)
 
 // ─── ADMIN SCREEN RENDERERS (A1-A9) ────────────────────────
 function renderAdminDashboard() {
   const d = S.dashboard || {};
   const bs = d.by_status || {};
   const total = d.today_total || 0;
-  const fulfilRate = total > 0 ? Math.round(((bs.Delivered||0)/(total))*100) : 0;
-  document.getElementById('adminDashboardContent').innerHTML = `
-    <div class="sec-hd">📊 ภาพรวมวันนี้ — ทุกร้าน</div>
-    <div class="sum-grid">
-      <div class="sum-card"><div class="sum-num">${total}</div><div class="sum-label">ออเดอร์</div></div>
-      <div class="sum-card"><div class="sum-num" style="color:var(--orange)">${bs.Pending||0}</div><div class="sum-label">Pending</div></div>
-      <div class="sum-card"><div class="sum-num" style="color:var(--blue)">${bs.Ordered||0}</div><div class="sum-label">Ordered</div></div>
-      <div class="sum-card"><div class="sum-num" style="color:var(--green)">${(bs.Fulfilled||0)+(bs.Delivered||0)}</div><div class="sum-label">Done</div></div>
-    </div>
-    <div class="sec-hd">📈 Performance</div>
-    <div class="pad">
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:16px">
-          <div style="font-size:28px;font-weight:700;color:var(--green)">${fulfilRate}%</div>
-          <div style="font-size:11px;color:var(--td)">Fulfilment Rate</div>
-        </div>
-        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:16px">
-          <div style="font-size:28px;font-weight:700;color:var(--red)">${d.cutoff_violations_today||0}</div>
-          <div style="font-size:11px;color:var(--td)">Cutoff Violations</div>
-        </div>
-        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:16px">
-          <div style="font-size:28px;font-weight:700;color:var(--orange)">${d.urgent_items||0}</div>
-          <div style="font-size:11px;color:var(--td)">URGENT Items</div>
-        </div>
-      </div>
-    </div>
-    <div class="sec-hd">🏪 Orders by Store</div>
-    <div class="pad">${renderStoreBreakdown()}</div>
-    <div class="sec-hd">🔗 Quick Links</div>
-    <div class="pad" style="padding-top:0;display:flex;gap:8px">
-      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-waste-dashboard')">
-        <div style="font-size:22px">🗑️</div>
-        <div style="font-size:11px;font-weight:600;margin-top:4px">Waste</div>
-      </div>
-      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-top-products')">
-        <div style="font-size:22px">🏆</div>
-        <div style="font-size:11px;font-weight:600;margin-top:4px">Top Products</div>
-      </div>
-      <div class="card" style="flex:1;text-align:center;padding:14px;cursor:pointer" onclick="showScreen('admin-announcements')">
-        <div style="font-size:22px">📢</div>
-        <div style="font-size:11px;font-weight:600;margin-top:4px">Announcements</div>
-      </div>
-    </div>`;
-}
-
-function renderStoreBreakdown() {
+  const done = (bs.Fulfilled||0) + (bs.Delivered||0);
+  const fulfilRate = total > 0 ? Math.round((done/total)*100) : 0;
   const orders = S.orders || [];
+
+  // Store breakdown
   const stores = {};
   orders.forEach(o => {
-    if (!stores[o.store_id]) stores[o.store_id] = { total:0, pending:0, ordered:0, done:0 };
+    if (!stores[o.store_id]) stores[o.store_id] = { total:0, pending:0, ordered:0, progress:0, done:0 };
     stores[o.store_id].total++;
     if (o.status === 'Pending') stores[o.store_id].pending++;
     else if (o.status === 'Ordered') stores[o.store_id].ordered++;
+    else if (o.status === 'InProgress') stores[o.store_id].progress++;
     else stores[o.store_id].done++;
   });
-  if (Object.keys(stores).length === 0) return '<div style="color:var(--td);font-size:12px;padding:12px">ยังไม่มีออเดอร์วันนี้</div>';
-  return Object.entries(stores).map(([sid, s]) => `
-    <div class="card" style="margin-bottom:6px">
-      <div class="card-row">
-        <div class="card-body">
-          <div class="card-title">${getStoreName(sid)}</div>
-          <div class="card-desc">${s.total} orders · ${s.pending} pending · ${s.ordered} ordered · ${s.done} done</div>
+
+  // Status distribution
+  const statusPct = (v) => total > 0 ? Math.round((v/total)*100) : 0;
+
+  // Alerts (pending + urgent + stock OUT)
+  const pendingOrders = orders.filter(o => o.status === 'Pending');
+  const urgentOrders = orders.filter(o => (o.items||[]).some(i => i.is_urgent));
+  const outStock = (S.stock||[]).filter(s => (s.stock_available||0) === 0);
+
+  // Waste + Returns today
+  const todayStr = todaySydney();
+  const todayWaste = (S.wasteLog||[]).filter(w => w.waste_date === todayStr);
+  const wasteQty = todayWaste.reduce((s,w) => s+(w.quantity||0), 0);
+  const todayReturns = (S.returns||[]).filter(r => (r.created_at||'').startsWith(todayStr));
+  const openReturns = (S.returns||[]).filter(r => r.status === 'Reported' || r.status === 'Received');
+
+  document.getElementById('adminDashboardContent').innerHTML = `<div style="padding:14px 18px;max-width:900px">
+    <!-- Row 1: KPI -->
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+      <div style="padding:12px;background:var(--gold-bg);border-radius:var(--rd2)">
+        <div style="font-size:7px;color:var(--gold);font-weight:600;text-transform:uppercase">Total Orders</div>
+        <div style="font-size:28px;font-weight:800;color:var(--gold)">${total}</div>
+        <div style="display:flex;gap:4px;margin-top:4px;font-size:7px"><span style="color:var(--red);font-weight:600">⏳ ${bs.Pending||0}</span><span style="color:var(--blue)">📦 ${bs.Ordered||0}</span><span style="color:var(--orange)">🔄 ${bs.InProgress||0}</span><span style="color:var(--green)">✅ ${done}</span></div>
+      </div>
+      <div style="padding:12px;background:var(--green-bg);border-radius:var(--rd2);text-align:center">
+        <div style="font-size:7px;color:var(--green);font-weight:600">FULFILMENT</div>
+        <div style="font-size:26px;font-weight:800;color:var(--green)">${fulfilRate}%</div>
+        <div style="height:4px;background:#c8e6c9;border-radius:2px;margin-top:3px"><div style="width:${fulfilRate}%;height:100%;background:var(--green);border-radius:2px"></div></div>
+      </div>
+      <div style="padding:12px;background:var(--red-bg);border-radius:var(--rd2);text-align:center">
+        <div style="font-size:7px;color:var(--red);font-weight:600">CUTOFF</div>
+        <div style="font-size:26px;font-weight:800;color:var(--red)">${d.cutoff_violations_today||0}</div>
+      </div>
+      <div style="padding:12px;background:var(--orange-bg);border-radius:var(--rd2);text-align:center">
+        <div style="font-size:7px;color:var(--orange);font-weight:600">URGENT</div>
+        <div style="font-size:26px;font-weight:800;color:var(--orange)">${d.urgent_items||0}</div>
+      </div>
+    </div>
+
+    <!-- Row 2: Store Health + Status Distribution -->
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-bottom:8px">
+      <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+        <div style="font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏪 Store Health</div>
+        ${Object.keys(stores).length === 0 ? '<div style="font-size:9px;color:var(--td);padding:8px 0">ยังไม่มีออเดอร์</div>' :
+          Object.entries(stores).map(([sid, s]) => {
+            const worst = s.pending > 0 ? 'var(--red)' : s.ordered > 0 ? 'var(--blue)' : s.progress > 0 ? 'var(--orange)' : 'var(--green)';
+            const donePct = s.total > 0 ? Math.round((s.done/s.total)*100) : 0;
+            return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px"><span style="font-weight:600">${getStoreName(sid)}</span><span>${s.total} orders</span></div>
+              <div style="height:4px;background:var(--s2);border-radius:2px"><div style="width:${donePct}%;height:100%;background:${worst};border-radius:2px"></div></div>
+              <div style="display:flex;gap:4px;font-size:7px;color:var(--t3);margin-top:1px">${s.pending?`<span style="color:var(--red)">●${s.pending} pending</span>`:''}${s.ordered?`<span style="color:var(--blue)">●${s.ordered} ordered</span>`:''}${s.progress?`<span style="color:var(--orange)">●${s.progress} progress</span>`:''}${s.done?`<span style="color:var(--green)">●${s.done} done</span>`:''}</div></div>`;
+          }).join('')}
+      </div>
+      <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+        <div style="font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">📊 Status Distribution</div>
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:8px">${total>0?`<div style="width:${statusPct(bs.Pending||0)}%;background:var(--red)"></div><div style="width:${statusPct(bs.Ordered||0)}%;background:var(--blue)"></div><div style="width:${statusPct(bs.InProgress||0)}%;background:var(--orange)"></div><div style="width:${statusPct(done)}%;background:var(--green)"></div>`:'<div style="width:100%;background:var(--s2)"></div>'}</div>
+        <div style="font-size:8px;line-height:2"><div style="display:flex;justify-content:space-between"><span><span style="color:var(--red)">●</span> Pending</span><span style="font-weight:700">${bs.Pending||0} (${statusPct(bs.Pending||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--blue)">●</span> Ordered</span><span style="font-weight:700">${bs.Ordered||0} (${statusPct(bs.Ordered||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--orange)">●</span> In Progress</span><span style="font-weight:700">${bs.InProgress||0} (${statusPct(bs.InProgress||0)}%)</span></div><div style="display:flex;justify-content:space-between"><span><span style="color:var(--green)">●</span> Done</span><span style="font-weight:700">${done} (${statusPct(done)}%)</span></div></div>
+      </div>
+    </div>
+
+    <!-- Row 3: Needs Attention -->
+    ${(pendingOrders.length + urgentOrders.length + outStock.length) > 0 ? `
+    <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px;margin-bottom:8px">
+      <div style="font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:6px">⚠️ Needs Attention</div>
+      ${pendingOrders.map(o => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:var(--red-bg);font-size:9px;color:var(--red);margin-bottom:3px;cursor:pointer" onclick="showBcAccept('${o.order_id}')">🚨 <b>${o.order_id} ${o.store_id}</b> — pending accept${o.is_cutoff_violation?' · cutoff ⚠️':''}</div>`).join('')}
+      ${urgentOrders.slice(0,3).map(o => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:#fef3c7;font-size:9px;color:#92400e;margin-bottom:3px">⚡ <b>${o.order_id} ${o.store_id}</b> — urgent items</div>`).join('')}
+      ${outStock.slice(0,3).map(s => `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);background:var(--blue-bg);font-size:9px;color:var(--blue);margin-bottom:3px">📦 <b>${s.product_name}</b> — stock OUT</div>`).join('')}
+    </div>` : ''}
+
+    <!-- Row 4: Waste + Returns Today -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase">🗑️ Waste Today</div><div style="font-size:7px;color:var(--t4);cursor:pointer" onclick="showScreen('admin-waste-dashboard')">ดูทั้งหมด →</div></div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${todayWaste.length}</div><div style="font-size:7px;color:var(--red)">items</div></div>
+          <div style="flex:1;padding:6px;background:var(--s1);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800">${wasteQty}</div><div style="font-size:7px;color:var(--t3)">ชิ้น</div></div>
+        </div>
+        ${todayWaste.slice(0,3).map(w => { const pn = ((S.products||[]).find(p=>p.product_id===w.product_id)||{}).product_name||w.product_id; return `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--bd2);font-size:8px"><span>● ${pn} ×${w.quantity}</span><span style="color:var(--red)">${w.reason}</span></div>`; }).join('')}
+      </div>
+      <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:8px;font-weight:700;color:var(--orange);text-transform:uppercase">↩️ Returns</div><div style="font-size:7px;color:var(--t4);cursor:pointer" onclick="showScreen('return-dashboard')">ดูทั้งหมด →</div></div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <div style="flex:1;padding:6px;background:var(--orange-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--orange)">${todayReturns.length}</div><div style="font-size:7px;color:var(--orange)">today</div></div>
+          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${openReturns.length}</div><div style="font-size:7px;color:var(--red)">open</div></div>
         </div>
       </div>
-    </div>`).join('');
+    </div>
+
+    <!-- Row 5: Quick Links -->
+    <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+      <div style="font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🔗 Quick Links</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:9px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:9px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:9px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:9px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
+        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-announcements')"><div style="display:flex;align-items:center;gap:6px"><span>📢</span><span style="font-size:9px;font-weight:600">Announcements</span><span style="margin-left:auto;font-size:10px;color:var(--t4)">→</span></div></div>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ─── A3: Product Management ──────────────────────────────────
@@ -97,31 +146,39 @@ async function renderAdminProducts() {
   const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
   
   el.innerHTML = `
-    <div style="display:flex;gap:8px;padding:12px;align-items:center">
-      <div class="dpill ${tab==='active'?'active':''}" onclick="S.adminProductTab='active';renderAdminProducts()">Active (${active.length})</div>
-      <div class="dpill ${tab==='inactive'?'active':''}" onclick="S.adminProductTab='inactive';renderAdminProducts()">Inactive (${inactive.length})</div>
-      <div style="flex:1"></div>
-      <button class="btn btn-gold btn-sm" onclick="showAddProductForm()">+ Add</button>
-    </div>
-    <div class="search-wrap"><input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()"></div>
-    <div class="pad" style="padding-top:0">
-      ${filtered.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--td);font-size:12px">ไม่พบสินค้า</div>' :
-      filtered.map(p => {
-        const isAct = p.is_active === true || p.is_active === 'TRUE';
-        return `<div class="card" style="margin-bottom:4px">
-          <div class="card-row">
-            <div class="card-icon" style="background:var(--s2)">${prodEmoji(p.product_name)}</div>
-            <div class="card-body">
-              <div class="card-title">${p.product_name}</div>
-              <div class="card-desc">${p.cat_id||p.category_id||'-'} · ${p.unit} · min:${p.min_order} step:${p.order_step||1} · ${p.section_id||'-'}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center">
-              <div onclick="showEditProductForm('${p.product_id}')" style="cursor:pointer;font-size:9px;padding:4px 8px;border-radius:8px;background:var(--blue-bg);color:var(--blue);font-weight:600">✏️</div>
-              <div onclick="toggleProduct('${p.product_id}',${!isAct})" style="cursor:pointer;font-size:9px;padding:4px 10px;border-radius:10px;background:${isAct?'var(--green-bg)':'var(--red-bg)'};color:${isAct?'var(--green)':'var(--red)'};font-weight:600">${isAct?'✅ Active':'❌ Off'}</div>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
+    <div style="padding:14px 18px;max-width:900px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <div class="filter-chip ${tab==='active'?'active':''}" onclick="S.adminProductTab='active';renderAdminProducts()">Active (${active.length})</div>
+        <div class="filter-chip ${tab==='inactive'?'active':''}" onclick="S.adminProductTab='inactive';renderAdminProducts()">Inactive (${inactive.length})</div>
+        <div style="flex:1"></div>
+        <button class="btn btn-gold btn-sm" onclick="showAddProductForm()">+ Add</button>
+      </div>
+      <input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()" style="width:100%;margin-bottom:8px">
+
+      ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' : `
+      <table style="width:100%;border-collapse:collapse;font-size:9px">
+        <thead><tr style="background:var(--s1)">
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+        </tr></thead>
+        <tbody>${filtered.map(p => {
+          const isAct = p.is_active === true || p.is_active === 'TRUE';
+          return `<tr>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(p.product_name)} ${p.product_name}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${getCatName(p.section_id)||p.cat_id||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="toggleProduct('${p.product_id}',${!isAct})"><span style="color:${isAct?'var(--green)':'var(--red)'}">●</span> ${isAct?'Active':'Off'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:7px" onclick="showEditProductForm('${p.product_id}')">✏️</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`}
     </div>`;
 }
 
@@ -416,26 +473,29 @@ async function renderAdminDeptMapping() {
     const mappings = resp.data || [];
     const roleColors = { store:'var(--blue)', bc_production:'var(--green)', bc_management:'var(--gold)', all:'var(--purple)' };
     
-    el.innerHTML = `
-      <div class="sec-hd">🏢 Department Mappings (${mappings.length})</div>
-      <div class="pad">
-        ${mappings.map(m => `<div class="card" style="margin-bottom:6px;${m.is_active?'':'opacity:.5;border-left:3px solid var(--red)'}">
-          <div class="card-row">
-            <div class="card-body">
-              <div class="card-title">${m.dept_id}</div>
-              <div class="card-desc">
-                <span style="padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;background:${(roleColors[m.module_role]||'var(--td)')+'20'};color:${roleColors[m.module_role]||'var(--td)'}">${m.module_role}</span>
-                · scope: <strong>${m.section_scope || '-'}</strong>
-              </div>
-            </div>
-            <div style="display:flex;gap:4px;flex-shrink:0">
-              <div onclick="editDeptMapping('${m.dept_id}','${m.module_role}','${m.section_scope||''}',${!!m.is_active})" style="cursor:pointer;font-size:12px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:var(--s2)">✏️</div>
-              <div onclick="toggleDeptActive('${m.dept_id}',${!m.is_active})" style="cursor:pointer;font-size:9px;padding:4px 8px;border-radius:8px;font-weight:600;
-                background:${m.is_active?'var(--green-bg)':'var(--red-bg)'};color:${m.is_active?'var(--green)':'var(--red)'}">${m.is_active?'ON':'OFF'}</div>
-            </div>
-          </div>
-        </div>`).join('')}
-      </div>`;
+    el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+      <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏢 Department → Module Role Mapping (${mappings.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:9px">
+        <thead><tr style="background:var(--s1)">
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Dept</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Module Role</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section Scope</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
+          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+        </tr></thead>
+        <tbody>${mappings.map(m => {
+          const roleColor = roleColors[m.module_role] || 'var(--td)';
+          const isNA = m.module_role === 'not_applicable';
+          return `<tr style="${m.is_active?'':'opacity:.5'}">
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${m.dept_id}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${roleColor}20;color:${roleColor};padding:1px 5px;border-radius:3px;font-size:8px;font-weight:600">${m.module_role}</span></td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${m.section_scope||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;color:${m.is_active?'var(--green)':'var(--red)'};cursor:pointer" onclick="toggleDeptActive('${m.dept_id}',${!m.is_active})">${m.is_active?'ON':'OFF'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:7px" onclick="editDeptMapping('${m.dept_id}','${m.module_role}','${m.section_scope||''}',${!!m.is_active})">✏️</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
   } catch(e) {
     el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
   }
@@ -501,18 +561,13 @@ async function renderAdminConfig() {
     { key:'auto_refresh_seconds', label:'🔄 Auto Refresh (วินาที)', desc:'รีเฟรชอัตโนมัติ', type:'number' },
   ];
   
-  el.innerHTML = `
-    <div class="sec-hd">⚙️ System Configuration</div>
-    <div class="pad">
-      ${items.map(i => `<div class="card" style="padding:16px;margin-bottom:8px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <div style="font-size:12px;font-weight:600">${i.label}</div>
-          <div onclick="editConfig('${i.key}','${config[i.key]||''}','${i.type}')" style="cursor:pointer;font-size:10px;padding:2px 8px;border-radius:6px;background:var(--gold-bg);color:var(--gold);font-weight:600">✏️ แก้</div>
-        </div>
-        <div style="font-size:18px;font-weight:700;color:var(--blue)">${config[i.key] || '-'}</div>
-        <div style="font-size:10px;color:var(--td);margin-top:2px">${i.desc}</div>
-      </div>`).join('')}
-    </div>`;
+  el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⚙️ System Configuration</div>
+    ${items.map(i => `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
+      <div><div style="font-size:10px;font-weight:500">${i.label}</div><div style="font-size:7px;color:var(--t3)">${i.desc}</div></div>
+      <div style="font-size:13px;font-weight:700;color:var(--gold)">${config[i.key]||'—'} <span style="font-size:8px;color:var(--blue);cursor:pointer" onclick="editConfig('${i.key}','${config[i.key]||''}','${i.type}')">✏️</span></div>
+    </div>`).join('')}
+  </div>`;
 }
 
 function editConfig(key, current, type) {
@@ -566,28 +621,22 @@ async function renderAdminNotifSettings() {
       ]},
     ];
     
-    el.innerHTML = `
-      <div style="padding:8px 12px;font-size:10px;color:var(--td)">กดเพื่อ toggle ON/OFF</div>
+    el.innerHTML = `<div style="padding:14px 18px;max-width:850px">
+      <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:2px">🔔 Notification Settings</div>
+      <div style="font-size:8px;color:var(--t3);margin-bottom:6px">กดเพื่อ toggle ON/OFF</div>
       ${groups.map(g => `
-        <div class="sec-hd">${g.title}</div>
-        <div class="pad" style="padding-top:0">
-          ${g.items.map(i => {
-            const on = settings[i.key] !== false;
-            return `<div class="card" style="margin-bottom:4px">
-              <div class="card-row">
-                <div class="card-body">
-                  <div class="card-title">${i.label}</div>
-                  <div class="card-desc">${i.desc}</div>
-                </div>
-                <div onclick="toggleNotifSetting('${i.key}',${!on})" style="cursor:pointer;width:48px;height:28px;border-radius:14px;position:relative;
-                  background:${on?'var(--green)':'var(--b2)'};transition:.2s">
-                  <div style="position:absolute;top:2px;${on?'right:2px':'left:2px'};width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s"></div>
-                </div>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      `).join('')}`;
+        <div style="font-size:9px;font-weight:600;color:var(--t3);margin:8px 0 4px">${g.title}</div>
+        ${g.items.map(i => {
+          const on = settings[i.key] !== false;
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
+            <div><div style="font-size:10px;font-weight:500">${i.label}</div><div style="font-size:7px;color:var(--t3)">${i.desc}</div></div>
+            <div onclick="toggleNotifSetting('${i.key}',${!on})" style="cursor:pointer;width:32px;height:18px;border-radius:9px;background:${on?'var(--green)':'var(--bd)'};position:relative;flex-shrink:0">
+              <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${on?'right:2px':'left:2px'};box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      `).join('')}
+    </div>`;
   } catch(e) {
     el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
   }
@@ -605,89 +654,86 @@ async function toggleNotifSetting(key, enabled) {
 function renderAdminCutoff() {
   const orders = S.orders || [];
   const violations = orders.filter(o => o.is_cutoff_violation);
-  
-  // Group by created_by
-  const byUser = {};
-  violations.forEach(o => {
-    const u = o.created_by || 'ไม่ทราบ';
-    if (!byUser[u]) byUser[u] = [];
-    byUser[u].push(o);
-  });
-  
-  document.getElementById('adminCutoffContent').innerHTML = `
-    <div class="sec-hd">⏰ Cutoff Violations (${violations.length})</div>
-    <div class="pad">
-      ${violations.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--td);font-size:12px">✅ ไม่มี violation</div>' : `
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          ${Object.entries(byUser).map(([user, arr]) => `
-            <div class="card" style="flex:1;min-width:120px;padding:12px;text-align:center">
-              <div style="font-size:24px;font-weight:700;color:var(--red)">${arr.length}</div>
-              <div style="font-size:11px;color:var(--td)">${user}</div>
-            </div>
-          `).join('')}
-        </div>
-        ${violations.map(o => `<div class="card" style="margin-bottom:4px;border-left:3px solid var(--red)">
-          <div class="card-row">
-            <div class="card-body">
-              <div class="card-title">${o.order_id}</div>
-              <div class="card-desc">${getStoreName(o.store_id)} · ${o.created_by||'-'} · ${new Date(o.created_at).toLocaleString('th-TH')}</div>
-            </div>
-            <div style="font-size:9px;padding:2px 8px;border-radius:10px;background:var(--red-bg);color:var(--red)">${o.status}</div>
-          </div>
-        </div>`).join('')}
-      `}
-    </div>`;
+
+  document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:14px 18px;max-width:850px">
+    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⏰ Cutoff Violations (${violations.length})</div>
+    ${violations.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี violation</div></div>' : `
+    <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:8px">
+      <thead><tr style="background:var(--s1)">
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งเมื่อ</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันส่ง</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งโดย</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+      </tr></thead>
+      <tbody>${violations.map(o => `<tr style="cursor:pointer;border-left:3px solid var(--red)" onclick="viewOrderDetail('${o.order_id}')">
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${getStoreName(o.store_id)}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${o.created_at ? new Date(o.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—'}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${o.display_name||o.created_by||'—'}</td>
+        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
+      </tr>`).join('')}</tbody>
+    </table>`}
+  </div>`;
 }
 
 // ─── A9: Audit Trail ─────────────────────────────────────────
 async function renderAdminAudit() {
   const el = document.getElementById('adminAuditContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
-  
+
   if (!S.auditFilter) S.auditFilter = 'all';
-  
+  const filter = S.auditFilter;
+
   try {
     const filterParams = filter !== 'all' ? { target_type: filter } : {};
     const resp = await api('get_audit_log', null, filterParams);
-    
+
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
-    
+
     const logs = resp.data || [];
     const typeColors = {
-      update_permission: { bg:'var(--purple-bg)', color:'var(--purple)', icon:'🔒' },
-      update_dept_mapping: { bg:'var(--blue-bg)', color:'var(--blue)', icon:'🏢' },
-      update_config: { bg:'var(--orange-bg)', color:'var(--orange)', icon:'⚙️' },
-      update_notif_setting: { bg:'var(--green-bg)', color:'var(--green)', icon:'🔔' },
-      update_product: { bg:'var(--cyan)', color:'var(--cyan)', icon:'📦' },
+      update_permission: { bg:'var(--purple-bg)', color:'var(--purple)', label:'🔒 permission' },
+      update_dept_mapping: { bg:'var(--blue-bg)', color:'var(--blue)', label:'🏢 dept' },
+      update_config: { bg:'var(--orange-bg)', color:'var(--orange)', label:'⚙️ config' },
+      update_notif_setting: { bg:'var(--green-bg)', color:'var(--green)', label:'🔔 notif' },
+      update_product: { bg:'rgba(8,145,178,.1)', color:'var(--blue)', label:'📦 product' },
     };
-    
-    el.innerHTML = `
-      <div class="filter-bar">
-        <div class="filter-chip ${filter==='all'?'active':''}" onclick="S.auditFilter='all';renderAdminAudit()">ทั้งหมด</div>
-        <div class="filter-chip ${filter==='permission'?'active':''}" onclick="S.auditFilter='permission';renderAdminAudit()">🔒 สิทธิ์</div>
-        <div class="filter-chip ${filter==='dept_mapping'?'active':''}" onclick="S.auditFilter='dept_mapping';renderAdminAudit()">🏢 Dept</div>
-        <div class="filter-chip ${filter==='config'?'active':''}" onclick="S.auditFilter='config';renderAdminAudit()">⚙️ Config</div>
-        <div class="filter-chip ${filter==='product'?'active':''}" onclick="S.auditFilter='product';renderAdminAudit()">📦 Product</div>
+
+    el.innerHTML = `<div style="padding:14px 18px;max-width:900px">
+      <div style="display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap">
+        <span class="filter-chip ${filter==='all'?'active':''}" onclick="S.auditFilter='all';renderAdminAudit()">ทั้งหมด</span>
+        <span class="filter-chip ${filter==='permission'?'active':''}" onclick="S.auditFilter='permission';renderAdminAudit()">🔒 สิทธิ์</span>
+        <span class="filter-chip ${filter==='dept_mapping'?'active':''}" onclick="S.auditFilter='dept_mapping';renderAdminAudit()">🏢 Dept</span>
+        <span class="filter-chip ${filter==='config'?'active':''}" onclick="S.auditFilter='config';renderAdminAudit()">⚙️ Config</span>
+        <span class="filter-chip ${filter==='product'?'active':''}" onclick="S.auditFilter='product';renderAdminAudit()">📦 Product</span>
       </div>
-      <div class="pad" style="padding-top:0">
-        ${logs.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--td);font-size:12px">📝 ยังไม่มีบันทึก</div>' :
-        logs.map(l => {
-          const tc = typeColors[l.action_type] || { bg:'var(--s2)', color:'var(--td)', icon:'📝' };
-          return `<div class="card" style="margin-bottom:4px">
-            <div class="card-row">
-              <div class="card-icon" style="background:${tc.bg};font-size:16px">${tc.icon}</div>
-              <div class="card-body">
-                <div class="card-title" style="font-size:11px">${l.action_type} · ${l.target_id}</div>
-                <div class="card-desc">${l.changed_by_name || l.changed_by} · ${new Date(l.changed_at).toLocaleString('th-TH')}</div>
-                <div style="font-size:9px;color:var(--tm);margin-top:2px;word-break:break-all">
-                  ${l.old_value ? '<span style="color:var(--red)">−</span> ' + truncate(l.old_value, 60) : ''}
-                  ${l.new_value ? ' <span style="color:var(--green)">+</span> ' + truncate(l.new_value, 60) : ''}
-                </div>
-              </div>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
+
+      ${logs.length === 0 ? '<div class="empty"><div class="empty-icon">📝</div><div class="empty-title">ยังไม่มีบันทึก</div></div>' : `
+      <table style="width:100%;border-collapse:collapse;font-size:9px">
+        <thead><tr style="background:var(--s1)">
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เวลา</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Action</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Target</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนจาก</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนเป็น</th>
+          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
+        </tr></thead>
+        <tbody>${logs.map(l => {
+          const tc = typeColors[l.action_type] || { bg:'var(--s2)', color:'var(--td)', label:l.action_type };
+          return `<tr>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${l.changed_at ? new Date(l.changed_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${tc.bg};color:${tc.color};padding:1px 4px;border-radius:3px;font-size:7px;font-weight:600">${tc.label}</span></td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:8px">${l.target_id||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--red);font-size:8px">${truncate(l.old_value,30)||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--green);font-size:8px">${truncate(l.new_value,30)||'—'}</td>
+            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${l.changed_by_name||l.changed_by||'—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`}
+    </div>`;
   } catch(e) {
     el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
   }

@@ -1,9 +1,9 @@
-// Version 6.6.0 | 6 MAR 2026 | Siam Palette Group
-// BC Order — app.js: Core, State, API, Loaders, Routing, Hamburger
+// Version 7.0 | 7 MAR 2026 | Siam Palette Group
+// BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 
 // ═══════════════════════════════════════════════════════════════
 // BC Order Module — Frontend SPA
-// Phase B: Entry + Store Flow
+// v7.0: Sidebar layout (replaces hamburger + bottom nav)
 // ═══════════════════════════════════════════════════════════════
 
 // ─── CONFIG ──────────────────────────────────────────────────
@@ -13,14 +13,10 @@ const HOME_URL = 'https://onspider-spg.github.io/spg-home/';
 // ─── CLIENT CACHE (localStorage + TTL) ──────────────────────
 const _C = {
   get(k) {
-    try {
-      const r = JSON.parse(localStorage.getItem('bc_c_' + k));
-      return r && Date.now() < r.x ? r.d : null;
-    } catch { return null; }
+    try { const r = JSON.parse(localStorage.getItem('bc_c_' + k)); return r && Date.now() < r.x ? r.d : null; } catch { return null; }
   },
-  set(k, d, mins) { 
-    try { localStorage.setItem('bc_c_' + k, JSON.stringify({ d, x: Date.now() + mins * 60000 })); }
-    catch {}
+  set(k, d, mins) {
+    try { localStorage.setItem('bc_c_' + k, JSON.stringify({ d, x: Date.now() + mins * 60000 })); } catch {}
   },
   del(prefix) {
     Object.keys(localStorage).filter(k => k.startsWith('bc_c_' + (prefix||''))).forEach(k => localStorage.removeItem(k));
@@ -31,14 +27,15 @@ const _C = {
 const S = {
   token: '',
   session: null,
-  deptMapping: null,  // {module_role, section_scope:[]}
-  role: 'store',      // 'store' | 'bc' — derived from deptMapping
+  deptMapping: null,
+  role: 'store',
+  sidebarRole: 'store', // 'store' | 'bc' | 'admin'
   categories: [],
   products: [],
-  cart: [],          // [{product_id, product_name, qty, unit, is_urgent, note, section_id, min_order, order_step}]
+  cart: [],
   deliveryDate: '',
   headerNote: '',
-  editingOrderId: null,  // set when editing existing order
+  editingOrderId: null,
   orders: [],
   currentOrder: null,
   stock: [],
@@ -52,24 +49,22 @@ const S = {
   productSearch: '',
   productFilter: 'all',
   orderFilter: 'all',
-  // BC-specific
   bcDateFilter: '',
   bcStatusFilter: 'all',
-  fulfilmentItems: [],  // [{...item, ful_status:'full'|'partial'|'', qty_sent:N, ful_note:''}]
+  fulfilmentItems: [],
   fulfilmentBy: '',
-  // BC Stock
-  bcStockProduct: '',   // selected product_id
-  bcStockAction: 'add', // 'add' | 'remove'
+  bcStockProduct: '',
+  bcStockAction: 'add',
   bcStockQty: 0,
   bcStockNote: '',
-  bcReturnFilter: 'open', // 'open' | 'all'
+  bcReturnFilter: 'open',
   bcPrintDate: '',
-  bcPrintTab: 'production', // 'production' | 'slip'
-  bcPrintStore: '',         // for slip view
-  wasteDashDays: 30,       // waste dashboard period
-  topProdDays: 30,         // top products period
-  _announcements: [],      // cached for admin edit
-  myPerms: [],             // user's allowed function_ids
+  bcPrintTab: 'production',
+  bcPrintStore: '',
+  wasteDashDays: 30,
+  topProdDays: 30,
+  _announcements: [],
+  myPerms: [],
 };
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
@@ -83,8 +78,6 @@ const HASH_SCREENS = new Set([
 ]);
 let _skipHashChange = false;
 
-// Parse hash: "#bc-orders" → {screen:'bc-orders', param:null}
-//             "#order-detail/ORD-123" → {screen:'order-detail', param:'ORD-123'}
 function parseHash(hash) {
   const h = (hash || '').replace('#', '');
   const slashIdx = h.indexOf('/');
@@ -98,58 +91,124 @@ function setHash(screen, param) {
   _skipHashChange = false;
 }
 
+// ─── SIDEBAR CONFIG ─────────────────────────────────────────
+const SB_CFG = {
+  store: [
+    { sec: 'Orders', open: true, items: [
+      { scr: 'home', lbl: 'Main Menu' },
+      { scr: 'browse', lbl: 'Create Order', action: 'startOrder' },
+      { scr: 'orders', lbl: 'View Orders', badgeKey: 'orders' },
+      { scr: 'stock', lbl: 'View Stock' },
+    ]},
+    { sec: 'Records', open: true, items: [
+      { scr: 'waste', lbl: 'Waste Log' },
+      { scr: 'returns', lbl: 'Returns' },
+    ]},
+    { sec: 'Dashboard', open: false, items: [
+      { scr: 'admin-top-products', lbl: 'Top Products' },
+      { scr: 'return-dashboard', lbl: 'Return Dashboard' },
+      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
+    ]},
+  ],
+  bc: [
+    { sec: 'Orders', open: true, items: [
+      { scr: 'bc-home', lbl: 'Main Menu' },
+      { scr: 'bc-orders', lbl: 'View Orders', badgeKey: 'orders' },
+      { scr: 'bc-stock', lbl: 'Manage Stock' },
+      { scr: 'bc-print', lbl: 'Print Centre' },
+    ]},
+    { sec: 'Records', open: true, items: [
+      { scr: 'waste', lbl: 'Waste Log' },
+      { scr: 'bc-returns', lbl: 'Incoming Returns', badgeKey: 'returns' },
+    ]},
+    { sec: 'Dashboard', open: false, items: [
+      { scr: 'admin-top-products', lbl: 'Top Products' },
+      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
+      { scr: 'return-dashboard', lbl: 'Return Dashboard' },
+    ]},
+  ],
+  admin: [
+    { sec: 'Admin', open: true, items: [
+      { scr: 'admin-dashboard', lbl: 'Dashboard' },
+      { scr: 'admin-products', lbl: 'Manage Products' },
+    ]},
+    { sec: 'Orders', open: true, items: [
+      { scr: 'bc-orders', lbl: 'View Orders', badgeKey: 'orders' },
+      { scr: 'bc-stock', lbl: 'Manage Stock' },
+      { scr: 'bc-print', lbl: 'Print Centre' },
+    ]},
+    { sec: 'Records', open: false, items: [
+      { scr: 'waste', lbl: 'Waste Log' },
+      { scr: 'bc-returns', lbl: 'Incoming Returns' },
+    ]},
+    { sec: 'Reports', open: false, items: [
+      { scr: 'admin-top-products', lbl: 'Top Products' },
+      { scr: 'admin-cutoff', lbl: 'Cutoff Violations' },
+      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
+      { scr: 'return-dashboard', lbl: 'Return Dashboard' },
+    ]},
+    { sec: 'Settings', open: false, items: [
+      { scr: 'admin-access', lbl: 'User Access' },
+      { scr: 'admin-dept-mapping', lbl: 'Dept Mapping' },
+      { scr: 'admin-config', lbl: 'System Config' },
+      { scr: 'admin-notif-settings', lbl: 'Notification Settings' },
+      { scr: 'admin-announcements', lbl: 'Announcements' },
+      { scr: 'admin-audit', lbl: 'Audit Trail' },
+    ]},
+  ],
+};
+
+const SCREEN_TITLES = {
+  'home':'Main Menu','browse':'Create Order','cart':'Cart','orders':'View Orders',
+  'order-detail':'Order Detail','stock':'View Stock','waste':'Waste Log','returns':'Returns',
+  'return-dashboard':'Return Dashboard',
+  'bc-home':'Main Menu','bc-orders':'View Orders','bc-accept':'Accept Order',
+  'bc-fulfil':'Fulfil & Deliver','bc-stock':'Manage Stock','bc-returns':'Incoming Returns','bc-print':'Print Centre',
+  'admin-dashboard':'Dashboard','admin-products':'Manage Products','admin-product-edit':'Edit Product',
+  'admin-access':'User Access','admin-dept-mapping':'Dept Mapping','admin-config':'System Config',
+  'admin-notif-settings':'Notification Settings','admin-cutoff':'Cutoff Violations',
+  'admin-audit':'Audit Trail','admin-waste-dashboard':'Waste Dashboard',
+  'admin-top-products':'Top Products','admin-announcements':'Announcements',
+  'loading':'Loading...','no-token':'Login Required','invalid-token':'Session Expired','blocked':'Access Denied',
+};
+
 // ─── ENTRY FLOW ──────────────────────────────────────────────
 async function init() {
   renderApp();
   showScreen('loading');
-  
-  // Extract token from URL
+
   const params = new URLSearchParams(window.location.search);
   S.token = params.get('token') || localStorage.getItem('spg_token') || '';
-  const demoMode = params.get('demo'); // ?demo=bc or ?demo=store
-  
-  if (!S.token && !demoMode) {
-    showScreen('no-token');
-    return;
-  }
-  
-  // Store token
+  const demoMode = params.get('demo');
+
+  if (!S.token && !demoMode) { showScreen('no-token'); return; }
+
   if (S.token) {
     localStorage.setItem('spg_token', S.token);
     if (params.has('token')) {
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
     }
   }
-  
+
   try {
     if (API_URL && S.token) {
-      // ─── REAL MODE: init_lite — only what Home needs ───
       const resp = await api('init_lite');
       if (!resp.success) {
-        console.error('❌ init_lite failed:', resp.error, resp.message);
         localStorage.removeItem('spg_token');
         showScreen('invalid-token');
         return;
       }
-      if (!S.session) {
-        showScreen('invalid-token');
-        return;
-      }
-      
-      // Assign Home data only — no products/orders/returns/stock
+      if (!S.session) { showScreen('invalid-token'); return; }
       S.notifications = resp.notifications || [];
       S.myPerms = resp.permissions || [];
       S.dashboard = resp.dashboard || {};
-      
       await routeToHome();
     } else {
-      // ─── DEMO MODE ───
       const role = (demoMode === 'bc') ? 'bc' : 'store';
       S.session = getMockSession(role);
       loadMockData(role);
       await routeToHome();
     }
-    
   } catch (err) {
     console.error('Init error:', err);
     const role = (demoMode === 'bc') ? 'bc' : 'store';
@@ -160,49 +219,46 @@ async function init() {
 }
 
 async function routeToHome() {
-  // Check dept mapping
   const dm = S.deptMapping;
-  if (dm && dm.module_role === 'not_applicable') {
-    showScreen('blocked');
-    return;
-  }
-  
-  // Determine role from deptMapping
+  if (dm && dm.module_role === 'not_applicable') { showScreen('blocked'); return; }
+
+  // Determine role
   if (dm && (dm.module_role === 'bc_production' || dm.module_role === 'bc_management')) {
     S.role = 'bc';
   } else {
     S.role = 'store';
   }
-  
-  // Check if URL has a hash to restore (deep-link)
+
+  // Determine sidebar role (admin overrides)
+  const tierLevel = parseInt((S.session?.tier_id || 'T9').replace('T', ''));
+  S.sidebarRole = tierLevel <= 2 ? 'admin' : S.role;
+
+  // ★ Render sidebar + topbar
+  renderSidebar();
+  renderGlobalTopbar();
+
+  // Check hash for deep link
   const { screen: initScreen, param: initParam } = parseHash(location.hash);
   if (initScreen && HASH_SCREENS.has(initScreen)) {
-    // Validate: store users can't access bc- screens (except waste), bc users can't access store-only screens
     const isBcScreen = initScreen.startsWith('bc-') || initScreen.startsWith('admin-');
     const isStoreOnly = ['home','browse','cart','orders','stock','returns'].includes(initScreen);
-    
     if (S.role === 'bc' && isStoreOnly && initScreen !== 'waste') {
       showScreen('bc-home');
     } else if (S.role === 'store' && isBcScreen) {
       showScreen('home');
     } else {
-      // Handle deep links with params
       await handleDeepLink(initScreen, initParam);
     }
   } else {
-    // Default: route to role home
-    if (S.role === 'bc') {
-      showScreen('bc-home');
-    } else {
-      showScreen('home');
-    }
+    if (S.sidebarRole === 'admin') showScreen('admin-dashboard');
+    else if (S.role === 'bc') showScreen('bc-home');
+    else showScreen('home');
   }
-  
-  checkNotifications();
-  startPolling(); // B-01: begin auto-refresh
-  startSessionMonitor(); // session expiry monitor
 
-  // Listen for hash changes (browser back/forward)
+  checkNotifications();
+  startPolling();
+  startSessionMonitor();
+
   window.addEventListener('hashchange', () => {
     if (_skipHashChange) return;
     const { screen: hash, param: hashParam } = parseHash(location.hash);
@@ -212,20 +268,15 @@ async function routeToHome() {
   });
 }
 
-// ─── DEEP LINK HANDLER ──────────────────────────────────────
+// ─── DEEP LINK ──────────────────────────────────────────────
 async function handleDeepLink(screen, param) {
-  // Screens that need a param to load properly
   if (param) {
     switch(screen) {
-      case 'order-detail':
-        return viewOrder(param); // loads order + shows detail
-      case 'bc-accept':
-        return showBcAccept(param); // loads order + shows accept
-      case 'bc-fulfil':
-        return showBcFulfil(param); // loads order + shows fulfil
+      case 'order-detail': return viewOrder(param);
+      case 'bc-accept': return showBcAccept(param);
+      case 'bc-fulfil': return showBcFulfil(param);
     }
   }
-  // All other screens: just show
   showScreen(screen, param);
 }
 
@@ -233,26 +284,17 @@ async function handleDeepLink(screen, param) {
 async function api(action, body = null, extraParams = {}) {
   const params = new URLSearchParams({ action, token: S.token, ...extraParams });
   const url = API_URL + '?' + params.toString();
-  
   try {
-    const opts = body ? {
-      method: 'POST',
-      body: JSON.stringify(body)
-    } : {};
-    
+    const opts = body ? { method: 'POST', body: JSON.stringify(body) } : {};
     const resp = await fetch(url, opts);
     const data = await resp.json();
-    
-    // Store session if returned
     if (data.session) S.session = data.session;
     if (data.deptMapping) S.deptMapping = data.deptMapping;
-    
     if (!data.success && data.error === 'INVALID_SESSION') {
       localStorage.removeItem('spg_token');
       showScreen('invalid-token');
       return data;
     }
-    
     return data;
   } catch (err) {
     console.error('API error:', err);
@@ -279,21 +321,12 @@ async function loadDashboard() {
   try {
     const resp = await api('get_dashboard');
     if (resp.success) { S.dashboard = resp.data; return; }
-    console.warn('[loadDashboard] FAILED:', resp.error, resp.message);
-  } catch(e) { console.warn('[loadDashboard] exception:', e); }
-  
-  // Fallback: compute from loaded orders
+  } catch(e) {}
   const today = todaySydney();
   const todayOrders = (S.orders || []).filter(o => o.delivery_date === today);
   S.dashboard = {
     today_total: todayOrders.length,
-    by_status: {
-      Pending: todayOrders.filter(o => o.status === 'Pending').length,
-      Ordered: todayOrders.filter(o => o.status === 'Ordered').length,
-      InProgress: todayOrders.filter(o => o.status === 'InProgress').length,
-      Fulfilled: todayOrders.filter(o => o.status === 'Fulfilled').length,
-      Delivered: todayOrders.filter(o => o.status === 'Delivered').length,
-    },
+    by_status: { Pending: todayOrders.filter(o => o.status === 'Pending').length, Ordered: todayOrders.filter(o => o.status === 'Ordered').length, InProgress: todayOrders.filter(o => o.status === 'InProgress').length, Fulfilled: todayOrders.filter(o => o.status === 'Fulfilled').length, Delivered: todayOrders.filter(o => o.status === 'Delivered').length },
     cutoff_violations_today: todayOrders.filter(o => o.is_cutoff_violation).length,
     urgent_items: 0,
   };
@@ -302,22 +335,13 @@ async function loadDashboard() {
 async function loadOrders(status = '') {
   const params = { limit: '100' };
   if (status && status !== 'all') params.status = status;
-  
-  // S-06: Store users see last 14 days by default
   if (S.role === 'store') {
-    const d = sydneyNow();
-    d.setDate(d.getDate() - 14);
+    const d = sydneyNow(); d.setDate(d.getDate() - 14);
     params.date_from = formatDate(d);
   }
-  
   const resp = await api('get_orders', null, params);
-  if (resp.success) {
-    S.orders = resp.data;
-    console.log(`[loadOrders] loaded ${S.orders.length} orders`);
-  } else {
-    console.warn('[loadOrders] FAILED:', resp.error, resp.message);
-    S.orders = [];
-  }
+  if (resp.success) S.orders = resp.data;
+  else S.orders = [];
 }
 
 async function loadOrderDetail(orderId) {
@@ -331,11 +355,8 @@ async function loadStock() {
 }
 
 async function loadWaste() {
-  // S-08: Only load last 14 days of waste
-  const d = sydneyNow();
-  d.setDate(d.getDate() - 14);
-  const dateFrom = formatDate(d);
-  const resp = await api('get_waste_log', null, { date_from: dateFrom });
+  const d = sydneyNow(); d.setDate(d.getDate() - 14);
+  const resp = await api('get_waste_log', null, { date_from: formatDate(d) });
   if (resp.success) S.wasteLog = resp.data;
 }
 
@@ -354,8 +375,6 @@ async function loadMyPermissions() {
     const resp = await api('get_my_permissions');
     if (resp.success) { S.myPerms = resp.data || []; return; }
   } catch(e) {}
-  // Fallback: if endpoint not available, grant all perms so menus still show
-  // (actual permission check happens on backend when action is performed)
   S.myPerms = [
     'fn_create_order','fn_edit_order','fn_cancel_order','fn_view_own_orders','fn_view_all_orders',
     'fn_accept_pending','fn_update_fulfilment','fn_mark_delivered',
@@ -365,107 +384,42 @@ async function loadMyPermissions() {
     'fn_manage_products','fn_manage_notifications','fn_manage_permissions',
     'fn_manage_config','fn_manage_dept_mapping'
   ];
-  console.warn('loadMyPermissions fallback: granting all (backend endpoint not deployed yet)');
 }
 
 function hasPerm(fnId) {
-  // T1/T2 always have access to operational functions
   const tierLevel = parseInt((S.session?.tier_id || 'T9').replace('T',''));
   if (tierLevel <= 2) return true;
   return S.myPerms.includes(fnId);
 }
-function hasAdminPerm(fnId) {
-  // v6.4.3: strict check — ALL tiers must have real permission for admin menus
-  return S.myPerms.includes(fnId);
-}
+function hasAdminPerm(fnId) { return S.myPerms.includes(fnId); }
 
-// ─── MOCK DATA (for demo without backend) ────────────────────
+// ─── MOCK DATA ───────────────────────────────────────────────
 function getMockSession(role) {
   if (role === 'bc') {
-    return {
-      valid: true, account_id: 'ACC-010', user_id: 'USR-020',
-      display_name: 'Somchai', full_name: 'Somchai Baker',
-      tier_id: 'T4', tier_level: 4, account_type: 'group',
-      store_id: 'BC', dept_id: 'cake',
-      access_level: 'edit',
-    };
+    return { valid:true, account_id:'ACC-010', user_id:'USR-020', display_name:'เชฟโอ', full_name:'Chef Oh', tier_id:'T4', tier_level:4, account_type:'group', store_id:'BC', dept_id:'cake', access_level:'edit' };
   }
-  return {
-    valid: true, account_id: 'ACC-002', user_id: 'USR-005',
-    display_name: 'Joy', full_name: 'Joyful Smith',
-    tier_id: 'T5', tier_level: 5, account_type: 'group',
-    store_id: 'MNG', dept_id: 'dessert',
-    access_level: 'edit',
-  };
+  return { valid:true, account_id:'ACC-002', user_id:'USR-005', display_name:'Junnie', full_name:'Junnie Smith', tier_id:'T3', tier_level:3, account_type:'group', store_id:'MNG', dept_id:'dessert', access_level:'edit' };
 }
 
 function loadMockData(role) {
   S.categories = [
-    { cat_id: 'CAT-CAKE', cat_name: 'Cake', section_id: 'cake', sort_order: 1 },
-    { cat_id: 'CAT-SAUCE', cat_name: 'Sauce', section_id: 'sauce', sort_order: 2 },
-    { cat_id: 'CAT-BAKED', cat_name: 'Baked Goods', section_id: 'sauce', sort_order: 3 },
+    { cat_id:'CAT-CAKE', cat_name:'Cake', section_id:'cake', sort_order:1 },
+    { cat_id:'CAT-SAUCE', cat_name:'Sauce', section_id:'sauce', sort_order:2 },
+    { cat_id:'CAT-BAKED', cat_name:'Baked Goods', section_id:'sauce', sort_order:3 },
   ];
   S.products = [
     { product_id:'PRD-001', product_name:'Carrot Cake', cat_id:'CAT-CAKE', section_id:'cake', unit:'pieces', min_order:3, order_step:1, allow_stock:true, stock_available:12, popup_notice:'สั่งล่วงหน้า 1 วัน', is_active:true },
-    { product_id:'PRD-002', product_name:'Chocolate Cake', cat_id:'CAT-CAKE', section_id:'cake', unit:'pieces', min_order:2, order_step:1, allow_stock:true, stock_available:8, popup_notice:'', is_active:true },
-    { product_id:'PRD-003', product_name:'Cheesecake', cat_id:'CAT-CAKE', section_id:'cake', unit:'pieces', min_order:2, order_step:1, allow_stock:true, stock_available:5, popup_notice:'', is_active:true },
-    { product_id:'PRD-004', product_name:'Banana Bread', cat_id:'CAT-CAKE', section_id:'cake', unit:'loaves', min_order:2, order_step:2, allow_stock:true, stock_available:6, popup_notice:'', is_active:true },
-    { product_id:'PRD-005', product_name:'Croissant', cat_id:'CAT-CAKE', section_id:'cake', unit:'pieces', min_order:6, order_step:3, allow_stock:true, stock_available:18, popup_notice:'', is_active:true },
-    { product_id:'PRD-006', product_name:'Muffin Blueberry', cat_id:'CAT-CAKE', section_id:'cake', unit:'pieces', min_order:4, order_step:2, allow_stock:true, stock_available:10, popup_notice:'', is_active:true },
-    { product_id:'PRD-007', product_name:'Thai Tea Latte', cat_id:'CAT-SAUCE', section_id:'sauce', unit:'bottles', min_order:5, order_step:1, allow_stock:true, stock_available:15, popup_notice:'', is_active:true },
-    { product_id:'PRD-008', product_name:'Mango Sauce', cat_id:'CAT-SAUCE', section_id:'sauce', unit:'bottles', min_order:3, order_step:1, allow_stock:true, stock_available:7, popup_notice:'', is_active:true },
-    { product_id:'PRD-009', product_name:'Chocolate Sauce', cat_id:'CAT-SAUCE', section_id:'sauce', unit:'bottles', min_order:3, order_step:1, allow_stock:true, stock_available:4, popup_notice:'', is_active:true },
-    { product_id:'PRD-010', product_name:'Caramel Sauce', cat_id:'CAT-SAUCE', section_id:'sauce', unit:'bottles', min_order:3, order_step:1, allow_stock:true, stock_available:9, popup_notice:'', is_active:true },
-    { product_id:'PRD-011', product_name:'Apple Crumble', cat_id:'CAT-BAKED', section_id:'sauce', unit:'pieces', min_order:2, order_step:1, allow_stock:true, stock_available:3, popup_notice:'', is_active:true },
-    { product_id:'PRD-012', product_name:'Scone Plain', cat_id:'CAT-BAKED', section_id:'sauce', unit:'pieces', min_order:4, order_step:2, allow_stock:true, stock_available:14, popup_notice:'', is_active:true },
+    { product_id:'PRD-002', product_name:'Chocolate Cake', cat_id:'CAT-CAKE', section_id:'cake', unit:'pieces', min_order:2, order_step:1, allow_stock:true, stock_available:8, is_active:true },
+    { product_id:'PRD-007', product_name:'Thai Tea Latte', cat_id:'CAT-SAUCE', section_id:'sauce', unit:'bottles', min_order:5, order_step:1, allow_stock:true, stock_available:15, is_active:true },
   ];
   if (role === 'bc') {
-    const deptId = S.session.dept_id;
-    const sc = deptId === 'bakery' ? ['cake','sauce'] : [deptId];
-    S.deptMapping = { module_role: deptId === 'bakery' ? 'bc_management' : 'bc_production', section_scope: sc };
+    S.deptMapping = { module_role:'bc_production', section_scope:['cake'] };
   } else {
-    S.deptMapping = { module_role: 'store', section_scope: [] };
+    S.deptMapping = { module_role:'store', section_scope:[] };
   }
-  S.dashboard = { today_total: 7, by_status: { Pending:1, Ordered:3, InProgress:1, Fulfilled:1, Delivered:1 }, cutoff_violations_today:1, urgent_items:2 };
-  S.orders = [
-    { order_id:'ORD-20260302-001', store_id:'MNG', dept_id:'dessert', user_id:'USR-005', display_name:'Somjai', order_date:'2026-03-01', delivery_date:'2026-03-02', status:'Pending', is_cutoff_violation:true, header_note:'', created_at:'2026-03-01T06:15:00Z',
-      items:[
-        { item_id:'ITM-000001', product_id:'PRD-001', product_name:'Carrot Cake', section_id:'cake', qty_ordered:6, unit:'pieces', is_urgent:true, note:'ตัดเป็น 8 ชิ้น' },
-        { item_id:'ITM-000002', product_id:'PRD-002', product_name:'Chocolate Cake', section_id:'cake', qty_ordered:4, unit:'pieces', is_urgent:false, note:'' },
-      ]},
-    { order_id:'ORD-20260302-002', store_id:'MNG', dept_id:'front', user_id:'USR-006', display_name:'Nong', order_date:'2026-03-01', delivery_date:'2026-03-02', status:'Ordered', is_cutoff_violation:false, header_note:'Deliver by 10:30', created_at:'2026-03-01T04:30:00Z',
-      items:[
-        { item_id:'ITM-000003', product_id:'PRD-004', product_name:'Banana Bread', section_id:'cake', qty_ordered:8, unit:'loaves', is_urgent:false, note:'' },
-      ]},
-    { order_id:'ORD-20260302-003', store_id:'ISH', dept_id:'kitchen', user_id:'USR-012', display_name:'Karn', order_date:'2026-03-01', delivery_date:'2026-03-02', status:'Ordered', is_cutoff_violation:false, header_note:'', created_at:'2026-03-01T03:20:00Z',
-      items:[
-        { item_id:'ITM-000004', product_id:'PRD-001', product_name:'Carrot Cake', section_id:'cake', qty_ordered:4, unit:'pieces', is_urgent:false, note:'' },
-      ]},
-    { order_id:'ORD-20260302-004', store_id:'GB', dept_id:'dessert', user_id:'USR-015', display_name:'Pim', order_date:'2026-03-01', delivery_date:'2026-03-02', status:'InProgress', is_cutoff_violation:false, header_note:'', created_at:'2026-03-01T02:10:00Z',
-      items:[
-        { item_id:'ITM-000005', product_id:'PRD-002', product_name:'Chocolate Cake', section_id:'cake', qty_ordered:3, unit:'pieces', is_urgent:false, note:'' },
-        { item_id:'ITM-000006', product_id:'PRD-005', product_name:'Croissant', section_id:'cake', qty_ordered:12, unit:'pieces', is_urgent:true, note:'' },
-      ]},
-    { order_id:'ORD-20260302-005', store_id:'TMC', dept_id:'front', user_id:'USR-018', display_name:'Fern', order_date:'2026-03-01', delivery_date:'2026-03-02', status:'Ordered', is_cutoff_violation:false, header_note:'', created_at:'2026-03-01T04:00:00Z',
-      items:[
-        { item_id:'ITM-000007', product_id:'PRD-006', product_name:'Muffin Blueberry', section_id:'cake', qty_ordered:8, unit:'pieces', is_urgent:false, note:'' },
-        { item_id:'ITM-000008', product_id:'PRD-007', product_name:'Thai Tea Latte', section_id:'sauce', qty_ordered:6, unit:'bottles', is_urgent:false, note:'' },
-      ]},
-    { order_id:'ORD-20260301-010', store_id:'MNG', dept_id:'dessert', user_id:'USR-005', display_name:'Somjai', order_date:'2026-02-28', delivery_date:'2026-03-01', status:'Fulfilled', is_cutoff_violation:false, header_note:'', created_at:'2026-02-28T04:15:00Z',
-      items:[
-        { item_id:'ITM-000009', product_id:'PRD-001', product_name:'Carrot Cake', section_id:'cake', qty_ordered:4, unit:'pieces', is_urgent:false, note:'', fulfilment_status:'full', qty_sent:4 },
-      ]},
-    { order_id:'ORD-20260301-011', store_id:'ISH', dept_id:'kitchen', user_id:'USR-012', display_name:'Karn', order_date:'2026-02-28', delivery_date:'2026-03-01', status:'Delivered', is_cutoff_violation:false, header_note:'', created_at:'2026-02-28T03:00:00Z',
-      items:[
-        { item_id:'ITM-000010', product_id:'PRD-004', product_name:'Banana Bread', section_id:'cake', qty_ordered:6, unit:'loaves', is_urgent:false, note:'', fulfilment_status:'full', qty_sent:6 },
-      ]},
-  ];
-  S.returns = [
-    { return_id:'RTN-000003', order_id:'ORD-20260301-010', item_id:'ITM-000009', product_id:'PRD-001', product_name:'Carrot Cake', section_id:'cake', qty:2, unit:'pieces', store_id:'MNG', dept_id:'dessert', reported_by:'Somjai', reason:'Quality', detail:'เค้กยุบ', status:'Returning', created_at:'2026-03-01T09:30:00Z' },
-    { return_id:'RTN-000002', order_id:'ORD-20260301-010', item_id:'ITM-000009', product_id:'PRD-001', product_name:'Carrot Cake', section_id:'cake', qty:1, unit:'pieces', store_id:'MNG', dept_id:'dessert', reported_by:'Somjai', reason:'Damaged', detail:'แตกระหว่างขนส่ง', status:'Received', created_at:'2026-02-28T14:00:00Z' },
-    { return_id:'RTN-000001', order_id:'ORD-20260301-011', item_id:'ITM-000010', product_id:'PRD-007', product_name:'Thai Tea Latte', section_id:'sauce', qty:4, unit:'bottles', store_id:'MNG', dept_id:'dessert', reported_by:'Somjai', reason:'Quality', detail:'ซอสเหลว', status:'Received', created_at:'2026-02-28T10:00:00Z' },
-    { return_id:'RTN-000000', order_id:'ORD-20260228-005', item_id:'ITM-000005', product_id:'PRD-002', product_name:'Chocolate Cake', section_id:'cake', qty:2, unit:'pieces', store_id:'GB', dept_id:'dessert', reported_by:'Pim', reason:'Wrong item', detail:'สั่ง Carrot ได้ Chocolate', status:'Reworked', created_at:'2026-02-27T11:00:00Z' },
-  ];
+  S.dashboard = { today_total:7, by_status:{ Pending:1, Ordered:3, InProgress:1, Fulfilled:1, Delivered:1 }, cutoff_violations_today:1, urgent_items:2 };
+  S.orders = [];
+  S.returns = [];
 }
 
 // ─── PRODUCT EMOJI MAP ───────────────────────────────────────
@@ -486,55 +440,97 @@ function prodEmoji(name) {
   return '🎂';
 }
 
-// ─── SCREEN RENDERER ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// SIDEBAR + GLOBAL TOPBAR (v7.0 — replaces hamburger + bottom nav)
+// ═══════════════════════════════════════════════════════════════
 
-// ─── HAMBURGER MENU ─────────────────────────────────────────
-function openHamburger() {
+function renderSidebar() {
+  const el = document.getElementById('sidebar');
+  if (!el) return;
   const s = S.session || {};
-  const tierBg = parseInt((s.tier_id||'T9').replace('T','')) <= 2 ? 'var(--gold)' : 'var(--blue)';
-  
-  document.getElementById('hmHeader').innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:44px;height:44px;border-radius:50%;background:${tierBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px">${(s.display_name||'?').charAt(0)}</div>
-      <div>
-        <div style="font-weight:700;font-size:15px">${s.display_name || 'User'}</div>
-        <div style="font-size:11px;color:var(--td)">${s.store_id||''} · ${s.dept_id||''}</div>
-        <div style="font-size:10px;margin-top:2px"><span style="background:${tierBg};color:#fff;padding:2px 8px;border-radius:10px;font-weight:600">${s.tier_id||'?'}</span></div>
-      </div>
-    </div>`;
-  
-  document.getElementById('hmBody').innerHTML = `
-    <div class="hm-item" onclick="location.href='${HOME_URL}'">
-      <div class="hm-item-icon">🏠</div>
-      <div>กลับหน้า Home</div>
-    </div>
-    <div class="hm-item" onclick="showProfileInfo()">
-      <div class="hm-item-icon">👤</div>
-      <div>ข้อมูลโปรไฟล์</div>
-    </div>
-    <div class="hm-item" onclick="showNotifPanel();closeHamburger()">
-      <div class="hm-item-icon">🔔</div>
-      <div>แจ้งเตือน</div>
-    </div>
-    <div style="height:1px;background:var(--b2);margin:8px 0"></div>
-    <div class="hm-item hm-item-danger" onclick="doLogout()">
-      <div class="hm-item-icon">🚪</div>
-      <div>ออกจากระบบ</div>
-    </div>
-    <div style="padding:16px;font-size:9px;color:var(--td);text-align:center">BC Order v5 · SPG © 2026</div>
-  `;
-  
-  document.getElementById('hmOverlay').classList.add('show');
-  document.getElementById('hmPanel').classList.add('show');
+  const cfg = SB_CFG[S.sidebarRole] || SB_CFG.store;
+  const isBc = S.role === 'bc';
+  const avClass = isBc ? ' bc' : '';
+
+  let sectionsHtml = '';
+  cfg.forEach(g => {
+    const itemsHtml = g.items.map(it => {
+      const isActive = it.scr === S.currentScreen;
+      const badge = it.badgeKey ? getBadgeCount(it.badgeKey) : 0;
+      return `<div class="sb-item${isActive ? ' act' : ''}" data-scr="${it.scr}" onclick="${it.action ? it.action + '()' : "showScreen('" + it.scr + "')"};closeSidebar()">${it.lbl}${badge > 0 ? `<span class="sb-badge">${badge}</span>` : ''}</div>`;
+    }).join('');
+    sectionsHtml += `<details class="sb-sec"${g.open ? ' open' : ''}><summary>${g.sec}</summary><div>${itemsHtml}</div></details><div class="sb-divider"></div>`;
+  });
+
+  el.innerHTML = `
+    <div class="sb-hd"><div class="sb-profile"><div class="sb-av${avClass}">${(s.display_name||'?').charAt(0)}</div><div><div class="sb-name">${s.display_name || 'User'}</div><div class="sb-meta">${s.tier_id||''} · ${getStoreName(s.store_id)} ${s.dept_id ? '· '+s.dept_id : ''}</div></div></div></div>
+    <div class="sb-body">${sectionsHtml}</div>
+    <div class="sb-ft"><div class="sb-ft-item" onclick="location.href='${HOME_URL}'">🏠 Home</div><div class="sb-ft-item logout" onclick="doLogout()">🚪 Log out</div></div>`;
 }
 
-function closeHamburger() {
-  document.getElementById('hmPanel').classList.remove('show');
-  document.getElementById('hmOverlay').classList.remove('show');
+function getBadgeCount(key) {
+  if (key === 'orders') {
+    const bs = S.dashboard?.by_status || {};
+    return (bs.Pending || 0) + (bs.Ordered || 0);
+  }
+  if (key === 'returns') {
+    return (S.returns || []).filter(r => r.status === 'Reported' || r.status === 'Returning').length;
+  }
+  return 0;
 }
+
+function updateSidebarActive(screenName) {
+  document.querySelectorAll('.sb-item').forEach(el => {
+    el.classList.toggle('act', el.dataset.scr === screenName);
+  });
+}
+
+function renderGlobalTopbar() {
+  const el = document.getElementById('globalTopbar');
+  if (!el) return;
+  const s = S.session || {};
+  const isBc = S.role === 'bc';
+  const avClass = isBc ? ' bc' : '';
+  const title = SCREEN_TITLES[S.currentScreen] || 'สั่งของเบเกอรี่';
+  const hasNotif = (S.notifications || []).length > 0;
+
+  el.innerHTML = `
+    <div class="g-tb-ham" onclick="toggleSidebar()"><div class="g-tb-ham-lines"><span></span><span></span><span></span></div></div>
+    <div class="g-tb-logo">SPG</div>
+    <div class="g-tb-title">สั่งของเบเกอรี่ <span style="color:var(--t4);font-weight:400">:</span> <span style="color:var(--gold)" id="gtbScreenTitle">${title}</span><div class="g-tb-sub">${s.display_name || ''} · ${s.tier_id || ''}</div></div>
+    <div class="g-tb-bell" onclick="showNotifPanel()">🔔${hasNotif ? '<span class="g-tb-dot"></span>' : ''}</div>
+    <div class="g-tb-av${avClass}">${(s.display_name||'?').charAt(0)}</div>`;
+}
+
+function updateTopbarTitle(screenName) {
+  const el = document.getElementById('gtbScreenTitle');
+  if (el) el.textContent = SCREEN_TITLES[screenName] || screenName;
+}
+
+// ─── SIDEBAR TOGGLE ─────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sbOverlay');
+  if (!sb) return;
+  const isOpen = sb.classList.contains('open');
+  sb.classList.toggle('open', !isOpen);
+  sb.classList.toggle('closed', isOpen);
+  if (ov) ov.classList.toggle('show', !isOpen);
+}
+
+function closeSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sbOverlay');
+  if (sb) { sb.classList.remove('open'); sb.classList.add('closed'); }
+  if (ov) ov.classList.remove('show');
+}
+
+// ─── BACKWARD COMPAT (old code may call these) ──────────────
+function openHamburger() { toggleSidebar(); }
+function closeHamburger() { closeSidebar(); }
 
 function showProfileInfo() {
-  closeHamburger();
+  closeSidebar();
   const s = S.session || {};
   showDialog(`
     <div style="text-align:center;margin-bottom:16px">
@@ -543,22 +539,20 @@ function showProfileInfo() {
       <div style="font-size:12px;color:var(--td)">${s.full_name || ''}</div>
     </div>
     <div style="background:var(--s2);border-radius:12px;padding:12px;font-size:12px">
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">User ID</span><span style="font-weight:600">${s.user_id || '-'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Account</span><span style="font-weight:600">${s.account_id || '-'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Store</span><span style="font-weight:600">${getStoreName(s.store_id) || s.store_id || '-'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Department</span><span style="font-weight:600">${s.dept_id || '-'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)"><span style="color:var(--td)">Tier</span><span style="font-weight:600">${s.tier_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd2)"><span style="color:var(--td)">User ID</span><span style="font-weight:600">${s.user_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd2)"><span style="color:var(--td)">Account</span><span style="font-weight:600">${s.account_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd2)"><span style="color:var(--td)">Store</span><span style="font-weight:600">${getStoreName(s.store_id) || s.store_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd2)"><span style="color:var(--td)">Department</span><span style="font-weight:600">${s.dept_id || '-'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd2)"><span style="color:var(--td)">Tier</span><span style="font-weight:600">${s.tier_id || '-'}</span></div>
       <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(--td)">Role</span><span style="font-weight:600">${S.deptMapping?.module_role || S.role || '-'}</span></div>
-      ${s.expires_at ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--b1)"><span style="color:var(--td)">Session หมดอายุ</span><span style="font-weight:600;font-size:10px">${new Date(s.expires_at).toLocaleString('th-TH', {timeZone:'Australia/Sydney'})}</span></div>` : ''}
     </div>
-    <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeDialog()">ปิด</button>
-  `);
+    <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeDialog()">ปิด</button>`);
 }
 
 function doLogout() {
-  closeHamburger();
+  closeSidebar();
   localStorage.removeItem('spg_token');
-  _C.del(); // clear all BC cache
+  _C.del();
   S.token = null;
   S.session = {};
   location.href = HOME_URL;
@@ -571,21 +565,16 @@ function sydneyNow() {
 
 function formatDate(d) {
   if (typeof d === 'string') return d;
-  // Read date parts directly — caller must pass sydneyNow() for Sydney dates
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
-function todaySydney() {
-  return formatDate(sydneyNow());
-}
+function todaySydney() { return formatDate(sydneyNow()); }
 
 function tomorrowSydney() {
-  const d = sydneyNow();
-  d.setDate(d.getDate() + 1);
-  return formatDate(d);
+  const d = sydneyNow(); d.setDate(d.getDate() + 1); return formatDate(d);
 }
 
 function formatDateThai(str) {
@@ -595,13 +584,10 @@ function formatDateThai(str) {
   return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
 
-  function formatDateAU(str) {
+function formatDateAU(str) {
   if (!str) return '';
   const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-AU', {
-    day: '2-digit',
-    month: 'short'
-  });
+  return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
 }
 
 function getStoreName(id) {
@@ -634,6 +620,7 @@ function getScopeLabel() {
 // Toast
 function toast(msg, type='success') {
   const wrap = document.getElementById('toastWrap');
+  if (!wrap) return;
   const t = document.createElement('div');
   t.className = 'toast toast-' + type;
   t.innerHTML = msg;
@@ -642,7 +629,6 @@ function toast(msg, type='success') {
 }
 
 // Dialog
-
 function showDialog(html) {
   document.getElementById('dialogContent').innerHTML = html;
   document.getElementById('overlay').classList.add('show');
@@ -651,4 +637,3 @@ function showDialog(html) {
 function closeDialog() {
   document.getElementById('overlay').classList.remove('show');
 }
-
