@@ -1,4 +1,4 @@
-/* Version 7.0.6 | 7 MAR 2026 | Siam Palette Group */
+/* Version 7.0.7 | 7 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Warm Light Theme + Sidebar Layout */
 /* Fix: sidebar desktop toggle, larger base font */
 
@@ -30,7 +30,7 @@
 
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100vh;min-height:100dvh;overflow-x:hidden}
-body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);color:var(--t);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);color:var(--t);font-size:10px;line-height:1.5;-webkit-font-smoothing:antialiased}
 
 /*═══ APP SHELL ═══*/
 #app-shell{display:flex;height:100vh;height:100dvh;overflow:hidden;background:var(--bg)}
@@ -207,7 +207,7 @@ textarea.form-input{resize:none;min-height:72px}
 
 /*═══ FILTER CHIPS ═══*/
 .filter-bar{display:flex;gap:6px;padding:4px 16px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.filter-chip{font-size:12px;padding:6px 14px;border-radius:20px;white-space:nowrap;cursor:pointer;font-weight:500;border:1px solid var(--bd);color:var(--td);background:var(--bg);transition:.15s}
+.filter-chip{font-size:10px;padding:6px 14px;border-radius:20px;white-space:nowrap;cursor:pointer;font-weight:500;border:1px solid var(--bd);color:var(--td);background:var(--bg);transition:.15s}
 .filter-chip.active{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:600}
 
 /*═══ SEARCH ═══*/
