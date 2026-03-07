@@ -1,6 +1,6 @@
-// Version 7.1 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
-// Phase 5: Report screens UI overhaul (wireframe match)
+// Phase 6: Admin screens + Product wireframe match
 
 // ─── ADMIN SCREEN RENDERERS (A1-A9) ────────────────────────
 function renderAdminDashboard() {
@@ -156,29 +156,38 @@ async function renderAdminProducts() {
       <input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()" style="width:100%;margin-bottom:8px">
 
       ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' : `
-      <table style="width:100%;border-collapse:collapse;font-size:9px">
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:7px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
         <tbody>${filtered.map(p => {
           const isAct = p.is_active === true || p.is_active === 'TRUE';
+          const catObj = (S.categories||[]).find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id));
+          const catName = catObj ? (catObj.cat_name||catObj.category_name) : (p.cat_id||'—');
           return `<tr>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(p.product_name)} ${p.product_name}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${getCatName(p.section_id)||p.cat_id||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="toggleProduct('${p.product_id}',${!isAct})"><span style="color:${isAct?'var(--green)':'var(--red)'}">●</span> ${isAct?'Active':'Off'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:7px" onclick="showEditProductForm('${p.product_id}')">✏️</button></td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(p.product_name)} ${p.product_name}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${catName}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:9px">Hidden</span>'}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
           </tr>`;
         }).join('')}</tbody>
-      </table>`}
+      </table></div>`}
     </div>`;
 }
 
@@ -210,9 +219,9 @@ async function renderProductEditScreen() {
   const el = document.getElementById('productEditContent');
   const p = S._editProduct;
   const isEdit = !!p;
-  
-  document.getElementById('productEditTitle').textContent = isEdit ? '✏️ ' + p.product_name : '➕ เพิ่มสินค้าใหม่';
-  
+
+  document.getElementById('productEditTitle').textContent = isEdit ? '✏️ แก้ไขสินค้า' : '➕ เพิ่มสินค้าใหม่';
+
   // Load visibility if editing
   if (isEdit && S._editVisibility.length === 0) {
     el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
@@ -221,121 +230,161 @@ async function renderProductEditScreen() {
       if (resp.success) S._editVisibility = resp.data || [];
     } catch(e) {}
   }
-  
+
   const cats = S.categories || [];
-  const sections = ['cake', 'sauce'];
+  const sections = ['cake', 'sauce', 'bakery'];
+  const unitOpts = ['pieces','pcs','loaves','btl','pack','kg','g'];
   const stores = [
-    { id:'MNG', name:'🥭 Mango Coco', depts:['dessert','drink'] },
-    { id:'ISH', name:'🍣 Issho Cafe', depts:['dessert','drink'] },
-    { id:'GB',  name:'🥞 Golden Brown', depts:['dessert','drink'] },
-    { id:'TMC', name:'🧀 Melting Cheese', depts:['dessert','drink'] },
-    { id:'RW',  name:'🍜 Red Wok', depts:['dessert','drink'] },
+    { id:'MNG', name:'MNG Haymarket', depts:['dessert','drink'] },
+    { id:'ISH', name:'ISH Burwood', depts:['dessert','drink'] },
+    { id:'GB',  name:'GB City', depts:['dessert','drink'] },
+    { id:'TMC', name:'TMC', depts:['dessert','drink'] },
+    { id:'RW',  name:'RW Marketplace', depts:['dessert','drink'] },
   ];
-  
+
   const imgUrl = isEdit ? (p.image_url || '') : '';
-  
+  const catObj = isEdit ? (cats.find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id))) : null;
+  const catLabel = catObj ? (catObj.cat_name||catObj.category_name) : '';
+  const isAct = isEdit && (p.is_active === true || p.is_active === 'TRUE');
+
   el.innerHTML = `
-    <div class="pad">
-      ${isEdit ? `<div style="font-size:10px;color:var(--td);margin-bottom:12px;background:var(--s2);padding:8px 12px;border-radius:8px">🆔 ${p.product_id}</div>` : ''}
-      
-      <!-- Image Preview -->
-      <div style="text-align:center;margin-bottom:16px">
-        <div id="imgPreview" style="width:120px;height:120px;border-radius:16px;margin:0 auto 8px;background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed var(--b2)">
-          ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(isEdit ? p.product_name : '')}'" />` : `<span style="font-size:48px">${isEdit ? prodEmoji(p.product_name) : '📦'}</span>`}
+    <div style="padding:14px 18px;max-width:900px">
+      <!-- Preview Area -->
+      <div style="display:flex;gap:12px;margin-bottom:16px">
+        <div id="imgPreview" style="width:80px;height:80px;background:${isEdit?'var(--gold-bg)':'var(--s2)'};border:2px solid ${isEdit?'var(--gold)':'var(--bd)'};border-radius:var(--rd2);display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;overflow:hidden">
+          ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(p?.product_name||'')}'" />` : `<span>${isEdit ? prodEmoji(p.product_name) : '📦'}</span>`}
+        </div>
+        <div style="flex:1;padding-top:4px">
+          <div style="font-size:10px;color:var(--t3)">${isEdit ? '' : 'Preview — กรอกข้อมูลด้านล่าง'}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--t1);margin-top:2px" id="prdPreviewName">${isEdit ? p.product_name : 'ชื่อสินค้า...'}</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:2px" id="prdPreviewMeta">${isEdit ? `${catLabel} · ${p.section_id} · ${p.unit}` : 'Category · Section · Unit'}</div>
+          ${isEdit ? `<div style="margin-top:4px"><span style="background:${isAct?'var(--green-bg)':'var(--red-bg)'};color:${isAct?'var(--green)':'var(--red)'};padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600">${isAct?'Active':'Hidden'}</span></div>` : ''}
         </div>
       </div>
-      
+
+      <!-- Form Fields -->
+      <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:8px">ข้อมูลสินค้า</div>
+
       <div class="form-group">
-        <label class="form-label">🖼️ Image URL</label>
-        <input class="form-input" id="prdImage" placeholder="https://example.com/image.jpg" value="${imgUrl}" oninput="previewProductImage(this.value)">
-        <div style="font-size:9px;color:var(--td);margin-top:2px">วาง URL รูปสินค้า จะแสดงในหน้าสั่งของ + Production Sheet</div>
+        <label class="form-label">❶ ชื่อสินค้า *</label>
+        <input class="form-input" id="prdName" placeholder="เช่น Mango Sticky Rice" value="${isEdit ? p.product_name : ''}" oninput="document.getElementById('prdPreviewName').textContent=this.value||'ชื่อสินค้า...'">
       </div>
-      
-      <div class="form-group">
-        <label class="form-label">ชื่อสินค้า *</label>
-        <input class="form-input" id="prdName" placeholder="เช่น Carrot Cake" value="${isEdit ? p.product_name : ''}">
-      </div>
-      
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="form-group">
-          <label class="form-label">Category</label>
+          <label class="form-label">❷ Category *</label>
           <select class="form-input" id="prdCat">
+            <option value="">-- เลือก --</option>
             ${cats.map(c => `<option value="${c.cat_id||c.category_id}" ${isEdit && (p.cat_id||p.category_id)===(c.cat_id||c.category_id)?'selected':''}>${c.cat_name||c.category_name||c.cat_id}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Section (ทีมผลิต) *</label>
+          <label class="form-label">❸ Section *</label>
           <select class="form-input" id="prdSection">
-            ${sections.map(s => `<option value="${s}" ${isEdit && p.section_id===s?'selected':''}>${s === 'cake' ? '🎂 cake' : '🫕 sauce'}</option>`).join('')}
+            <option value="">-- เลือก --</option>
+            ${sections.map(s => `<option value="${s}" ${isEdit && p.section_id===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
-      
+
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div class="form-group">
-          <label class="form-label">หน่วย</label>
-          <input class="form-input" id="prdUnit" placeholder="pieces" value="${isEdit ? p.unit||'pieces' : 'pieces'}">
+          <label class="form-label">❹ Unit *</label>
+          <select class="form-input" id="prdUnit">
+            ${unitOpts.map(u => `<option value="${u}" ${isEdit && p.unit===u?'selected':''}>${u}</option>`).join('')}
+          </select>
         </div>
         <div class="form-group">
-          <label class="form-label">สั่งขั้นต่ำ</label>
+          <label class="form-label">❺ Min Order *</label>
           <input class="form-input" type="number" id="prdMin" min="1" value="${isEdit ? p.min_order||1 : 1}">
         </div>
         <div class="form-group">
-          <label class="form-label">Step</label>
+          <label class="form-label">❻ Order Step</label>
           <input class="form-input" type="number" id="prdStep" min="1" value="${isEdit ? p.order_step||1 : 1}">
         </div>
       </div>
-      
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="form-group">
-          <label class="form-label">สั่งสูงสุด</label>
+          <label class="form-label">❼ Max Order</label>
           <input class="form-input" type="number" id="prdMax" min="1" value="${isEdit ? p.max_order||100 : 100}">
         </div>
         <div class="form-group">
-          <label class="form-label">Allow Stock</label>
+          <label class="form-label">❽ Allow Stock</label>
           <select class="form-input" id="prdStock">
             <option value="true" ${isEdit && p.allow_stock?'selected':''}>Yes</option>
             <option value="false" ${isEdit && !p.allow_stock?'selected':''}>No</option>
           </select>
         </div>
       </div>
-      
+
       <div class="form-group">
-        <label class="form-label">Description</label>
-        <textarea class="form-input" id="prdDesc" rows="2" placeholder="รายละเอียดสินค้า">${isEdit ? p.description||'' : ''}</textarea>
+        <label class="form-label">❾ Description</label>
+        <textarea class="form-input" id="prdDesc" rows="2" placeholder="รายละเอียดสินค้า..." style="resize:vertical">${isEdit ? p.description||'' : ''}</textarea>
       </div>
-    </div>
-    
-    <!-- Visibility Section -->
-    <div class="sec-hd">👁️ ร้านที่เห็นสินค้านี้</div>
-    <div class="pad" style="padding-top:0">
-      <div style="font-size:10px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้</div>
-      ${stores.map(store => {
-        return store.depts.map(dept => {
-          const vis = S._editVisibility.find(v => v.store_id === store.id && v.dept_id === dept);
-          const checked = vis ? vis.is_active : (!isEdit); // new product = all checked by default
-          return `
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2)">
-            <input type="checkbox" id="vis_${store.id}_${dept}" ${checked ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold)">
-            <label for="vis_${store.id}_${dept}" style="flex:1;font-size:12px;cursor:pointer">
-              <span style="font-weight:600">${store.name}</span>
-              <span style="color:var(--td);font-size:10px"> · ${dept}</span>
+
+      <!-- Image Upload -->
+      <div class="form-group">
+        <label class="form-label">❿ รูปสินค้า</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:48px;height:48px;background:var(--s2);border:1.5px solid var(--bd);border-radius:var(--rd2);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden" id="imgThumb">
+            ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" />` : '📷'}
+          </div>
+          <div>
+            <label style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--bd);border-radius:var(--rd2);font-size:11px;cursor:pointer;background:var(--bg)">
+              📁 เลือกไฟล์
+              <input type="file" accept="image/*" style="display:none" onchange="handleProductImage(this)">
             </label>
-          </div>`;
-        }).join('');
-      }).join('')}
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <div style="font-size:10px;color:var(--blue);cursor:pointer" onclick="toggleAllVis(true)">✅ เลือกทั้งหมด</div>
-        <div style="font-size:10px;color:var(--red);cursor:pointer" onclick="toggleAllVis(false)">❌ ยกเลิกทั้งหมด</div>
+            <div style="font-size:9px;color:var(--t4);margin-top:2px">JPG, PNG · max 2MB · auto compress</div>
+          </div>
+        </div>
+        <input type="hidden" id="prdImage" value="${imgUrl}">
       </div>
-    </div>
-    
-    <!-- Submit -->
-    <div class="pad" style="padding-bottom:40px">
-      <button class="btn btn-gold" style="width:100%;padding:14px" onclick="submitProductEdit(${isEdit ? `'${p.product_id}'` : 'null'})">${isEdit ? '💾 บันทึกการแก้ไข' : '➕ เพิ่มสินค้า'}</button>
-      ${isEdit ? `<button class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--red);border-color:var(--red)" onclick="toggleProduct('${p.product_id}',${!(p.is_active===true||p.is_active==='TRUE')});showScreen('admin-products')">${p.is_active===true||p.is_active==='TRUE' ? '🔇 ปิดสินค้านี้' : '🔔 เปิดสินค้านี้'}</button>` : ''}
-    </div>
-  `;
+
+      <!-- Popup Notice -->
+      <div class="form-group">
+        <label class="form-label">⓫ Popup Notice <span style="font-size:9px;color:var(--t4)">(แสดงตอนเพิ่มลงตะกร้า)</span></label>
+        <input class="form-input" id="prdPopupNotice" placeholder="เช่น สั่งล่วงหน้า 2 วัน" value="${isEdit ? p.popup_notice||'' : ''}">
+      </div>
+
+      <!-- Visibility Section -->
+      <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin:16px 0 4px">👁️ ร้านที่เห็นสินค้านี้</div>
+      <div style="font-size:10px;color:var(--td);margin-bottom:8px">เลือกร้าน + แผนกที่สามารถสั่งสินค้านี้ได้ — สินค้าใหม่เปิดทุกร้านเป็น default</div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px">
+        <thead><tr style="background:var(--s1)">
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Department</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:9px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Visible?</th>
+        </tr></thead>
+        <tbody>${stores.map(store => {
+          return store.depts.map(dept => {
+            const vis = S._editVisibility.find(v => v.store_id === store.id && v.dept_id === dept);
+            const checked = vis ? vis.is_active : (!isEdit);
+            return `<tr>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${store.name}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${dept}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">
+                <span style="color:${checked?'var(--green)':'var(--t4)'};font-size:14px;cursor:pointer" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.textContent=this.dataset.on==='1'?'☑':'☐';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--t4)';document.getElementById('vis_${store.id}_${dept}').checked=this.dataset.on==='1'" data-on="${checked?'1':'0'}">${checked?'☑':'☐'}</span>
+                <input type="checkbox" id="vis_${store.id}_${dept}" ${checked?'checked':''} style="display:none">
+              </td>
+            </tr>`;
+          }).join('');
+        }).join('')}</tbody>
+      </table>
+
+      <div style="display:flex;gap:8px;font-size:10px;margin-bottom:12px">
+        <span style="color:var(--blue);cursor:pointer" onclick="toggleAllVis(true)">✅ เลือกทั้งหมด</span>
+        <span style="color:var(--red);cursor:pointer" onclick="toggleAllVis(false)">❌ ยกเลิกทั้งหมด</span>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-gold" style="flex:2" onclick="submitProductEdit(${isEdit ? `'${p.product_id}'` : 'null'})">${isEdit ? '💾 บันทึกการแก้ไข' : '+ เพิ่มสินค้า'}</button>
+        <button class="btn btn-outline" style="flex:1" onclick="showScreen('admin-products')">ยกเลิก</button>
+      </div>
+      ${isEdit ? `<button class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--red);border-color:var(--red)" onclick="toggleProduct('${p.product_id}',${!isAct});showScreen('admin-products')">${isAct ? '🔇 ปิดสินค้านี้ (Deactivate)' : '🔔 เปิดสินค้านี้'}</button>` : ''}
+    </div>`;
 }
 
 function previewProductImage(url) {
@@ -345,12 +394,33 @@ function previewProductImage(url) {
     preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='❌'" />`;
   } else {
     const name = document.getElementById('prdName')?.value || '';
-    preview.innerHTML = `<span style="font-size:48px">${prodEmoji(name) || '📦'}</span>`;
+    preview.innerHTML = `<span style="font-size:36px">${prodEmoji(name) || '📦'}</span>`;
   }
+}
+
+function handleProductImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  if (file.size > 2 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 2MB', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('prdImage').value = e.target.result;
+    const thumb = document.getElementById('imgThumb');
+    if (thumb) thumb.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+    const preview = document.getElementById('imgPreview');
+    if (preview) preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
 }
 
 function toggleAllVis(on) {
   document.querySelectorAll('[id^="vis_"]').forEach(el => { el.checked = on; });
+  // Update visual checkboxes
+  document.querySelectorAll('[data-on]').forEach(el => {
+    el.dataset.on = on ? '1' : '0';
+    el.textContent = on ? '☑' : '☐';
+    el.style.color = on ? 'var(--green)' : 'var(--t4)';
+  });
 }
 
 async function submitProductEdit(productId) {
@@ -369,6 +439,7 @@ async function submitProductEdit(productId) {
     allow_stock: document.getElementById('prdStock').value === 'true',
     description: document.getElementById('prdDesc').value || '',
     image_url: document.getElementById('prdImage').value.trim() || '',
+    popup_notice: document.getElementById('prdPopupNotice')?.value || '',
   };
   
   if (isEdit) body.product_id = productId;
