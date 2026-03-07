@@ -1,6 +1,6 @@
-// Version 7.1 | 7 MAR 2026 | Siam Palette Group
+// Version 7.1.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
-// Phase 4: BC Screens UI overhaul (wireframe match)
+// Fix: Print section filter, tab selected state, cleaner print header
 
 // ─── B-04: WASTE DASHBOARD ──────────────────────────────────
 async function renderAdminWasteDashboard() {
@@ -1249,22 +1249,64 @@ async function resolveReturn(id, status) {
 
 // ─── B8-B9: PRINT CENTRE ────────────────────────────────────
 async function renderBcPrint() {
-  // N-01 fix: ensure orders are loaded before rendering
   try { await loadOrders(); } catch(e) { console.warn('Print: loadOrders failed:', e); }
-  
-  if (!S.bcPrintDate) {
-    S.bcPrintDate = tomorrowSydney();
-  }
-  document.getElementById('bcPrintDateInput').value = S.bcPrintDate;
-  document.getElementById('bcPrintSub').textContent = getScopeLabel();
 
-  // Tabs
+  if (!S.bcPrintDate) S.bcPrintDate = tomorrowSydney();
+  if (!S.bcPrintSections) S.bcPrintSections = []; // empty = all
+
+  document.getElementById('bcPrintDateInput').value = S.bcPrintDate;
+
+  // Available sections from orders
+  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
+  const allOrders = filterOrdersByDateAndScope(S.bcPrintDate, scope);
+  const secSet = new Set();
+  allOrders.forEach(o => (o.items||[]).forEach(it => { if (it.section_id) secSet.add(it.section_id); }));
+  const sections = [...secSet].sort();
+
+  // Section filter checkboxes
+  const secIcons = { cake:'🎂', sauce:'🍶', tart:'🥧', bread:'🍞', bakery:'🍞' };
+  const sectionFilterHtml = sections.length > 1 ? `<div style="display:flex;gap:6px;padding:4px 16px 8px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:11px;color:var(--td);font-weight:600">Section:</span>
+    ${sections.map(sec => {
+      const checked = S.bcPrintSections.length === 0 || S.bcPrintSections.includes(sec);
+      return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+        <input type="checkbox" ${checked?'checked':''} onchange="togglePrintSection('${sec}')"> ${secIcons[sec]||'📦'} ${sec}
+      </label>`;
+    }).join('')}
+    <span style="font-size:10px;color:var(--blue);cursor:pointer;margin-left:8px" onclick="S.bcPrintSections=[];renderBcPrint()">Select All</span>
+  </div>` : '';
+
+  // Tabs — use 'active' class (not 'bc-active')
   document.getElementById('bcPrintTabs').innerHTML = `
-    <div class="filter-chip ${S.bcPrintTab==='production'?'bc-active':''}" onclick="S.bcPrintTab='production';renderBcPrint()">📄 Production Sheet</div>
-    <div class="filter-chip ${S.bcPrintTab==='slip'?'bc-active':''}" onclick="S.bcPrintTab='slip';renderBcPrint()">🧾 Delivery Slip</div>`;
+    <div class="filter-chip ${S.bcPrintTab==='production'?'active':''}" onclick="S.bcPrintTab='production';renderBcPrint()">📄 Production Sheet</div>
+    <div class="filter-chip ${S.bcPrintTab==='slip'?'active':''}" onclick="S.bcPrintTab='slip';renderBcPrint()">🧾 Delivery Slip</div>`;
+
+  // Insert section filter after tabs
+  const tabsEl = document.getElementById('bcPrintTabs');
+  if (tabsEl) tabsEl.insertAdjacentHTML('afterend', `<div id="bcPrintSectionFilter">${sectionFilterHtml}</div>`);
+  // Remove old if re-rendered
+  const oldFilter = document.querySelectorAll('#bcPrintSectionFilter');
+  if (oldFilter.length > 1) oldFilter[0].remove();
 
   if (S.bcPrintTab === 'production') renderProductionSheet();
   else renderDeliverySlip();
+}
+
+function togglePrintSection(sec) {
+  if (S.bcPrintSections.length === 0) {
+    // Was "all" → now deselect this one
+    const scope = S.deptMapping ? S.deptMapping.section_scope : [];
+    const allOrders = filterOrdersByDateAndScope(S.bcPrintDate, scope);
+    const secSet = new Set();
+    allOrders.forEach(o => (o.items||[]).forEach(it => { if (it.section_id) secSet.add(it.section_id); }));
+    S.bcPrintSections = [...secSet].filter(s => s !== sec);
+  } else if (S.bcPrintSections.includes(sec)) {
+    S.bcPrintSections = S.bcPrintSections.filter(s => s !== sec);
+    if (S.bcPrintSections.length === 0) S.bcPrintSections = []; // all again
+  } else {
+    S.bcPrintSections.push(sec);
+  }
+  renderBcPrint();
 }
 
 // ─── B8: PRODUCTION SHEET ───
@@ -1272,13 +1314,13 @@ function renderProductionSheet() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
   const orders = filterOrdersByDateAndScope(S.bcPrintDate, scope);
 
-  // Collect all items across orders, filter by scope
+  // Collect all items — filter by scope + section checkboxes
   const allItems = [];
   orders.forEach(o => {
     (o.items || []).forEach(it => {
-      if (scope.length === 0 || scope.includes(it.section_id)) {
-        allItems.push({ ...it, store_id: o.store_id, order_id: o.order_id, dept_id: o.dept_id, header_note: o.header_note, display_name: o.display_name });
-      }
+      if (scope.length > 0 && !scope.includes(it.section_id)) return;
+      if (S.bcPrintSections.length > 0 && !S.bcPrintSections.includes(it.section_id)) return;
+      allItems.push({ ...it, store_id: o.store_id, order_id: o.order_id, dept_id: o.dept_id, header_note: o.header_note, display_name: o.display_name });
     });
   });
 
@@ -1334,14 +1376,14 @@ function renderProductionSheet() {
   const orderIds = [...new Set(allItems.map(it => it.order_id))].sort();
 
   // Render
-  const now = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-  const sectionTitle = scope.length ? scope.map(s => s.toUpperCase()).join(' + ') : 'ALL';
+  const sectionTitle = S.bcPrintSections.length > 0 ? S.bcPrintSections.map(s => s.toUpperCase()).join(' + ') : (scope.length ? scope.map(s => s.toUpperCase()).join(' + ') : 'ALL');
+  const nowFull = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 
   let html = `<div class="print-area">
     <div style="text-align:center;margin-bottom:10px">
+      <div class="print-only" style="display:none;font-size:10px;color:#888;text-align:right">สั่งของเบเกอรี่ — Siam Palette Group</div>
       <div style="font-size:14px;font-weight:700">PRODUCTION SHEET — ${sectionTitle}</div>
-      <div style="font-size:9px;color:#888">Delivery Date: ${formatDateThai(S.bcPrintDate)} | Printed: ${now}</div>
-      <div style="font-size:9px;color:#555;margin-top:2px">Orders: ${orderIds.length} รายการ (${orderIds.join(', ')})</div>
+      <div style="font-size:9px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)} | Printed: ${nowFull}</div>
     </div>
     <table class="ptbl">
       <thead><tr><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr></thead><tbody>`;
@@ -1434,6 +1476,7 @@ function renderDeliverySlip() {
   storeOrders.forEach(o => {
     (o.items || []).forEach(it => {
       if (scope.length > 0 && !scope.includes(it.section_id)) return;
+      if (S.bcPrintSections.length > 0 && !S.bcPrintSections.includes(it.section_id)) return;
       const sec = it.section_id || 'other';
       if (!bySection[sec]) bySection[sec] = {};
       const deptKey = `${getDeptName(o.dept_id)} (${o.display_name || o.user_id})`;
@@ -1457,14 +1500,12 @@ function renderDeliverySlip() {
   });
 
   const now = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-  const sectionIcons = { cake:'🎂', sauce:'🫕', other:'📦' };
+  const sectionIcons = { cake:'🎂', sauce:'🫕', tart:'🥧', bread:'🍞', bakery:'🍞', other:'📦' };
 
   html += `<div class="slip-wrap">
     <div class="slip-hd">
-      <div style="font-size:16px;font-weight:700">${S.bcPrintStore}</div>
-      <div>${getStoreName(S.bcPrintStore)}</div>
-      <div style="font-size:8px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)}</div>
-      <div style="font-size:7px;color:#555;margin-top:2px">Orders: ${orderIds.length} (${orderIds.join(', ')})</div>
+      <div style="font-size:16px;font-weight:700">${getStoreName(S.bcPrintStore)}</div>
+      <div style="font-size:8px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)} | Printed: ${now}</div>
     </div>`;
 
   // Render sections

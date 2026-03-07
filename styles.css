@@ -1,4 +1,4 @@
-/* Version 7.0.3 | 7 MAR 2026 | Siam Palette Group */
+/* Version 7.0.4 | 7 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Warm Light Theme + Sidebar Layout */
 /* Fix: sidebar desktop toggle, larger base font */
 
@@ -339,10 +339,14 @@ textarea.form-input{resize:none;min-height:72px}
 /*═══ PRINT MEDIA ═══*/
 @media print{
   body{background:#fff!important}
-  .sb,.g-tb,.sb-overlay,.toast-wrap{display:none!important}
+  .sb,.g-tb,.sb-overlay,.toast-wrap,#bcPrintTabs,#bcPrintSectionFilter,.no-print,.filter-chip,.filter-bar,.search-wrap,.dpill,#bcPrintDateInput{display:none!important}
+  #app-shell{display:block!important}
+  #mainArea{display:block!important;overflow:visible!important}
+  .mn{overflow:visible!important;background:#fff!important}
   .screen{display:none!important}
   #scr-bc-print{display:block!important;position:static!important;overflow:visible!important}
   .print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}
+  .print-only{display:block!important}
   .ptbl thead{display:table-header-group}
   .ptbl tr{page-break-inside:avoid}
   body.slip-mode #scr-bc-print{width:76mm;margin:0 auto;padding:0}
