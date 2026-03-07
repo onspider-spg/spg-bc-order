@@ -1032,8 +1032,8 @@ function startPolling() {
     try {
       // Only refresh data that's already loaded (lazy load compatible)
       await loadNotifications();
-      if (S.orders && S.orders.length) await loadOrders();
-      if (S.returns && S.returns.length) await loadReturns();
+      if (S._ordersLoaded) await loadOrders();
+      if (S._returnsLoaded) await loadReturns();
       checkNotifications();
       if (S.currentScreen === 'home' || S.currentScreen === 'bc-home') {
         await loadDashboard();

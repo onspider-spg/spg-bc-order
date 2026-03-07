@@ -312,16 +312,18 @@ async function showScreen(name, param) {
     try {
       // Screens that need products + categories
       if (['browse','cart','admin-products','admin-product-edit'].includes(name)) {
-        if (!S.products || !S.products.length) {
+        if (!S._productsLoaded) {
           el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px"><div class="spinner"></div></div>';
           await Promise.all([loadCategories(), loadProducts()]);
+          S._productsLoaded = true;
         }
       }
       // Screens that need orders
       if (['orders'].includes(name)) {
-        if (!S.orders || !S.orders.length) {
+        if (!S._ordersLoaded) {
           el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px"><div class="spinner"></div></div>';
           await loadOrders();
+          S._ordersLoaded = true;
         }
       }
       // Screens that need stock
@@ -331,16 +333,18 @@ async function showScreen(name, param) {
       }
       // Screens that need returns
       if (['returns','return-dashboard','bc-returns'].includes(name)) {
-        if (!S.returns || !S.returns.length) {
+        if (!S._returnsLoaded) {
           el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px"><div class="spinner"></div></div>';
           await loadReturns();
+          S._returnsLoaded = true;
         }
       }
       // BC orders screens
       if (['bc-orders','bc-accept','bc-fulfil'].includes(name)) {
-        if (!S.orders || !S.orders.length) {
+        if (!S._ordersLoaded) {
           el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px"><div class="spinner"></div></div>';
           await loadOrders();
+          S._ordersLoaded = true;
         }
       }
     } catch (e) {

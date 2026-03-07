@@ -78,9 +78,9 @@ async function renderAdminProducts() {
   const el = document.getElementById('adminProductsContent');
   
   // Only load if not yet loaded (lazy load in showScreen handles first load)
-  if (!S.products || !S.products.length) {
+  if (!S._productsLoaded) {
     el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
-    try { await loadProducts(); } catch(e) {}
+    try { await loadProducts(); S._productsLoaded = true; } catch(e) {}
   }
   
   const prods = S.products || [];
