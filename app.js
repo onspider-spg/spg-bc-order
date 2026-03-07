@@ -1,4 +1,4 @@
-// Version 7.0.5 | 7 MAR 2026 | Siam Palette Group
+// Version 7.3 | 7 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -64,6 +64,7 @@ const S = {
   bcPrintTab: 'production',
   bcPrintStore: '',
   bcPrintSections: [],
+  bcPrintSelected: {},
   wasteDashDays: 30,
   topProdDays: 30,
   _announcements: [],

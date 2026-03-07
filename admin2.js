@@ -1,4 +1,4 @@
-// Version 7.2 | 7 MAR 2026 | Siam Palette Group
+// Version 7.3 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -1206,7 +1206,8 @@ async function receiveReturn(id) {
     const r = await api('resolve_return', { return_id: id, status: 'Received' });
     toast(r.message || '📥 รับของเรียบร้อย', r.success ? 'success' : 'error');
   } catch (e) {
-    toast('📥 รับของเรียบร้อย (Demo)', 'success');
+    toast('❌ รับของไม่สำเร็จ: ' + (e.message||'ลองใหม่'), 'error');
+    return;
   }
 
   const ret = S.returns.find(x => x.return_id === id);
@@ -1235,7 +1236,8 @@ async function resolveReturn(id, status) {
     });
     toast(r.message || `✅ ${isWaste ? 'บันทึกทิ้ง + WasteLog' : 'ทำใหม่เรียบร้อย'}`, r.success ? 'success' : 'error');
   } catch (e) {
-    toast(`✅ ${isWaste ? 'บันทึกทิ้ง + WasteLog' : 'ทำใหม่เรียบร้อย'} (Demo)`, 'success');
+    toast('❌ ไม่สำเร็จ: ' + (e.message||'ลองใหม่'), 'error');
+    return;
   }
 
   const ret = S.returns.find(x => x.return_id === id);
@@ -1309,6 +1311,12 @@ function togglePrintSection(sec) {
   renderBcPrint();
 }
 
+function toggleAllPrintItems(on) {
+  if (!S.bcPrintSelected) S.bcPrintSelected = {};
+  Object.keys(S.bcPrintSelected).forEach(k => { S.bcPrintSelected[k] = on; });
+  renderProductionSheet();
+}
+
 // ─── B8: PRODUCTION SHEET ───
 function renderProductionSheet() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
@@ -1379,18 +1387,30 @@ function renderProductionSheet() {
   const sectionTitle = S.bcPrintSections.length > 0 ? S.bcPrintSections.map(s => s.toUpperCase()).join(' + ') : (scope.length ? scope.map(s => s.toUpperCase()).join(' + ') : 'ALL');
   const nowFull = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 
+  // Initialize selection state
+  if (!S.bcPrintSelected) S.bcPrintSelected = {};
+  products.forEach(p => { if (!(p in S.bcPrintSelected)) S.bcPrintSelected[p] = true; });
+  const selectedCount = products.filter(p => S.bcPrintSelected[p]).length;
+
   let html = `<div class="print-area">
     <div style="text-align:center;margin-bottom:10px">
       <div class="print-only" style="display:none;font-size:13px;color:#888;text-align:right">สั่งของเบเกอรี่ — Siam Palette Group</div>
       <div style="font-size:14px;font-weight:700">PRODUCTION SHEET — ${sectionTitle}</div>
       <div style="font-size:13px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)} | Printed: ${nowFull}</div>
     </div>
+    <div class="no-print" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;font-size:12px">
+      <span style="color:var(--t3)">เลือก ${selectedCount}/${products.length} รายการ</span>
+      <span style="color:var(--blue);cursor:pointer" onclick="toggleAllPrintItems(true)">✅ เลือกทั้งหมด</span>
+      <span style="color:var(--red);cursor:pointer" onclick="toggleAllPrintItems(false)">❌ ยกเลิกทั้งหมด</span>
+    </div>
     <table class="ptbl">
-      <thead><tr><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr></thead><tbody>`;
+      <thead><tr><th class="no-print" style="width:30px">☑</th><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr></thead><tbody>`;
 
   products.forEach(p => {
     const row = pivot[p];
-    html += `<tr class="${row.urgent ? 'urg' : ''}">
+    const checked = S.bcPrintSelected[p];
+    html += `<tr class="${row.urgent ? 'urg' : ''}" ${!checked?'data-print-hide="1"':''}>
+      <td class="no-print" style="text-align:center"><input type="checkbox" ${checked?'checked':''} onchange="S.bcPrintSelected['${p.replace(/'/g,"\\'")}']=this.checked;renderProductionSheet()" style="width:16px;height:16px"></td>
       <td style="text-align:left"><strong>${p}</strong></td>
       <td><strong>${row.total}</strong></td>`;
     allStores.forEach(s => {

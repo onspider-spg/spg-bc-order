@@ -1,4 +1,4 @@
-/* Version 7.0.8 | 7 MAR 2026 | Siam Palette Group */
+/* Version 7.3 | 7 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Warm Light Theme + Sidebar Layout */
 /* Fix: sidebar desktop toggle, larger base font */
 
@@ -30,7 +30,7 @@
 
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100vh;min-height:100dvh;overflow-x:hidden}
-body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);color:var(--t);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);color:var(--t);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 
 /*═══ APP SHELL ═══*/
 #app-shell{display:flex;height:100vh;height:100dvh;overflow:hidden;background:var(--bg)}
@@ -98,7 +98,7 @@ body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);
 .g-tb-av.bc{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
 
 /*═══ MAIN CONTENT ═══*/
-.mn{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,#fdfaf4 0%,#fff 15%)}
+.mn{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(180deg,#fdfaf4 0%,#fff 15%);zoom:1.25;-moz-transform:scale(1.25);-moz-transform-origin:0 0}
 
 /*═══ SCREEN SYSTEM ═══*/
 .screen{display:none;flex-direction:column;min-height:100%}
@@ -335,6 +335,8 @@ textarea.form-input{resize:none;min-height:72px}
   .mn{overflow:visible!important;background:#fff!important}
   .screen{display:none!important}
   #scr-bc-print{display:block!important;position:static!important;overflow:visible!important}
+  .no-print{display:none!important}
+  [data-print-hide="1"]{display:none!important}
   .print-area,.slip-wrap{margin:0;border-radius:0;box-shadow:none}
   .print-only{display:block!important}
   .ptbl thead{display:table-header-group}

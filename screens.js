@@ -1,4 +1,4 @@
-// Version 7.2 | 7 MAR 2026 | Siam Palette Group
+// Version 7.3 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -56,7 +56,16 @@ function renderApp() {
         <div class="topbar-back" onclick="showScreen('home')">←</div>
         <div class="topbar-title">ประวัติออเดอร์</div>
       </div>
-      <div class="filter-bar" id="orderFilters" style="padding-top:8px"></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:12px">
+        <span style="color:var(--t3)">📅 ส่ง:</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" id="orderDateFrom" onchange="filterOrders()">
+        <span style="color:var(--t4)">→</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" id="orderDateTo" onchange="filterOrders()">
+        <span style="font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="resetOrderDates()">วันนี้</span>
+        <span style="font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="setOrderDatesWeek()">พรุ่งนี้</span>
+        <span style="font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="clearOrderDates()">ทุกวัน</span>
+      </div>
+      <div class="filter-bar" id="orderFilters" style="padding-top:0"></div>
       <div class="content" id="orderList"></div>
     </div>
     
@@ -890,29 +899,37 @@ async function renderOrders() {
   const content = document.getElementById('orderList');
   content.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try { await loadOrders(); } catch(e) {}
-
-  // Status counts
-  const all = S.orders;
-  const counts = { all:all.length, Pending:all.filter(o=>o.status==='Pending').length, Ordered:all.filter(o=>o.status==='Ordered').length, Fulfilled:all.filter(o=>o.status==='Fulfilled').length, Delivered:all.filter(o=>o.status==='Delivered').length };
-
-  document.getElementById('orderFilters').innerHTML = `
-    <div class="filter-chip ${S.orderFilter==='all'?'active':''}" onclick="S.orderFilter='all';filterOrders()">All (${counts.all})</div>
-    <div class="filter-chip ${S.orderFilter==='Pending'?'active':''}" onclick="S.orderFilter='Pending';filterOrders()">⏳ Pending (${counts.Pending})</div>
-    <div class="filter-chip ${S.orderFilter==='Ordered'?'active':''}" onclick="S.orderFilter='Ordered';filterOrders()">📦 Ordered (${counts.Ordered})</div>
-    <div class="filter-chip ${S.orderFilter==='Fulfilled'?'active':''}" onclick="S.orderFilter='Fulfilled';filterOrders()">✅ Fulfilled (${counts.Fulfilled})</div>
-    <div class="filter-chip ${S.orderFilter==='Delivered'?'active':''}" onclick="S.orderFilter='Delivered';filterOrders()">🚚 Delivered (${counts.Delivered})</div>`;
-
   filterOrders();
 }
 
 function filterOrders() {
   const content = document.getElementById('orderList');
   let orders = S.orders;
+
+  // Date range filter
+  const fromEl = document.getElementById('orderDateFrom');
+  const toEl = document.getElementById('orderDateTo');
+  const from = fromEl ? fromEl.value : '';
+  const to = toEl ? toEl.value : '';
+  if (from) orders = orders.filter(o => (o.delivery_date||o.order_date) >= from);
+  if (to) orders = orders.filter(o => (o.delivery_date||o.order_date) <= to);
+
+  // Status filter
   if (S.orderFilter !== 'all') orders = orders.filter(o => o.status === S.orderFilter);
 
-  document.querySelectorAll('#orderFilters .filter-chip').forEach(c => {
-    c.classList.toggle('active', c.textContent.includes(S.orderFilter === 'all' ? 'All' : S.orderFilter));
+  // Update counts based on date-filtered orders
+  const dateFiltered = S.orders.filter(o => {
+    if (from && (o.delivery_date||o.order_date) < from) return false;
+    if (to && (o.delivery_date||o.order_date) > to) return false;
+    return true;
   });
+  const counts = { all:dateFiltered.length, Pending:dateFiltered.filter(o=>o.status==='Pending').length, Ordered:dateFiltered.filter(o=>o.status==='Ordered').length, Fulfilled:dateFiltered.filter(o=>o.status==='Fulfilled').length, Delivered:dateFiltered.filter(o=>o.status==='Delivered').length };
+
+  document.getElementById('orderFilters').innerHTML = `
+    <div class="filter-chip ${S.orderFilter==='all'?'active':''}" onclick="S.orderFilter='all';filterOrders()">ทั้งหมด (${counts.all})</div>
+    <div class="filter-chip ${S.orderFilter==='Pending'?'active':''}" onclick="S.orderFilter='Pending';filterOrders()">Pending (${counts.Pending})</div>
+    <div class="filter-chip ${S.orderFilter==='Ordered'?'active':''}" onclick="S.orderFilter='Ordered';filterOrders()">Ordered (${counts.Ordered})</div>
+    <div class="filter-chip ${S.orderFilter==='Fulfilled'?'active':''}" onclick="S.orderFilter='Fulfilled';filterOrders()">Done (${counts.Fulfilled + counts.Delivered})</div>`;
 
   if (orders.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">ไม่มีออเดอร์</div></div>';
@@ -925,11 +942,13 @@ function filterOrders() {
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.2px;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order Date</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
         <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
         <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
         <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
+        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
       </tr></thead>
       <tbody>${orders.map(o => {
         const bdr = bdrMap[o.status] || 'var(--bd)';
@@ -937,16 +956,45 @@ function filterOrders() {
         const itemsSummary = (o.items||[]).map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ') || '—';
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}" onclick="viewOrder('${o.order_id}')">
           <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
+          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${o.store_id||'—'}</td>
           <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
           <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
           <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${itemsSummary}</td>
           <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px;color:var(--t3)">${o.is_cutoff_violation?'<span style="font-size:11px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span> ':''}${o.header_note||'—'}</td>
+          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${o.is_cutoff_violation?'⚠️':'—'}</td>
+          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.created_by||'—'}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
-    <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders · 30 วัน</div>
+    <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders · ${from||'—'} → ${to||'ทั้งหมด'}</div>
   </div>`;
+}
+
+function resetOrderDates() {
+  const today = todaySydney();
+  const el1 = document.getElementById('orderDateFrom');
+  const el2 = document.getElementById('orderDateTo');
+  if (el1) el1.value = today;
+  if (el2) el2.value = today;
+  filterOrders();
+}
+
+function setOrderDatesWeek() {
+  const tom = tomorrowSydney();
+  const el1 = document.getElementById('orderDateFrom');
+  const el2 = document.getElementById('orderDateTo');
+  if (el1) el1.value = tom;
+  if (el2) el2.value = tom;
+  filterOrders();
+}
+
+function clearOrderDates() {
+  const el1 = document.getElementById('orderDateFrom');
+  const el2 = document.getElementById('orderDateTo');
+  if (el1) el1.value = '';
+  if (el2) el2.value = '';
+  S.orderFilter = 'all';
+  filterOrders();
 }
 
 async function viewOrder(orderId) {
