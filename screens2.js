@@ -1030,7 +1030,10 @@ function startPolling() {
   if (_pollInterval) clearInterval(_pollInterval);
   _pollInterval = setInterval(async () => {
     try {
-      await Promise.all([loadNotifications(), loadOrders(), loadReturns()]);
+      // Only refresh data that's already loaded (lazy load compatible)
+      await loadNotifications();
+      if (S.orders && S.orders.length) await loadOrders();
+      if (S.returns && S.returns.length) await loadReturns();
       checkNotifications();
       if (S.currentScreen === 'home' || S.currentScreen === 'bc-home') {
         await loadDashboard();

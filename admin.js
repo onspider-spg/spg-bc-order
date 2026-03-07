@@ -76,10 +76,12 @@ function renderStoreBreakdown() {
 // ─── A3: Product Management ──────────────────────────────────
 async function renderAdminProducts() {
   const el = document.getElementById('adminProductsContent');
-  el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
-  // Reload products to get latest
-  try { await loadProducts(); } catch(e) {}
+  // Only load if not yet loaded (lazy load in showScreen handles first load)
+  if (!S.products || !S.products.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+    try { await loadProducts(); } catch(e) {}
+  }
   
   const prods = S.products || [];
   const active = prods.filter(p => p.is_active === true || p.is_active === 'TRUE');
