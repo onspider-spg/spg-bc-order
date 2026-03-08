@@ -1,4 +1,4 @@
-// Version 9.7 | 8 MAR 2026 | Siam Palette Group
+// Version 9.8 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -132,6 +132,9 @@ const SB_CFG = {
       { scr: 'admin-top-products', lbl: 'Top Products' },
       { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
       { scr: 'return-dashboard', lbl: 'Return Dashboard' },
+    ]},
+    { sec: 'Admin', open: false, items: [
+      { scr: 'admin-products', lbl: 'Manage Products', perm: 'fn_manage_products' },
     ]},
   ],
   admin: [
@@ -473,7 +476,9 @@ function renderSidebar() {
 
   let sectionsHtml = '';
   cfg.forEach((g, gi) => {
-    const itemsHtml = g.items.map(it => {
+    const visibleItems = g.items.filter(it => !it.perm || hasPerm(it.perm));
+    if (visibleItems.length === 0) return; // hide empty sections
+    const itemsHtml = visibleItems.map(it => {
       const isActive = it.scr === S.currentScreen;
       const badge = it.badgeKey ? getBadgeCount(it.badgeKey) : 0;
       return `<div class="sb-item${isActive ? ' act' : ''}" data-scr="${it.scr}" onclick="${it.action ? it.action + '()' : "showScreen('" + it.scr + "')"};closeSidebar()">${it.lbl}${badge > 0 ? `<span class="sb-badge">${badge}</span>` : ''}</div>`;
