@@ -1,4 +1,4 @@
-// Version 8.6 | 8 MAR 2026 | Siam Palette Group
+// Version 9.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -177,6 +177,7 @@ const SCREEN_TITLES = {
 
 // ─── ENTRY FLOW ──────────────────────────────────────────────
 async function init() {
+  _C.del('prods'); // Always fresh products on page load
   renderApp();
   showScreen('loading');
 
@@ -317,7 +318,7 @@ async function loadProducts() {
   const cached = _C.get('prods');
   if (cached) { S.products = cached; return; }
   const resp = await api('get_products', null, { include_stock: 'true' });
-  if (resp.success) { S.products = resp.data; _C.set('prods', resp.data, 60); }
+  if (resp.success) { S.products = resp.data; _C.set('prods', resp.data, 5); }
 }
 
 async function loadDashboard() {
