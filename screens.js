@@ -1,4 +1,4 @@
-// Version 8.5 | 8 MAR 2026 | Siam Palette Group
+// Version 8.8 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -133,14 +133,14 @@ function renderApp() {
         <div class="topbar-title" style="color:var(--blue)">📋 ออเดอร์<div class="topbar-sub" id="bcOrderSub"></div></div>
         <div class="topbar-action" onclick="showScreen('bc-print')" title="พิมพ์">🖨️</div>
       </div>
-      <div style="padding:8px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <label style="font-size:14px;color:var(--td);white-space:nowrap">📅 ส่ง:</label>
-        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px;min-width:120px" onchange="S.bcDateFilter=this.value;renderBcOrderFilters();renderBcOrderList()" id="bcDateInput" onclick="this.showPicker?.()">
-        <div style="display:flex;gap:4px">
-          <div class="filter-chip" style="font-size:13px;padding:4px 8px" onclick="setBcDate('today')">วันนี้</div>
-          <div class="filter-chip" style="font-size:13px;padding:4px 8px" onclick="setBcDate('tomorrow')">พรุ่งนี้</div>
-          <div class="filter-chip" style="font-size:13px;padding:4px 8px" onclick="setBcDate('all')">ทุกวัน</div>
-        </div>
+      <div style="padding:8px 16px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px">
+        <span style="color:var(--t3)">📅 ส่ง:</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px;min-width:110px" onchange="S.bcDateFrom=this.value;renderBcOrderFilters();renderBcOrderList()" id="bcDateFromInput">
+        <span style="color:var(--t4)">→</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px;min-width:110px" onchange="S.bcDateTo=this.value;renderBcOrderFilters();renderBcOrderList()" id="bcDateToInput">
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="setBcDate('today')">วันนี้</span>
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="setBcDate('tomorrow')">พรุ่งนี้</span>
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="setBcDate('all')">ทุกวัน</span>
       </div>
       <div class="filter-bar" id="bcOrderFilters"></div>
       <div class="content" id="bcOrderList"></div>
@@ -321,7 +321,7 @@ async function showScreen(name, param) {
     // ── Lazy load: ensure data is loaded before rendering ──
     try {
       // Screens that need products + categories
-      if (['browse','cart','admin-products','admin-product-edit'].includes(name)) {
+      if (['browse','cart','waste','returns','bc-returns','bc-stock','admin-products','admin-product-edit','admin-dashboard','admin-waste-dashboard','admin-top-products'].includes(name)) {
         if (!S._productsLoaded) {
           await Promise.all([loadCategories(), loadProducts()]);
           S._productsLoaded = true;

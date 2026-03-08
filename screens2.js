@@ -1,4 +1,4 @@
-// Version 8.2 | 8 MAR 2026 | Siam Palette Group
+// Version 8.8 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -435,20 +435,24 @@ async function renderReturnDashboard() {
   const el = document.getElementById('returnDashContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
 
-  if (!S.returnDashDays) S.returnDashDays = 30;
+  if (!S.returnDashFrom) { const d = new Date(); d.setDate(d.getDate() - 30); S.returnDashFrom = d.toISOString().split('T')[0]; }
+  if (!S.returnDashTo) S.returnDashTo = new Date().toISOString().split('T')[0];
 
   try {
-    const resp = await api('get_return_dashboard', null, { days: String(S.returnDashDays) });
+    const resp = await api('get_return_dashboard', null, { from_date: S.returnDashFrom, to_date: S.returnDashTo });
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
 
     const d = resp.data;
     const bs = d.byStatus || {};
 
     let html = `
-      <div class="filter-bar">
-        <div class="filter-chip ${S.returnDashDays===7?'active':''}" onclick="S.returnDashDays=7;renderReturnDashboard()">7 วัน</div>
-        <div class="filter-chip ${S.returnDashDays===14?'active':''}" onclick="S.returnDashDays=14;renderReturnDashboard()">14 วัน</div>
-        <div class="filter-chip ${S.returnDashDays===30?'active':''}" onclick="S.returnDashDays=30;renderReturnDashboard()">30 วัน</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:12px">
+        <span style="color:var(--t3)">📅</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.returnDashFrom}" onchange="S.returnDashFrom=this.value;renderReturnDashboard()">
+        <span style="color:var(--t4)">→</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.returnDashTo}" onchange="S.returnDashTo=this.value;renderReturnDashboard()">
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="S.returnDashFrom=todaySydney();S.returnDashTo=todaySydney();renderReturnDashboard()">วันนี้</span>
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="const d=new Date();d.setDate(d.getDate()-30);S.returnDashFrom=d.toISOString().split('T')[0];S.returnDashTo=new Date().toISOString().split('T')[0];renderReturnDashboard()">30 วัน</span>
       </div>`;
 
     // Summary cards — wireframe style

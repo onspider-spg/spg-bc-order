@@ -1,4 +1,4 @@
-// Version 8.3 | 8 MAR 2026 | Siam Palette Group
+// Version 8.8 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -7,10 +7,11 @@ async function renderAdminWasteDashboard() {
   const el = document.getElementById('adminWasteDbContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
-  if (!S.wasteDashDays) S.wasteDashDays = 30;
+  if (!S.wasteDashFrom) { const d = new Date(); d.setDate(d.getDate() - 30); S.wasteDashFrom = d.toISOString().split('T')[0]; }
+  if (!S.wasteDashTo) S.wasteDashTo = new Date().toISOString().split('T')[0];
   
   try {
-    const resp = await api('get_waste_dashboard', null, { days: String(S.wasteDashDays) });
+    const resp = await api('get_waste_dashboard', null, { from_date: S.wasteDashFrom, to_date: S.wasteDashTo });
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
     
     const d = resp.data;
@@ -18,17 +19,20 @@ async function renderAdminWasteDashboard() {
     const reasonColors = { Expired:'#ef4444', Damaged:'#f97316', Return:'#8b5cf6', Other:'#6b7280' };
     const reasonLabels = { Expired:'หมดอายุ', Damaged:'เสียหาย', Return:'จาก Return' };
     
-    // Period selector
+    // Date range selector
     let html = `
-      <div class="filter-bar">
-        <div class="filter-chip ${S.wasteDashDays===7?'active':''}" onclick="S.wasteDashDays=7;renderAdminWasteDashboard()">7 วัน</div>
-        <div class="filter-chip ${S.wasteDashDays===14?'active':''}" onclick="S.wasteDashDays=14;renderAdminWasteDashboard()">14 วัน</div>
-        <div class="filter-chip ${S.wasteDashDays===30?'active':''}" onclick="S.wasteDashDays=30;renderAdminWasteDashboard()">30 วัน</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:12px">
+        <span style="color:var(--t3)">📅</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.wasteDashFrom}" onchange="S.wasteDashFrom=this.value;renderAdminWasteDashboard()">
+        <span style="color:var(--t4)">→</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.wasteDashTo}" onchange="S.wasteDashTo=this.value;renderAdminWasteDashboard()">
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="S.wasteDashFrom=todaySydney();S.wasteDashTo=todaySydney();renderAdminWasteDashboard()">วันนี้</span>
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="const d=new Date();d.setDate(d.getDate()-30);S.wasteDashFrom=d.toISOString().split('T')[0];S.wasteDashTo=new Date().toISOString().split('T')[0];renderAdminWasteDashboard()">30 วัน</span>
       </div>`;
     
     // Summary cards
     html += `
-      <div class="sec-hd">📊 สรุปภาพรวม (${S.wasteDashDays} วัน)</div>
+      <div class="sec-hd">📊 สรุปภาพรวม (${S.wasteDashFrom} → ${S.wasteDashTo})</div>
       <div class="sum-grid">
         <div class="sum-card" style="border-left:3px solid var(--red)">
           <div class="sum-val" style="color:var(--red)">${sm.today_qty}</div>
@@ -42,11 +46,11 @@ async function renderAdminWasteDashboard() {
         </div>
         <div class="sum-card" style="border-left:3px solid var(--blue)">
           <div class="sum-val">${sm.total_qty}</div>
-          <div class="sum-lbl">ทั้งหมด ${S.wasteDashDays} วัน</div>
+          <div class="sum-lbl">ทั้งหมด</div>
           <div style="font-size:13px;color:var(--td)">${sm.total_records} รายการ</div>
         </div>
         <div class="sum-card" style="border-left:3px solid var(--gold)">
-          <div class="sum-val">${sm.total_records > 0 ? Math.round(sm.total_qty / S.wasteDashDays) : 0}</div>
+          <div class="sum-val">${sm.total_records > 0 ? Math.round(sm.total_qty / Math.max(1, Math.round((new Date(S.wasteDashTo)-new Date(S.wasteDashFrom))/(86400000)))) : 0}</div>
           <div class="sum-lbl">เฉลี่ย/วัน</div>
         </div>
       </div>`;
@@ -122,7 +126,7 @@ async function renderAdminWasteDashboard() {
     // Daily Trend (bar chart)
     const trend = d.dailyTrend || [];
     const maxDay = Math.max(...trend.map(t => t.qty), 1);
-    const recentTrend = trend.slice(-Math.min(S.wasteDashDays, 14));
+    const recentTrend = trend.slice(-14);
     html += `<div class="sec-hd">📈 แนวโน้มรายวัน</div>
       <div class="pad" style="padding-top:0;overflow-x:auto">
         <div style="display:flex;align-items:flex-end;gap:3px;height:120px;min-width:${recentTrend.length * 24}px">`;
@@ -153,11 +157,12 @@ async function renderAdminTopProducts() {
   const el = document.getElementById('adminTopProdContent');
   el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   
-  if (!S.topProdDays) S.topProdDays = 30;
+  if (!S.topProdFrom) { const d = new Date(); d.setDate(d.getDate() - 30); S.topProdFrom = d.toISOString().split('T')[0]; }
+  if (!S.topProdTo) S.topProdTo = new Date().toISOString().split('T')[0];
   if (!S.topProdStore) S.topProdStore = 'ALL';
   
   try {
-    const qp = { days: String(S.topProdDays) };
+    const qp = { from_date: S.topProdFrom, to_date: S.topProdTo };
     if (S.topProdStore !== 'ALL') qp.store = S.topProdStore;
     const resp = await api('get_top_products', null, qp);
     if (!resp.success) { el.innerHTML = '<div class="pad" style="color:var(--red)">❌ ' + (resp.message || resp.error) + '</div>'; return; }
@@ -166,12 +171,15 @@ async function renderAdminTopProducts() {
     const sectionIcons = { cake:'🎂', sauce:'🫕', baked:'🍞', other:'📦' };
     const sectionColors = { cake:'#f59e0b', sauce:'#8b5cf6', baked:'#f97316', other:'#6b7280' };
     
-    // Period selector
+    // Date range selector
     let html = `
-      <div class="filter-bar">
-        <div class="filter-chip ${S.topProdDays===7?'active':''}" onclick="S.topProdDays=7;renderAdminTopProducts()">7 วัน</div>
-        <div class="filter-chip ${S.topProdDays===14?'active':''}" onclick="S.topProdDays=14;renderAdminTopProducts()">14 วัน</div>
-        <div class="filter-chip ${S.topProdDays===30?'active':''}" onclick="S.topProdDays=30;renderAdminTopProducts()">30 วัน</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:12px">
+        <span style="color:var(--t3)">📅</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.topProdFrom}" onchange="S.topProdFrom=this.value;renderAdminTopProducts()">
+        <span style="color:var(--t4)">→</span>
+        <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.topProdTo}" onchange="S.topProdTo=this.value;renderAdminTopProducts()">
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="S.topProdFrom=todaySydney();S.topProdTo=todaySydney();renderAdminTopProducts()">วันนี้</span>
+        <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="const d=new Date();d.setDate(d.getDate()-30);S.topProdFrom=d.toISOString().split('T')[0];S.topProdTo=new Date().toISOString().split('T')[0];renderAdminTopProducts()">30 วัน</span>
       </div>
       ${S.role === 'bc' ? `<div class="filter-bar" style="margin-top:0">
         <div class="filter-chip ${S.topProdStore==='ALL'?'active':''}" onclick="S.topProdStore='ALL';renderAdminTopProducts()">ทุกร้าน</div>
@@ -187,7 +195,7 @@ async function renderAdminTopProducts() {
         <div style="padding:10px;background:var(--gold-bg);border-radius:var(--rd2);text-align:center">
           <div style="font-size:12px;color:var(--gold);font-weight:600">Total Ordered</div>
           <div style="font-size:22px;font-weight:800;color:var(--gold)">${(d.total_qty||0).toLocaleString()}</div>
-          <div style="font-size:12px;color:var(--gold)">ชิ้น · ${S.topProdDays} วัน</div>
+          <div style="font-size:12px;color:var(--gold)">ชิ้น · ${S.topProdFrom} → ${S.topProdTo}</div>
         </div>
         <div style="padding:10px;background:var(--s1);border-radius:var(--rd2);text-align:center">
           <div style="font-size:12px;color:var(--t3);font-weight:600">Total Orders</div>
@@ -292,7 +300,7 @@ async function renderAdminTopProducts() {
     const trend = d.dailyTrend || [];
     if (trend.length > 0) {
       const maxDay = Math.max(...trend.map(t => t.qty), 1);
-      const recentTrend = trend.slice(-Math.min(S.topProdDays, 14));
+      const recentTrend = trend.slice(-14);
       html += `<div class="sec-hd">📈 แนวโน้มการสั่งรายวัน</div>
         <div class="pad" style="padding-top:0;overflow-x:auto">
           <div style="display:flex;align-items:flex-end;gap:3px;height:120px;min-width:${recentTrend.length * 24}px">`;
@@ -553,28 +561,21 @@ async function confirmDeleteAnnouncement(notifId) {
 // ─── B2: BC ORDER LIST ──────────────────────────────────────
 async function renderBcOrders() {
   try { await loadOrders(); } catch(e) { console.warn('loadOrders failed:', e); }
-  // Smart default: today if has orders, else tomorrow, else all
-  if (!S.bcDateFilter) {
-    const today = todaySydney();
-    const tmr = tomorrowSydney();
-    const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-    const todayN = filterOrdersByDateAndScope(today, scope).length;
-    const tmrN = filterOrdersByDateAndScope(tmr, scope).length;
-    S.bcDateFilter = todayN > 0 ? today : tmrN > 0 ? tmr : (S.orders.length > 0 ? 'all' : today);
-  }
+  if (!S.bcDateFrom) S.bcDateFrom = todaySydney();
+  if (!S.bcDateTo) S.bcDateTo = tomorrowSydney();
   
-  const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  
-  document.getElementById('bcDateInput').value = S.bcDateFilter === 'all' ? '' : S.bcDateFilter;
+  const fromEl = document.getElementById('bcDateFromInput');
+  const toEl = document.getElementById('bcDateToInput');
+  if (fromEl) fromEl.value = S.bcDateFrom;
+  if (toEl) toEl.value = S.bcDateTo;
   document.getElementById('bcOrderSub').textContent = getScopeLabel();
   renderBcOrderFilters();
   renderBcOrderList();
 }
 
 function renderBcOrderFilters() {
-  // Count orders by status for this date
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  const dated = filterOrdersByDateAndScope(S.bcDateFilter, scope);
+  const dated = filterOrdersByDateRangeAndScope(S.bcDateFrom, S.bcDateTo, scope);
   const counts = { all:dated.length, Pending:0, Ordered:0, InProgress:0, Fulfilled:0, Delivered:0 };
   dated.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
 
@@ -592,31 +593,39 @@ function renderBcOrderFilters() {
 }
 
 function setBcDate(mode) {
-  if (mode === 'today') S.bcDateFilter = todaySydney();
-  else if (mode === 'tomorrow') S.bcDateFilter = tomorrowSydney();
-  else S.bcDateFilter = 'all';
-  document.getElementById('bcDateInput').value = S.bcDateFilter === 'all' ? '' : S.bcDateFilter;
+  if (mode === 'today') { S.bcDateFrom = todaySydney(); S.bcDateTo = todaySydney(); }
+  else if (mode === 'tomorrow') { S.bcDateFrom = tomorrowSydney(); S.bcDateTo = tomorrowSydney(); }
+  else { S.bcDateFrom = ''; S.bcDateTo = ''; }
+  const fromEl = document.getElementById('bcDateFromInput');
+  const toEl = document.getElementById('bcDateToInput');
+  if (fromEl) fromEl.value = S.bcDateFrom;
+  if (toEl) toEl.value = S.bcDateTo;
   renderBcOrderFilters();
   renderBcOrderList();
 }
 
-function filterOrdersByDateAndScope(date, scope) {
-  let orders = date === 'all' ? [...S.orders] : S.orders.filter(o => o.delivery_date === date);
-  // BC section_scope filter: only show orders that have items in our scope
+function filterOrdersByDateRangeAndScope(from, to, scope) {
+  let orders = S.orders || [];
+  if (from) orders = orders.filter(o => o.delivery_date >= from);
+  if (to) orders = orders.filter(o => o.delivery_date <= to);
   if (scope && scope.length > 0) {
     orders = orders.filter(o => {
-      // B-02 fix: if items not loaded yet (undefined or null), keep the order visible
       if (!o.items) return true;
-      if (o.items.length === 0) return true;  // items loaded but empty → still show
+      if (o.items.length === 0) return true;
       return o.items.some(it => scope.includes(it.section_id));
     });
   }
   return orders;
 }
 
+// Single-date version for Print Centre
+function filterOrdersByDateAndScope(date, scope) {
+  return filterOrdersByDateRangeAndScope(date, date, scope);
+}
+
 function renderBcOrderList() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  let orders = filterOrdersByDateAndScope(S.bcDateFilter, scope);
+  let orders = filterOrdersByDateRangeAndScope(S.bcDateFrom, S.bcDateTo, scope);
 
   if (S.bcStatusFilter !== 'all') {
     if (S.bcStatusFilter === 'Fulfilled') {
@@ -630,7 +639,7 @@ function renderBcOrderList() {
   if (!orders.length) {
     const totalLoaded = S.orders ? S.orders.length : 0;
     el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">ไม่มีออเดอร์</div>
-      ${totalLoaded > 0 && S.bcDateFilter !== 'all' ? `<div style="margin-top:12px"><button class="btn btn-outline btn-sm" onclick="S.bcDateFilter='all';document.getElementById('bcDateInput').value='';renderBcOrderFilters();renderBcOrderList()">📋 ดูทั้งหมด (${totalLoaded} orders)</button></div>` : ''}
+      ${totalLoaded > 0 ? `<div style="margin-top:12px"><button class="btn btn-outline btn-sm" onclick="S.bcDateFrom='';S.bcDateTo='';setBcDate('all')">📋 ดูทั้งหมด (${totalLoaded} orders)</button></div>` : ''}
       <div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="renderBcOrders()">🔄 โหลดใหม่</button></div></div>`;
     return;
   }
