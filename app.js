@@ -1,4 +1,4 @@
-// Version 10.5 | 8 MAR 2026 | Siam Palette Group
+// Version 10.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -80,7 +80,7 @@ const HASH_SCREENS = new Set([
   'order-detail',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
-  'admin-config','admin-notif-settings','admin-cutoff','admin-audit',
+  'admin-config','admin-notif-settings','admin-cutoff','admin-audit','admin-visibility',
   'admin-waste-dashboard','admin-top-products','admin-announcements','admin-product-edit'
 ]);
 let _skipHashChange = false;
@@ -118,6 +118,7 @@ const SB_CFG = {
     ]},
     { sec: 'Admin', open: false, items: [
       { scr: 'admin-products', lbl: 'Manage Products', perm: 'fn_manage_products' },
+      { scr: 'admin-visibility', lbl: 'Manage Visibility', perm: 'fn_manage_visibility' },
     ]},
   ],
   bc: [
@@ -138,6 +139,7 @@ const SB_CFG = {
     ]},
     { sec: 'Admin', open: false, items: [
       { scr: 'admin-products', lbl: 'Manage Products', perm: 'fn_manage_products' },
+      { scr: 'admin-visibility', lbl: 'Manage Visibility', perm: 'fn_manage_visibility' },
     ]},
   ],
   admin: [
@@ -162,6 +164,7 @@ const SB_CFG = {
     ]},
     { sec: 'Settings', open: false, items: [
       { scr: 'admin-access', lbl: 'User Access', perm: 'fn_manage_permissions' },
+      { scr: 'admin-visibility', lbl: 'Manage Visibility', perm: 'fn_manage_visibility' },
       { scr: 'admin-dept-mapping', lbl: 'Dept Mapping', perm: 'fn_manage_dept_mapping' },
       { scr: 'admin-config', lbl: 'System Config', perm: 'fn_manage_permissions' },
       { scr: 'admin-notif-settings', lbl: 'Notification Settings', perm: 'fn_manage_notifications' },
@@ -179,7 +182,7 @@ const SCREEN_TITLES = {
   'admin-dashboard':'Dashboard','admin-products':'Manage Products','admin-product-edit':'Edit Product',
   'admin-access':'User Access','admin-dept-mapping':'Dept Mapping','admin-config':'System Config',
   'admin-notif-settings':'Notification Settings','admin-cutoff':'Cutoff Violations',
-  'admin-audit':'Audit Trail','admin-waste-dashboard':'Waste Dashboard',
+  'admin-audit':'Audit Trail','admin-visibility':'Manage Visibility','admin-waste-dashboard':'Waste Dashboard',
   'admin-top-products':'Top Products','admin-announcements':'Announcements',
   'loading':'Loading...','no-token':'Login Required','invalid-token':'Session Expired','blocked':'Access Denied',
 };

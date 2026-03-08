@@ -1,4 +1,4 @@
-// Version 10.2 | 8 MAR 2026 | Siam Palette Group
+// Version 10.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -314,7 +314,7 @@ async function renderProductEditScreen() {
       <!-- Preview Area -->
       <div style="display:flex;gap:12px;margin-bottom:16px">
         <div id="imgPreview" style="width:80px;height:80px;background:${isEdit?'var(--gold-bg)':'var(--s2)'};border:2px solid ${isEdit?'var(--gold)':'var(--bd)'};border-radius:var(--rd2);display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;overflow:hidden">
-          ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='${prodEmoji(p?.product_name||'')}'" />` : `<span>${isEdit ? prodEmoji(p.product_name) : '📦'}</span>`}
+          ${imgUrl ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" />` : ''}
         </div>
         <div style="flex:1;padding-top:4px">
           <div style="font-size:13px;color:var(--t3)">${isEdit ? '' : 'Preview — กรอกข้อมูลด้านล่าง'}</div>
@@ -454,7 +454,7 @@ function previewProductImage(url) {
     preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='❌'" />`;
   } else {
     const name = document.getElementById('prdName')?.value || '';
-    preview.innerHTML = `<span style="font-size:36px">${prodEmoji(name) || '📦'}</span>`;
+    preview.innerHTML = '';
   }
 }
 
@@ -882,4 +882,82 @@ async function renderAdminAudit() {
 }
 
 function truncate(s, n) { return s && s.length > n ? s.substring(0, n) + '...' : s; }
+
+// ─── VISIBILITY MATRIX (like User Access) ───────────────────
+async function renderAdminVisibility() {
+  const el = document.getElementById('adminVisContent');
+  el.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+
+  try {
+    const resp = await api('get_product_visibility');
+    if (!resp.success) { el.innerHTML = '<div class="pad">❌ '+resp.error+'</div>'; return; }
+
+    const visData = resp.data || [];
+    const prods = (S.products || []).filter(p => p.is_active === true || p.is_active === 'TRUE');
+    const channels = (S.orderingChannels || []).filter(ch => ch.is_active);
+    channels.sort((a, b) => getStoreName(a.store_id).localeCompare(getStoreName(b.store_id)) || a.dept_id.localeCompare(b.dept_id));
+
+    // Build lookup: { productId_storeId_deptId: true/false }
+    const visMap = {};
+    visData.forEach(v => { visMap[v.product_id + '_' + v.store_id + '_' + v.dept_id] = v.is_active; });
+
+    // Section filter
+    const sections = [...new Set(prods.map(p => p.section_id).filter(Boolean))].sort();
+    S._visSection = S._visSection || [];
+    S._visSearch = S._visSearch || '';
+
+    let filtered = prods;
+    if (S._visSection.length > 0) filtered = filtered.filter(p => S._visSection.includes(p.section_id));
+    if (S._visSearch) { const q = S._visSearch.toLowerCase(); filtered = filtered.filter(p => p.product_name.toLowerCase().includes(q)); }
+
+    const secChips = sections.length > 1 ? sfChips('_visSection', sections, 'renderAdminVisibility') : '';
+
+    el.innerHTML = `<div style="padding:16px 20px">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px">กดเพื่อ toggle ON/OFF — เฉพาะ T1/T2 เท่านั้น</div>
+      <input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S._visSearch}" oninput="S._visSearch=this.value;renderAdminVisibility()" style="width:100%;margin-bottom:8px">
+      ${secChips}
+      <div style="overflow-x:auto;margin-top:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:${400 + channels.length * 60}px">
+        <thead><tr style="background:var(--s1)">
+          <th style="padding:8px 12px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);border-bottom:2px solid var(--bd);position:sticky;left:0;background:var(--s1);z-index:1">Product</th>
+          ${channels.map(ch => `<th style="padding:4px 6px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);border-bottom:2px solid var(--bd);white-space:nowrap">${ch.store_id}<br>${ch.dept_id}</th>`).join('')}
+        </tr></thead>
+        <tbody>${filtered.map(p => {
+          return `<tr>
+            <td style="padding:6px 12px;border-bottom:1px solid var(--bd2);font-weight:600;font-size:12px;position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap">${p.product_name}</td>
+            ${channels.map(ch => {
+              const key = p.product_id + '_' + ch.store_id + '_' + ch.dept_id;
+              const on = visMap[key] === true;
+              return `<td style="padding:4px 6px;border-bottom:1px solid var(--bd2);text-align:center">
+                <span style="color:${on?'var(--green)':'var(--t4)'};font-size:16px;cursor:pointer" onclick="toggleVis('${p.product_id}','${ch.store_id}','${ch.dept_id}',this)">${on?'☑':'☐'}</span>
+              </td>`;
+            }).join('')}
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+      <div style="font-size:12px;color:var(--t3);margin-top:8px;text-align:center">${filtered.length} สินค้า × ${channels.length} ช่องทาง</div>
+    </div>`;
+  } catch(e) {
+    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: '+e.message+'</div>';
+  }
+}
+
+async function toggleVis(productId, storeId, deptId, el) {
+  const isOn = el.textContent === '☑';
+  const newVal = !isOn;
+  // Optimistic UI
+  el.textContent = newVal ? '☑' : '☐';
+  el.style.color = newVal ? 'var(--green)' : 'var(--t4)';
+  // Save
+  const resp = await api('update_product_visibility', {
+    product_id: productId,
+    visibility: [{ store_id: storeId, dept_id: deptId, is_active: newVal }]
+  });
+  if (!resp.success) {
+    // Revert
+    el.textContent = isOn ? '☑' : '☐';
+    el.style.color = isOn ? 'var(--green)' : 'var(--t4)';
+    toast('❌ บันทึกไม่สำเร็จ', 'error');
+  }
+}
 
