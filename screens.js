@@ -1,4 +1,4 @@
-// Version 8.4 | 8 MAR 2026 | Siam Palette Group
+// Version 8.5 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -943,18 +943,39 @@ function filterOrders() {
   }
 
   const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)', Cancelled:'var(--t4)' };
+  const isMob = window.innerWidth < 768;
 
-  content.innerHTML = `<div style="padding:8px 16px;overflow-x:auto">
+  if (isMob) {
+    // ── MOBILE: Card layout ──
+    content.innerHTML = `<div style="padding:8px 16px;display:flex;flex-direction:column;gap:6px">${orders.map(o => {
+      const bdr = bdrMap[o.status] || 'var(--bd)';
+      const isDone = o.status === 'Fulfilled' || o.status === 'Delivered';
+      const items3 = (o.items||[]).slice(0,3).map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ');
+      const more = (o.items||[]).length > 3 ? ` +${(o.items||[]).length - 3}` : '';
+      return `<div style="padding:12px;border:1px solid var(--bd2);border-left:3px solid ${bdr};border-radius:0 var(--rd2) var(--rd2) 0;cursor:pointer;${isDone?'opacity:.7':''}" onclick="viewOrder('${o.order_id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:700;color:var(--gold)">${o.order_id}</span>
+          <span class="status ${statusClass(o.status)}">${o.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--t2)">ส่ง ${formatDateThai(o.delivery_date)} · ${o.store_id||''}</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${items3}${more}</div>
+      </div>`;
+    }).join('')}
+    <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders</div>
+    </div>`;
+  } else {
+    // ── DESKTOP: Table layout (unchanged) ──
+    content.innerHTML = `<div style="padding:8px 16px;overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;letter-spacing:.2px;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
       </tr></thead>
       <tbody>${orders.map(o => {
         const bdr = bdrMap[o.status] || 'var(--bd)';
@@ -962,18 +983,19 @@ function filterOrders() {
         const itemsSummary = (o.items||[]).map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ') || '—';
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}" onclick="viewOrder('${o.order_id}')">
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.store_id||'—'}</td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.store_id||'—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${itemsSummary}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.is_cutoff_violation?'⚠️':'—'}</td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.created_by||'—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.is_cutoff_violation?'⚠️':'—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.created_by||'—'}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
     <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders · ${from||'—'} → ${to||'ทั้งหมด'}</div>
   </div>`;
+  }
 }
 
 function resetOrderDates() {

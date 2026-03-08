@@ -1,4 +1,4 @@
-// Version 8.2 | 8 MAR 2026 | Siam Palette Group
+// Version 8.5 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -183,18 +183,34 @@ async function renderAdminProducts() {
       </div>
       <input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()" style="width:100%;margin-bottom:8px">
 
-      ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' : `
+      ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' :
+      window.innerWidth < 768 ? `
+      <div style="display:flex;flex-direction:column;gap:4px">${filtered.map(p => {
+        const isAct = p.is_active === true || p.is_active === 'TRUE';
+        const catObj = (S.categories||[]).find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id));
+        const catName = catObj ? (catObj.cat_name||catObj.category_name) : (p.cat_id||'—');
+        return `<div style="padding:12px;border:1px solid var(--bd2);border-radius:var(--rd2);display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.product_name}</div>
+            <div style="font-size:12px;color:var(--t3);margin-top:2px">${catName} · ${p.section_id||''} · ${p.unit}</div>
+          </div>
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:8px">
+            ${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:12px">Hidden</span>'}
+            <span style="font-size:16px">✏️</span>
+          </div>
+        </div>`;
+      }).join('')}</div>` : `
       <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:700px">
         <thead><tr style="background:var(--s1)">
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-          <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-          <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
-          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
-          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
-          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
@@ -205,12 +221,12 @@ async function renderAdminProducts() {
           return `<tr>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${p.product_name}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${catName}</td>
-            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
-            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
-            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
-            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
-            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
-            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:13px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:13px">Hidden</span>'}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
           </tr>`;
