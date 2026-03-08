@@ -1,4 +1,4 @@
-// Version 10.1 | 8 MAR 2026 | Siam Palette Group
+// Version 10.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -206,7 +206,7 @@ function renderAdminProductList() {
         const catObj = (S.categories||[]).find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id));
         const catName = catObj ? (catObj.cat_name||catObj.category_name) : (p.cat_id||'—');
         return `<div style="padding:12px;border:1px solid var(--bd2);border-radius:var(--rd2);display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">
-          <div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 40)}</div>
+          ${p.image_url ? `<div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 40)}</div>` : ''}
           <div style="flex:1;min-width:0">
             <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.product_name}</div>
             <div style="font-size:12px;color:var(--t3);margin-top:2px">${catName} · ${p.section_id||''} · ${p.unit}</div>
@@ -236,7 +236,7 @@ function renderAdminProductList() {
           const catObj = (S.categories||[]).find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id));
           const catName = catObj ? (catObj.cat_name||catObj.category_name) : (p.cat_id||'—');
           return `<tr>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;background:var(--s1);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 32)}</div>${p.product_name}</div></td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600"><div style="display:flex;align-items:center;gap:8px">${p.image_url ? `<div style="width:32px;height:32px;background:var(--s1);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 32)}</div>` : ''}${p.product_name}</div></td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${catName}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.unit}</td>

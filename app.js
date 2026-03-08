@@ -1,4 +1,4 @@
-// Version 10.1 | 8 MAR 2026 | Siam Palette Group
+// Version 10.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -464,8 +464,8 @@ function prodEmoji(name) {
 
 function prodImg(p, size) {
   const sz = size || 44;
-  if (p && p.image_url) return `<img src="${p.image_url}" style="width:${sz}px;height:${sz}px;border-radius:10px;object-fit:cover" loading="lazy" onerror="this.outerHTML='<span style=\\'font-size:${Math.round(sz*0.55)}px\\'>${prodEmoji(p.product_name)}</span>'">`;
-  return `<span style="font-size:${Math.round(sz*0.55)}px">${prodEmoji(p?.product_name||'')}</span>`;
+  if (p && p.image_url) return `<img src="${p.image_url}" style="width:${sz}px;height:${sz}px;border-radius:10px;object-fit:cover" loading="lazy" onerror="this.style.display='none'">`;
+  return '';
 }
 
 // ═══════════════════════════════════════════════════════════════
