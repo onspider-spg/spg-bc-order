@@ -1,4 +1,4 @@
-// Version 8.9 | 8 MAR 2026 | Siam Palette Group
+// Version 9.1 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -942,8 +942,22 @@ function filterOrders() {
     return;
   }
 
+  // Sort
+  if (S.orderSortField) {
+    const dir = S.orderSortDir === 'asc' ? 1 : -1;
+    const f = S.orderSortField;
+    orders.sort((a,b) => {
+      const va = (f === 'items' ? (a.items||[]).length : a[f]) || '';
+      const vb = (f === 'items' ? (b.items||[]).length : b[f]) || '';
+      return va < vb ? -dir : va > vb ? dir : 0;
+    });
+  }
+
   const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)', Cancelled:'var(--t4)' };
   const isMob = window.innerWidth < 768;
+  const sa = (f) => S.orderSortField===f ? (S.orderSortDir==='asc'?'▲':'▼') : '⇅';
+  const so = (f) => `onclick="S.orderSortField='${f}';S.orderSortDir=(S.orderSortField==='${f}'&&S.orderSortDir==='asc')?'desc':'asc';filterOrders()" style="cursor:pointer;padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"`;
+
 
   if (isMob) {
     // ── MOBILE: Card layout ──
@@ -968,14 +982,14 @@ function filterOrders() {
     content.innerHTML = `<div style="padding:8px 16px;overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;letter-spacing:.2px;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
+        <th ${so('order_id')}>Order ID ${sa('order_id')}</th>
+        <th ${so('store_id')}>Store ${sa('store_id')}</th>
+        <th ${so('order_date')}>Order ${sa('order_date')}</th>
+        <th ${so('delivery_date')}>Delivery ${sa('delivery_date')}</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+        <th ${so('status')}>Status ${sa('status')}</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
+        <th ${so('display_name')}>By ${sa('display_name')}</th>
       </tr></thead>
       <tbody>${orders.map(o => {
         const bdr = bdrMap[o.status] || 'var(--bd)';

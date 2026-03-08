@@ -1,4 +1,4 @@
-// Version 9.0 | 8 MAR 2026 | Siam Palette Group
+// Version 9.1 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -1331,17 +1331,14 @@ async function renderBcPrint() {
   allOrders.forEach(o => (o.items||[]).forEach(it => { if (it.section_id) secSet.add(it.section_id); }));
   const sections = [...secSet].sort();
 
-  // Section filter checkboxes
+  // Section filter chips
   const secIcons = { cake:'🎂', sauce:'🍶', tart:'🥧', bread:'🍞', bakery:'🍞' };
-  const sectionFilterHtml = sections.length > 1 ? `<div style="display:flex;gap:6px;padding:4px 16px 8px;flex-wrap:wrap;align-items:center">
-    <span style="font-size:14px;color:var(--td);font-weight:600">Section:</span>
+  const sectionFilterHtml = sections.length > 0 ? `<div class="filter-bar" style="padding:4px 16px 8px">
+    <div class="filter-chip ${S.bcPrintSections.length===0?'active':''}" onclick="S.bcPrintSections=[];renderBcPrint()">ทั้งหมด</div>
     ${sections.map(sec => {
-      const checked = S.bcPrintSections.length === 0 || S.bcPrintSections.includes(sec);
-      return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
-        <input type="checkbox" ${checked?'checked':''} onchange="togglePrintSection('${sec}')"> ${secIcons[sec]||'📦'} ${sec}
-      </label>`;
+      const isActive = S.bcPrintSections.length > 0 && S.bcPrintSections.includes(sec);
+      return `<div class="filter-chip ${isActive?'active':''}" onclick="S.bcPrintSections=['${sec}'];renderBcPrint()">${secIcons[sec]||'📦'} ${sec}</div>`;
     }).join('')}
-    <span style="font-size:13px;color:var(--blue);cursor:pointer;margin-left:8px" onclick="S.bcPrintSections=[];renderBcPrint()">Select All</span>
   </div>` : '';
 
   // Tabs — use 'active' class (not 'bc-active')
@@ -1358,29 +1355,6 @@ async function renderBcPrint() {
 
   if (S.bcPrintTab === 'production') renderProductionSheet();
   else renderDeliverySlip();
-}
-
-function togglePrintSection(sec) {
-  if (S.bcPrintSections.length === 0) {
-    // Was "all" → now deselect this one
-    const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-    const allOrders = filterOrdersByDateAndScope(S.bcPrintDate, scope);
-    const secSet = new Set();
-    allOrders.forEach(o => (o.items||[]).forEach(it => { if (it.section_id) secSet.add(it.section_id); }));
-    S.bcPrintSections = [...secSet].filter(s => s !== sec);
-  } else if (S.bcPrintSections.includes(sec)) {
-    S.bcPrintSections = S.bcPrintSections.filter(s => s !== sec);
-    if (S.bcPrintSections.length === 0) S.bcPrintSections = []; // all again
-  } else {
-    S.bcPrintSections.push(sec);
-  }
-  renderBcPrint();
-}
-
-function toggleAllPrintItems(on) {
-  if (!S.bcPrintSelected) S.bcPrintSelected = {};
-  Object.keys(S.bcPrintSelected).forEach(k => { S.bcPrintSelected[k] = on; });
-  renderProductionSheet();
 }
 
 // ─── B8: PRODUCTION SHEET ───
@@ -1453,30 +1427,19 @@ function renderProductionSheet() {
   const sectionTitle = S.bcPrintSections.length > 0 ? S.bcPrintSections.map(s => s.toUpperCase()).join(' + ') : (scope.length ? scope.map(s => s.toUpperCase()).join(' + ') : 'ALL');
   const nowFull = new Date().toLocaleString('en-GB', { timeZone:'Australia/Sydney', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 
-  // Initialize selection state
-  if (!S.bcPrintSelected) S.bcPrintSelected = {};
-  products.forEach(p => { if (!(p in S.bcPrintSelected)) S.bcPrintSelected[p] = true; });
-  const selectedCount = products.filter(p => S.bcPrintSelected[p]).length;
-
   let html = `<div class="print-area">
     <div style="text-align:center;margin-bottom:10px">
       <div class="print-only" style="display:none;font-size:13px;color:#888;text-align:right">สั่งของเบเกอรี่ — Siam Palette Group</div>
       <div style="font-size:14px;font-weight:700">PRODUCTION SHEET — ${sectionTitle}</div>
       <div style="font-size:13px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)} | Printed: ${nowFull}</div>
-    </div>
-    <div class="no-print" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;font-size:12px">
-      <span style="color:var(--t3)">เลือก ${selectedCount}/${products.length} รายการ</span>
-      <span style="color:var(--blue);cursor:pointer" onclick="toggleAllPrintItems(true)">✅ เลือกทั้งหมด</span>
-      <span style="color:var(--red);cursor:pointer" onclick="toggleAllPrintItems(false)">❌ ยกเลิกทั้งหมด</span>
+      <div style="font-size:12px;color:var(--t3);margin-top:2px">Orders: ${orderIds.join(', ')}</div>
     </div>
     <table class="ptbl">
-      <thead><tr><th class="no-print" style="width:30px">☑</th><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr></thead><tbody>`;
+      <thead><tr><th style="text-align:left">Product</th><th>Total</th>${allStores.map(s => `<th>${s}</th>`).join('')}</tr></thead><tbody>`;
 
   products.forEach(p => {
     const row = pivot[p];
-    const checked = S.bcPrintSelected[p];
-    html += `<tr class="${row.urgent ? 'urg' : ''}" ${!checked?'data-print-hide="1"':''}>
-      <td class="no-print" style="text-align:center"><input type="checkbox" ${checked?'checked':''} onchange="S.bcPrintSelected['${p.replace(/'/g,"\\'")}']=this.checked;renderProductionSheet()" style="width:16px;height:16px"></td>
+    html += `<tr class="${row.urgent ? 'urg' : ''}">
       <td style="text-align:left"><strong>${p}</strong></td>
       <td><strong>${row.total}</strong></td>`;
     allStores.forEach(s => {
