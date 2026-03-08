@@ -1,4 +1,4 @@
-// Version 8.1 | 7 MAR 2026 | Siam Palette Group
+// Version 8.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -411,7 +411,7 @@ async function renderProductEditScreen() {
         <button class="btn btn-gold" style="flex:2" onclick="submitProductEdit(${isEdit ? `'${p.product_id}'` : 'null'})">${isEdit ? '💾 บันทึกการแก้ไข' : '+ เพิ่มสินค้า'}</button>
         <button class="btn btn-outline" style="flex:1" onclick="showScreen('admin-products')">ยกเลิก</button>
       </div>
-      ${isEdit ? `<button class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--red);border-color:var(--red)" onclick="toggleProduct('${p.product_id}',${!isAct});showScreen('admin-products')">${isAct ? '🔇 ปิดสินค้านี้ (Deactivate)' : '🔔 เปิดสินค้านี้'}</button>` : ''}
+      ${isEdit ? `<button class="btn btn-outline" style="margin-top:8px;color:var(--red);border-color:var(--red)" onclick="toggleProduct('${p.product_id}',${!isAct});showScreen('admin-products')">${isAct ? '🔇 ปิดสินค้านี้ (Deactivate)' : '🔔 เปิดสินค้านี้'}</button>` : ''}
     </div>`;
 }
 

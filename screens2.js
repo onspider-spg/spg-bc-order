@@ -1,4 +1,4 @@
-// Version 8.1 | 7 MAR 2026 | Siam Palette Group
+// Version 8.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -369,7 +369,7 @@ function showReturnDetail(returnId) {
     <div style="font-size:12px;font-weight:600;margin-bottom:6px">📊 Status Timeline</div>
     <div style="padding-left:4px;margin-bottom:16px">${statusHistory}</div>
     ${canEdit ? `<button class="btn btn-gold" onclick="showEditReturnForm('${r.return_id}')">✏️ แก้ไข</button>` : '<div style="font-size:13px;color:var(--td);text-align:center">BC ดำเนินการแล้ว ไม่สามารถแก้ไขได้</div>'}
-    <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="closeDialog()">← ปิด</button>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="closeDialog()">← ปิด</button>
   `);
 }
 
@@ -993,7 +993,7 @@ function showNotifSettings() {
     <div style="text-align:center;margin-bottom:12px"><span style="font-size:20px">⚙️</span> <span style="font-size:16px;font-weight:700">ตั้งค่าแจ้งเตือน</span></div>
     <div style="padding:0 4px">${toggleHtml}</div>
     <div style="margin-top:16px">
-      <button class="btn btn-gold" style="width:100%" onclick="showNotifPanel()">← กลับ</button>
+      <button class="btn btn-gold" onclick="showNotifPanel()">← กลับ</button>
     </div>
   `);
 }
