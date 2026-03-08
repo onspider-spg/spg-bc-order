@@ -1,4 +1,4 @@
-// Version 7.4 | 7 MAR 2026 | Siam Palette Group
+// Version 7.5 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -108,17 +108,46 @@ function renderAdminDashboard() {
       </div>
     </div>
 
-    <!-- Row 5: Quick Links -->
-    <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🔗 Quick Links</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:13px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:13px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:13px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:13px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+    <!-- Row 5: Recent Activity + Quick Links -->
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:8px">
+      <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🕐 Recent Activity</div>
+        <div id="activityFeed" style="font-size:12px;color:var(--t3)">Loading...</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🔗 Quick Links</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:13px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:13px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:13px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:13px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+        </div>
       </div>
     </div>
   </div>`;
+
+  // Async load activity feed — does NOT block dashboard render
+  loadActivityFeed();
+}
+
+async function loadActivityFeed() {
+  const el = document.getElementById('activityFeed');
+  if (!el) return;
+  try {
+    const resp = await api('get_recent_activity');
+    if (!resp.success || !resp.data.length) { el.textContent = 'ยังไม่มีกิจกรรม'; return; }
+    const icons = { Pending:'⏳', Ordered:'📦', InProgress:'🔄', Fulfilled:'✅', Delivered:'🚚', Rejected:'❌', Cancelled:'🚫' };
+    const colors = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)', Cancelled:'var(--t4)' };
+    el.innerHTML = resp.data.map(a => {
+      const t = a.updated_at ? new Date(a.updated_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—';
+      return `<div style="display:flex;gap:6px;padding:3px 0;border-bottom:1px solid var(--bd2);align-items:center">
+        <span style="color:var(--t4);min-width:50px;font-size:11px">${t}</span>
+        <span>${icons[a.status]||'📋'}</span>
+        <span style="flex:1"><b style="color:var(--gold)">${a.order_id}</b> ${a.store_id} — <b style="color:${colors[a.status]||'var(--t2)'}">${a.status}</b></span>
+        <span style="font-size:11px;color:var(--t4)">${a.display_name||''}</span>
+      </div>`;
+    }).join('');
+  } catch(e) { el.textContent = '—'; }
 }
 
 // ─── A3: Product Management ──────────────────────────────────
