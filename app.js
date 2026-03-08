@@ -1,4 +1,4 @@
-// Version 10.2 | 8 MAR 2026 | Siam Palette Group
+// Version 10.5 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -103,35 +103,38 @@ const SB_CFG = {
   store: [
     { sec: 'Orders', open: true, items: [
       { scr: 'home', lbl: 'Main Menu' },
-      { scr: 'browse', lbl: 'Create Order', action: 'startOrder' },
-      { scr: 'orders', lbl: 'View Orders', badgeKey: 'orders' },
-      { scr: 'stock', lbl: 'View Stock' },
+      { scr: 'browse', lbl: 'Create Order', action: 'startOrder', perm: 'fn_create_order' },
+      { scr: 'orders', lbl: 'View Orders', badgeKey: 'orders', perm: 'fn_view_own_orders' },
+      { scr: 'stock', lbl: 'View Stock', perm: 'fn_view_stock' },
     ]},
     { sec: 'Records', open: true, items: [
-      { scr: 'waste', lbl: 'Waste Log' },
-      { scr: 'returns', lbl: 'Returns' },
+      { scr: 'waste', lbl: 'Waste Log', perm: 'fn_view_waste' },
+      { scr: 'returns', lbl: 'Returns', perm: 'fn_view_returns' },
     ]},
     { sec: 'Dashboard', open: false, items: [
-      { scr: 'admin-top-products', lbl: 'Top Products' },
-      { scr: 'return-dashboard', lbl: 'Return Dashboard' },
-      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
+      { scr: 'admin-top-products', lbl: 'Top Products', perm: 'fn_view_all_orders' },
+      { scr: 'return-dashboard', lbl: 'Return Dashboard', perm: 'fn_view_returns' },
+      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard', perm: 'fn_view_waste' },
+    ]},
+    { sec: 'Admin', open: false, items: [
+      { scr: 'admin-products', lbl: 'Manage Products', perm: 'fn_manage_products' },
     ]},
   ],
   bc: [
     { sec: 'Orders', open: true, items: [
       { scr: 'bc-home', lbl: 'Main Menu' },
-      { scr: 'bc-orders', lbl: 'View Orders', badgeKey: 'orders' },
-      { scr: 'bc-stock', lbl: 'Manage Stock' },
-      { scr: 'bc-print', lbl: 'Print Centre' },
+      { scr: 'bc-orders', lbl: 'View Orders', badgeKey: 'orders', perm: 'fn_view_all_orders' },
+      { scr: 'bc-stock', lbl: 'Manage Stock', perm: 'fn_view_stock' },
+      { scr: 'bc-print', lbl: 'Print Centre', perm: 'fn_view_production' },
     ]},
     { sec: 'Records', open: true, items: [
-      { scr: 'waste', lbl: 'Waste Log' },
-      { scr: 'bc-returns', lbl: 'Incoming Returns', badgeKey: 'returns' },
+      { scr: 'waste', lbl: 'Waste Log', perm: 'fn_view_waste' },
+      { scr: 'bc-returns', lbl: 'Incoming Returns', badgeKey: 'returns', perm: 'fn_view_returns' },
     ]},
     { sec: 'Dashboard', open: false, items: [
-      { scr: 'admin-top-products', lbl: 'Top Products' },
-      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
-      { scr: 'return-dashboard', lbl: 'Return Dashboard' },
+      { scr: 'admin-top-products', lbl: 'Top Products', perm: 'fn_view_all_orders' },
+      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard', perm: 'fn_view_waste' },
+      { scr: 'return-dashboard', lbl: 'Return Dashboard', perm: 'fn_view_returns' },
     ]},
     { sec: 'Admin', open: false, items: [
       { scr: 'admin-products', lbl: 'Manage Products', perm: 'fn_manage_products' },
@@ -140,29 +143,29 @@ const SB_CFG = {
   admin: [
     { sec: 'Admin', open: true, items: [
       { scr: 'admin-dashboard', lbl: 'Dashboard' },
-      { scr: 'admin-products', lbl: 'Manage Products' },
+      { scr: 'admin-products', lbl: 'Manage Products', perm: 'fn_manage_products' },
     ]},
     { sec: 'Orders', open: true, items: [
-      { scr: 'bc-orders', lbl: 'View Orders', badgeKey: 'orders' },
-      { scr: 'bc-stock', lbl: 'Manage Stock' },
-      { scr: 'bc-print', lbl: 'Print Centre' },
+      { scr: 'bc-orders', lbl: 'View Orders', badgeKey: 'orders', perm: 'fn_view_all_orders' },
+      { scr: 'bc-stock', lbl: 'Manage Stock', perm: 'fn_view_stock' },
+      { scr: 'bc-print', lbl: 'Print Centre', perm: 'fn_view_production' },
     ]},
     { sec: 'Records', open: false, items: [
-      { scr: 'waste', lbl: 'Waste Log' },
-      { scr: 'bc-returns', lbl: 'Incoming Returns' },
+      { scr: 'waste', lbl: 'Waste Log', perm: 'fn_view_waste' },
+      { scr: 'bc-returns', lbl: 'Incoming Returns', perm: 'fn_view_returns' },
     ]},
     { sec: 'Reports', open: false, items: [
-      { scr: 'admin-top-products', lbl: 'Top Products' },
-      { scr: 'admin-cutoff', lbl: 'Cutoff Violations' },
-      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard' },
-      { scr: 'return-dashboard', lbl: 'Return Dashboard' },
+      { scr: 'admin-top-products', lbl: 'Top Products', perm: 'fn_view_all_orders' },
+      { scr: 'admin-cutoff', lbl: 'Cutoff Violations', perm: 'fn_view_all_orders' },
+      { scr: 'admin-waste-dashboard', lbl: 'Waste Dashboard', perm: 'fn_view_waste' },
+      { scr: 'return-dashboard', lbl: 'Return Dashboard', perm: 'fn_view_returns' },
     ]},
     { sec: 'Settings', open: false, items: [
-      { scr: 'admin-access', lbl: 'User Access' },
-      { scr: 'admin-dept-mapping', lbl: 'Dept Mapping' },
-      { scr: 'admin-config', lbl: 'System Config' },
-      { scr: 'admin-notif-settings', lbl: 'Notification Settings' },
-      { scr: 'admin-audit', lbl: 'Audit Trail' },
+      { scr: 'admin-access', lbl: 'User Access', perm: 'fn_manage_permissions' },
+      { scr: 'admin-dept-mapping', lbl: 'Dept Mapping', perm: 'fn_manage_dept_mapping' },
+      { scr: 'admin-config', lbl: 'System Config', perm: 'fn_manage_permissions' },
+      { scr: 'admin-notif-settings', lbl: 'Notification Settings', perm: 'fn_manage_notifications' },
+      { scr: 'admin-audit', lbl: 'Audit Trail', perm: 'fn_view_audit_log' },
     ]},
   ],
 };
