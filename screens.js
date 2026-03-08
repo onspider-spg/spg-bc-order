@@ -1,4 +1,4 @@
-// Version 9.2 | 8 MAR 2026 | Siam Palette Group
+// Version 9.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -63,6 +63,7 @@ function renderApp() {
         <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="clearOrderDates()">ทุกวัน</span>
       </div>
       <div class="filter-bar" id="orderFilters" style="padding-top:0"></div>
+      <div id="orderSecFilter"></div>
       <div class="content" id="orderList"></div>
     </div>
     
@@ -82,6 +83,7 @@ function renderApp() {
         <div class="topbar-title">สต็อกสินค้า</div>
       </div>
       <div class="search-wrap"><input class="search-input" placeholder="ค้นหาสินค้า..." oninput="renderStock(this.value)"></div>
+      <div id="stockSecFilter"></div>
       <div class="content" id="stockContent"></div>
     </div>
     
@@ -100,6 +102,7 @@ function renderApp() {
         <div class="topbar-back" onclick="showScreen('home')">←</div>
         <div class="topbar-title">Return / Feedback</div>
       </div>
+      <div id="returnsSecFilter"></div>
       <div class="content" id="returnsContent"></div>
       <div class="bottomnav bc-nav" id="storeReturnsNav"></div>
     </div>
@@ -143,6 +146,7 @@ function renderApp() {
         <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="setBcDate('all')">ทุกวัน</span>
       </div>
       <div class="filter-bar" id="bcOrderFilters"></div>
+      <div id="bcOrderSecFilter"></div>
       <div class="content" id="bcOrderList"></div>
       <div class="bottomnav bc-nav" id="bcOrdersNav"></div>
     </div>
@@ -922,6 +926,17 @@ function filterOrders() {
   if (S.orderFilter === 'Fulfilled') orders = orders.filter(o => o.status === 'Fulfilled' || o.status === 'Delivered');
   else if (S.orderFilter !== 'all') orders = orders.filter(o => o.status === S.orderFilter);
 
+  // Section filter
+  const secSet = new Set();
+  orders.forEach(o => (o.items||[]).forEach(it => { if (it.section_id) secSet.add(it.section_id); }));
+  const sections = [...secSet].sort();
+  const secEl = document.getElementById('orderSecFilter');
+  if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_orders', sections, 'filterOrders');
+  else if (secEl) secEl.innerHTML = '';
+  if (S.sf_orders && S.sf_orders.length > 0) {
+    orders = orders.filter(o => (o.items||[]).some(it => S.sf_orders.includes(it.section_id)));
+  }
+
   // Update counts based on date-filtered orders
   const dateFiltered = S.orders.filter(o => {
     if (from && (o.delivery_date||o.order_date) < from) return false;
@@ -1197,6 +1212,13 @@ function renderStock(search) {
   const content = document.getElementById('stockContent');
   let items = S.stock;
   if (search) items = items.filter(s => s.product_name.toLowerCase().includes(search.toLowerCase()));
+
+  // Section filter
+  const sections = [...new Set(items.map(s => s.section_id).filter(Boolean))].sort();
+  const secEl = document.getElementById('stockSecFilter');
+  if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_stock', sections, 'renderStockScreen');
+  else if (secEl) secEl.innerHTML = '';
+  items = sfFilter('sf_stock', items, 'section_id');
 
   if (items.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่มีข้อมูลสต็อก</div></div>';

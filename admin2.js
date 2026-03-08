@@ -1,4 +1,4 @@
-// Version 9.2 | 8 MAR 2026 | Siam Palette Group
+// Version 9.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -637,6 +637,17 @@ function renderBcOrderList() {
     }
   }
 
+  // Section filter
+  const secSet = new Set();
+  orders.forEach(o => (o.items||[]).forEach(it => { if (it.section_id) secSet.add(it.section_id); }));
+  const sections = [...secSet].sort();
+  const secEl = document.getElementById('bcOrderSecFilter');
+  if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_bcorders', sections, 'renderBcOrderList');
+  else if (secEl) secEl.innerHTML = '';
+  if (S.sf_bcorders && S.sf_bcorders.length > 0) {
+    orders = orders.filter(o => (o.items||[]).some(it => S.sf_bcorders.includes(it.section_id)));
+  }
+
   const el = document.getElementById('bcOrderList');
   if (!orders.length) {
     const totalLoaded = S.orders ? S.orders.length : 0;
@@ -1051,7 +1062,7 @@ function renderBcStock() {
     </div>
 
     <input class="search-input" placeholder="🔍 ค้นหาชื่อสินค้า..." oninput="filterBcStock(this.value)" style="margin-bottom:8px;width:100%">
-
+    <div id="bcStockSecFilter"></div>
     <div id="bcStockTable"></div>
 
     <button class="btn btn-blue" style="margin-top:8px" onclick="showBcStockPopup()">+ เพิ่ม/ลดสต็อก</button>
@@ -1065,6 +1076,14 @@ function filterBcStock(q) {
   let items = S.stock;
   if (scope.length > 0) items = items.filter(s => scope.includes(s.section_id));
   if (q) items = items.filter(s => s.product_name.toLowerCase().includes(q.toLowerCase()));
+
+  // Section filter chips
+  const sections = [...new Set(items.map(s => s.section_id).filter(Boolean))].sort();
+  const secEl = document.getElementById('bcStockSecFilter');
+  if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_bcstock', sections, 'renderBcStock');
+  else if (secEl) secEl.innerHTML = '';
+  items = sfFilter('sf_bcstock', items, 'section_id');
+
   renderBcStockTable(items);
 }
 
@@ -1357,7 +1376,9 @@ async function renderBcPrint() {
 }
 
 function setPrintSection(sec) {
-  S.bcPrintSections = [sec];
+  if (!S.bcPrintSections) S.bcPrintSections = [];
+  const idx = S.bcPrintSections.indexOf(sec);
+  if (idx >= 0) S.bcPrintSections.splice(idx, 1); else S.bcPrintSections.push(sec);
   renderBcPrint();
 }
 

@@ -1,4 +1,4 @@
-// Version 8.9 | 8 MAR 2026 | Siam Palette Group
+// Version 9.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -14,29 +14,21 @@ function renderWasteList() {
   const content = document.getElementById('wasteContent');
   const logs = S.wasteLog || [];
 
-  // Category filter chips from logs
-  const sections = [...new Set(logs.map(w => {
-    const p = (S.products||[]).find(x => x.product_id === w.product_id);
-    return p ? p.section_id : 'other';
-  }))];
+  // Section from product lookup
+  const prodMap = {};
+  (S.products||[]).forEach(p => { prodMap[p.product_id] = p; });
+  const sections = [...new Set(logs.map(w => (prodMap[w.product_id]||{}).section_id || 'other'))].sort();
 
-  // Filter by wasteSelectedCat
+  // Filter by selected sections
   let filtered = logs;
-  if (S.wasteSelectedCat && S.wasteSelectedCat !== 'all') {
-    filtered = logs.filter(w => {
-      const p = (S.products||[]).find(x => x.product_id === w.product_id);
-      return p && p.section_id === S.wasteSelectedCat;
-    });
+  if (S.sf_waste && S.sf_waste.length > 0) {
+    filtered = logs.filter(w => S.sf_waste.includes((prodMap[w.product_id]||{}).section_id));
   }
 
   const reasonColor = r => r === 'Expired' ? 'var(--red)' : r === 'Damaged' ? 'var(--orange)' : r === 'Production Error' ? 'var(--purple)' : 'var(--td)';
 
   content.innerHTML = `<div style="padding:16px 20px">
-    <!-- Filter Chips -->
-    <div style="display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap">
-      <span style="font-size:12px;padding:3px 10px;border-radius:14px;border:1px solid ${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'var(--gold)':'var(--bd)'};color:${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'#fff':'var(--t3)'};background:${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'var(--gold)':'#fff'};cursor:pointer" onclick="S.wasteSelectedCat='all';renderWasteList()">ทั้งหมด</span>
-      ${sections.map(sec => `<span style="font-size:12px;padding:3px 10px;border-radius:14px;border:1px solid ${S.wasteSelectedCat===sec?'var(--gold)':'var(--bd)'};color:${S.wasteSelectedCat===sec?'#fff':'var(--t3)'};background:${S.wasteSelectedCat===sec?'var(--gold)':'#fff'};cursor:pointer" onclick="S.wasteSelectedCat='${sec}';renderWasteList()">${getCatName(sec)}</span>`).join('')}
-    </div>
+    ${sections.length > 1 ? sfChips('sf_waste', sections, 'renderWasteList') : ''}
 
     <!-- Waste Table -->
     ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ยังไม่มีรายการ Waste</div><div class="empty-desc">14 วันล่าสุด</div></div>' : `
@@ -221,7 +213,18 @@ async function deleteWaste(wasteId) {
 // v7.1: Store Returns — card list with border-left color + action buttons per card
 function renderReturnsScreen() {
   const content = document.getElementById('returnsContent');
-  const items = S.returns || [];
+  let items = S.returns || [];
+
+  // Section filter
+  const prodMap = {};
+  (S.products||[]).forEach(p => { prodMap[p.product_id] = p; });
+  const sections = [...new Set(items.map(r => (prodMap[r.product_id]||{}).section_id).filter(Boolean))].sort();
+  const secEl = document.getElementById('returnsSecFilter');
+  if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_returns', sections, 'renderReturnsScreen');
+  else if (secEl) secEl.innerHTML = '';
+  if (S.sf_returns && S.sf_returns.length > 0) {
+    items = items.filter(r => S.sf_returns.includes((prodMap[r.product_id]||{}).section_id));
+  }
 
   const borderMap = { Reported:'var(--orange)', Received:'var(--blue)', Returning:'var(--orange)', Reworked:'var(--green)', Wasted:'var(--red)' };
   const isResolved = st => st === 'Reworked' || st === 'Wasted';

@@ -1,4 +1,4 @@
-// Version 9.2 | 8 MAR 2026 | Siam Palette Group
+// Version 9.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -639,6 +639,30 @@ function toast(msg, type='success') {
 
 // Dialog
 function showDialog(html) {
+
+// ─── SECTION FILTER (shared across all pages) ─────────────
+const SEC_ICONS = { cake:'🎂', sauce:'🍶', tart:'🥧', bread:'🍞', bakery:'🍞' };
+
+function toggleSF(key, sec, fn) {
+  if (!S[key]) S[key] = [];
+  const idx = S[key].indexOf(sec);
+  if (idx >= 0) S[key].splice(idx, 1); else S[key].push(sec);
+  if (typeof window[fn] === 'function') window[fn]();
+}
+
+function sfChips(key, sections, fn) {
+  if (!S[key]) S[key] = [];
+  const sel = S[key];
+  return `<div class="filter-bar" style="flex-wrap:wrap">
+    <div class="filter-chip ${sel.length===0?'active':''}" onclick="S.${key}=[];${fn}()">ทั้งหมด</div>
+    ${sections.map(sec => `<div class="filter-chip ${sel.includes(sec)?'active':''}" onclick="toggleSF('${key}','${sec}','${fn}')">${SEC_ICONS[sec]||'📦'} ${sec}</div>`).join('')}
+  </div>`;
+}
+
+function sfFilter(key, items, field) {
+  if (!S[key] || S[key].length === 0) return items;
+  return items.filter(i => S[key].includes(i[field]));
+}
   document.getElementById('dialogContent').innerHTML = html;
   document.getElementById('overlay').classList.add('show');
 }

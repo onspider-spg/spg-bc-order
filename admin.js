@@ -1,4 +1,4 @@
-// Version 9.0 | 8 MAR 2026 | Siam Palette Group
+// Version 9.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -176,6 +176,7 @@ async function renderAdminProducts() {
         <button class="btn btn-gold btn-sm" onclick="showAddProductForm()">+ Add</button>
       </div>
       <input class="search-input" id="adminProdSearch" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProductList()" style="width:100%;margin-bottom:8px">
+      <div id="adminProdSecFilter"></div>
       <div id="adminProdListWrap"></div>
     </div>`;
   renderAdminProductList();
@@ -188,7 +189,14 @@ function renderAdminProductList() {
   const tab = S.adminProductTab || 'active';
   const list = tab === 'active' ? prods.filter(p => p.is_active === true || p.is_active === 'TRUE') : prods.filter(p => p.is_active !== true && p.is_active !== 'TRUE');
   const q = (S.adminProductSearch || '').toLowerCase();
-  const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
+  let filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
+
+  // Section filter
+  const sections = [...new Set(filtered.map(p => p.section_id).filter(Boolean))].sort();
+  const secEl = document.getElementById('adminProdSecFilter');
+  if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_products', sections, 'renderAdminProductList');
+  else if (secEl) secEl.innerHTML = '';
+  filtered = sfFilter('sf_products', filtered, 'section_id');
 
   wrap.innerHTML = filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' :
       window.innerWidth < 768 ? `
