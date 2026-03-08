@@ -1,4 +1,4 @@
-// Version 9.6 | 8 MAR 2026 | Siam Palette Group
+// Version 9.8 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -294,11 +294,14 @@ async function renderProductEditScreen() {
   const cats = S.categories || [];
   const sections = [...new Set((S.products||[]).map(p => p.section_id).filter(Boolean))].sort();
   const unitOpts = ['pieces','pcs','loaves','btl','pack','kg','g'];
-  // Build store+dept combos from ordering channels (DB-driven)
+  // Build store+dept combos: all stores × unique depts from ordering channels
+  const visStores = (S.stores || []).filter(s => !['BC'].includes(s.store_id));
+  const visDepts = [...new Set((S.orderingChannels || []).map(ch => ch.dept_id))].sort();
   const storeVisRows = [];
-  (S.orderingChannels || []).forEach(ch => {
-    const store = (S.stores || []).find(s => s.store_id === ch.store_id);
-    if (store) storeVisRows.push({ store_id: ch.store_id, store_name: store.store_name, dept_id: ch.dept_id });
+  visStores.forEach(store => {
+    visDepts.forEach(dept => {
+      storeVisRows.push({ store_id: store.store_id, store_name: store.store_name, dept_id: dept });
+    });
   });
 
   const imgUrl = isEdit ? (p.image_url || '') : '';
@@ -502,12 +505,17 @@ async function submitProductEdit(productId) {
   if (isEdit) body.product_id = productId;
   
   // Collect visibility
+  // Collect visibility from all stores × depts
   const visibility = [];
-  (S.orderingChannels || []).forEach(ch => {
-    const cb = document.getElementById('vis_' + ch.store_id + '_' + ch.dept_id);
-    if (cb) {
-      visibility.push({ store_id: ch.store_id, dept_id: ch.dept_id, is_active: cb.checked });
-    }
+  const savStores = (S.stores || []).filter(s => !['BC'].includes(s.store_id));
+  const savDepts = [...new Set((S.orderingChannels || []).map(ch => ch.dept_id))].sort();
+  savStores.forEach(store => {
+    savDepts.forEach(dept => {
+      const cb = document.getElementById('vis_' + store.store_id + '_' + dept);
+      if (cb) {
+        visibility.push({ store_id: store.store_id, dept_id: dept, is_active: cb.checked });
+      }
+    });
   });
   
   try {
