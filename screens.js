@@ -1,4 +1,4 @@
-// Version 10.4 | 8 MAR 2026 | Siam Palette Group
+// Version 10.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -271,6 +271,10 @@ function renderApp() {
       </div>
       <div class="content" id="adminAuditContent"></div>
     </div>
+
+    <div class="screen" id="scr-admin-visibility">
+      <div class="content" id="adminVisContent"></div>
+    </div>
     
     <div class="screen" id="scr-admin-waste-dashboard">
       <div class="topbar" style="background:var(--gold-bg)">
@@ -326,7 +330,7 @@ async function showScreen(name, param) {
     // ── Lazy load: ensure data is loaded before rendering ──
     try {
       // Screens that need products + categories
-      if (['browse','cart','waste','returns','bc-returns','bc-stock','admin-products','admin-product-edit','admin-dashboard','admin-waste-dashboard','admin-top-products'].includes(name)) {
+      if (['browse','cart','waste','returns','bc-returns','bc-stock','admin-products','admin-product-edit','admin-dashboard','admin-waste-dashboard','admin-top-products','admin-visibility'].includes(name)) {
         if (!S._productsLoaded) {
           await Promise.all([loadCategories(), loadProducts()]);
           S._productsLoaded = true;
@@ -387,6 +391,7 @@ async function showScreen(name, param) {
       case 'admin-notif-settings': renderAdminNotifSettings(); break;
       case 'admin-cutoff': renderAdminCutoff(); break;
       case 'admin-audit': renderAdminAudit(); break;
+      case 'admin-visibility': renderAdminVisibility(); break;
       case 'admin-waste-dashboard': renderAdminWasteDashboard(); break;
       case 'admin-top-products': renderAdminTopProducts(); break;
       case 'return-dashboard': renderReturnDashboard(); break;
