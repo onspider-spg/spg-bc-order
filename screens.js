@@ -1,4 +1,4 @@
-// Version 9.9 | 8 MAR 2026 | Siam Palette Group
+// Version 10.1 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -628,7 +628,7 @@ function renderProducts() {
     const btnColor = inCart ? 'var(--green)' : 'var(--t4)';
 
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;${borderStyle};border-radius:var(--rd)">
-      <div style="width:44px;height:44px;background:${inCart?'#fff':'var(--s1)'};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${prodEmoji(p.product_name)}</div>
+      <div style="width:44px;height:44px;background:${inCart?'#fff':'var(--s1)'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 44)}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700">${p.product_name}</div>
         <div style="font-size:13px;color:${stockColor}">${stockText}</div>
@@ -746,7 +746,7 @@ function renderCart() {
         const isFulfilled = S.editingOrderId && item.fulfilment_status;
         return `<div style="padding:12px 0;border-bottom:1px solid var(--bd2)">
           <div style="display:flex;align-items:flex-start;gap:10px">
-            <div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${prodEmoji(item.product_name)}</div>
+            <div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(S.products.find(x=>x.product_id===item.product_id), 40)}</div>
             <div style="flex:1;min-width:0">
               <div style="font-size:12px;font-weight:700">${item.product_name}${isFulfilled ? ' <span style="font-size:12px;padding:2px 6px;border-radius:6px;background:var(--green-bg);color:var(--green)">✅ ทำแล้ว</span>' : ''}</div>
               <div style="font-size:13px;color:var(--t3)">${item.unit} · ขั้นต่ำ ${item.min_order}${item.order_step>1?' · step '+item.order_step:''}${isFulfilled ? ' · sent:'+item.qty_sent : ''}</div>
