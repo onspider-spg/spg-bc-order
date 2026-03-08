@@ -1,4 +1,4 @@
-// Version 10.4 | 8 MAR 2026 | Siam Palette Group
+// Version 10.8 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -1208,9 +1208,9 @@ function renderBcReturns() {
   const resolved = items.filter(r => r.status === 'Reworked' || r.status === 'Wasted');
 
   document.getElementById('bcReturnFilters').innerHTML = `
+    <div class="filter-chip ${S.bcReturnFilter==='all'?'active':''}" onclick="S.bcReturnFilter='all';renderBcReturns()">ทั้งหมด (${items.length})</div>
     <div class="filter-chip ${S.bcReturnFilter==='open'?'active':''}" onclick="S.bcReturnFilter='open';renderBcReturns()">Open (${open.length})</div>
-    <div class="filter-chip ${S.bcReturnFilter==='resolved'?'active':''}" onclick="S.bcReturnFilter='resolved';renderBcReturns()">Resolved (${resolved.length})</div>
-    <div class="filter-chip ${S.bcReturnFilter==='all'?'active':''}" onclick="S.bcReturnFilter='all';renderBcReturns()">ทั้งหมด (${items.length})</div>`;
+    <div class="filter-chip ${S.bcReturnFilter==='resolved'?'active':''}" onclick="S.bcReturnFilter='resolved';renderBcReturns()">Resolved (${resolved.length})</div>`;
 
   if (S.bcReturnFilter === 'open') items = open;
   else if (S.bcReturnFilter === 'resolved') items = resolved;
