@@ -1,4 +1,4 @@
-// Version 7.5 | 7 MAR 2026 | Siam Palette Group
+// Version 8.0 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -37,25 +37,25 @@ function renderAdminDashboard() {
   const todayReturns = (S.returns||[]).filter(r => (r.created_at||'').startsWith(todayStr));
   const openReturns = (S.returns||[]).filter(r => r.status === 'Reported' || r.status === 'Received');
 
-  document.getElementById('adminDashboardContent').innerHTML = `<div style="padding:14px 18px">
+  document.getElementById('adminDashboardContent').innerHTML = `<div style="padding:16px 20px">
     <!-- Row 1: KPI -->
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
       <div style="padding:12px;background:var(--gold-bg);border-radius:var(--rd2)">
-        <div style="font-size:11px;color:var(--gold);font-weight:600;text-transform:uppercase">Total Orders</div>
-        <div style="font-size:28px;font-weight:800;color:var(--gold)">${total}</div>
-        <div style="display:flex;gap:4px;margin-top:4px;font-size:11px"><span style="color:var(--red);font-weight:600">⏳ ${bs.Pending||0}</span><span style="color:var(--blue)">📦 ${bs.Ordered||0}</span><span style="color:var(--orange)">🔄 ${bs.InProgress||0}</span><span style="color:var(--green)">✅ ${done}</span></div>
+        <div style="font-size:12px;color:var(--gold);font-weight:600;text-transform:uppercase">Total Orders</div>
+        <div style="font-size:24px;font-weight:800;color:var(--gold)">${total}</div>
+        <div style="display:flex;gap:4px;margin-top:4px;font-size:12px"><span style="color:var(--red);font-weight:600">⏳ ${bs.Pending||0}</span><span style="color:var(--blue)">📦 ${bs.Ordered||0}</span><span style="color:var(--orange)">🔄 ${bs.InProgress||0}</span><span style="color:var(--green)">✅ ${done}</span></div>
       </div>
       <div style="padding:12px;background:var(--green-bg);border-radius:var(--rd2);text-align:center">
-        <div style="font-size:11px;color:var(--green);font-weight:600">FULFILMENT</div>
+        <div style="font-size:12px;color:var(--green);font-weight:600">FULFILMENT</div>
         <div style="font-size:26px;font-weight:800;color:var(--green)">${fulfilRate}%</div>
         <div style="height:4px;background:#c8e6c9;border-radius:2px;margin-top:3px"><div style="width:${fulfilRate}%;height:100%;background:var(--green);border-radius:2px"></div></div>
       </div>
       <div style="padding:12px;background:var(--red-bg);border-radius:var(--rd2);text-align:center">
-        <div style="font-size:11px;color:var(--red);font-weight:600">CUTOFF</div>
+        <div style="font-size:12px;color:var(--red);font-weight:600">CUTOFF</div>
         <div style="font-size:26px;font-weight:800;color:var(--red)">${d.cutoff_violations_today||0}</div>
       </div>
       <div style="padding:12px;background:var(--orange-bg);border-radius:var(--rd2);text-align:center">
-        <div style="font-size:11px;color:var(--orange);font-weight:600">URGENT</div>
+        <div style="font-size:12px;color:var(--orange);font-weight:600">URGENT</div>
         <div style="font-size:26px;font-weight:800;color:var(--orange)">${d.urgent_items||0}</div>
       </div>
     </div>
@@ -70,7 +70,7 @@ function renderAdminDashboard() {
             const donePct = s.total > 0 ? Math.round((s.done/s.total)*100) : 0;
             return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span style="font-weight:600">${getStoreName(sid)}</span><span>${s.total} orders</span></div>
               <div style="height:4px;background:var(--s2);border-radius:2px"><div style="width:${donePct}%;height:100%;background:${worst};border-radius:2px"></div></div>
-              <div style="display:flex;gap:4px;font-size:11px;color:var(--t3);margin-top:1px">${s.pending?`<span style="color:var(--red)">●${s.pending} pending</span>`:''}${s.ordered?`<span style="color:var(--blue)">●${s.ordered} ordered</span>`:''}${s.progress?`<span style="color:var(--orange)">●${s.progress} progress</span>`:''}${s.done?`<span style="color:var(--green)">●${s.done} done</span>`:''}</div></div>`;
+              <div style="display:flex;gap:4px;font-size:12px;color:var(--t3);margin-top:1px">${s.pending?`<span style="color:var(--red)">●${s.pending} pending</span>`:''}${s.ordered?`<span style="color:var(--blue)">●${s.ordered} ordered</span>`:''}${s.progress?`<span style="color:var(--orange)">●${s.progress} progress</span>`:''}${s.done?`<span style="color:var(--green)">●${s.done} done</span>`:''}</div></div>`;
           }).join('')}
       </div>
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
@@ -92,18 +92,18 @@ function renderAdminDashboard() {
     <!-- Row 4: Waste + Returns Today -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase">🗑️ Waste Today</div><div style="font-size:11px;color:var(--t4);cursor:pointer" onclick="showScreen('admin-waste-dashboard')">ดูทั้งหมด →</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase">🗑️ Waste Today</div><div style="font-size:12px;color:var(--t4);cursor:pointer" onclick="showScreen('admin-waste-dashboard')">ดูทั้งหมด →</div></div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${todayWaste.length}</div><div style="font-size:11px;color:var(--red)">items</div></div>
-          <div style="flex:1;padding:6px;background:var(--s1);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800">${wasteQty}</div><div style="font-size:11px;color:var(--t3)">ชิ้น</div></div>
+          <div style="flex:1;padding:8px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${todayWaste.length}</div><div style="font-size:12px;color:var(--red)">items</div></div>
+          <div style="flex:1;padding:8px;background:var(--s1);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800">${wasteQty}</div><div style="font-size:12px;color:var(--t3)">ชิ้น</div></div>
         </div>
         ${todayWaste.slice(0,3).map(w => { const pn = ((S.products||[]).find(p=>p.product_id===w.product_id)||{}).product_name||w.product_id; return `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--bd2);font-size:12px"><span>● ${pn} ×${w.quantity}</span><span style="color:var(--red)">${w.reason}</span></div>`; }).join('')}
       </div>
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase">↩️ Returns</div><div style="font-size:11px;color:var(--t4);cursor:pointer" onclick="showScreen('return-dashboard')">ดูทั้งหมด →</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase">↩️ Returns</div><div style="font-size:12px;color:var(--t4);cursor:pointer" onclick="showScreen('return-dashboard')">ดูทั้งหมด →</div></div>
         <div style="display:flex;gap:6px;margin-bottom:6px">
-          <div style="flex:1;padding:6px;background:var(--orange-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--orange)">${todayReturns.length}</div><div style="font-size:11px;color:var(--orange)">today</div></div>
-          <div style="flex:1;padding:6px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${openReturns.length}</div><div style="font-size:11px;color:var(--red)">open</div></div>
+          <div style="flex:1;padding:8px;background:var(--orange-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--orange)">${todayReturns.length}</div><div style="font-size:12px;color:var(--orange)">today</div></div>
+          <div style="flex:1;padding:8px;background:var(--red-bg);border-radius:6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${openReturns.length}</div><div style="font-size:12px;color:var(--red)">open</div></div>
         </div>
       </div>
     </div>
@@ -117,10 +117,10 @@ function renderAdminDashboard() {
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
         <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🔗 Quick Links</div>
         <div style="display:flex;flex-direction:column;gap:4px">
-          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:13px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:13px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:13px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-          <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:13px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:12px 16px;margin:0" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:6px"><span>🏆</span><span style="font-size:13px;font-weight:600">Top Products</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:12px 16px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:13px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:12px 16px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:13px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
+          <div class="card" style="padding:12px 16px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:13px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
         </div>
       </div>
     </div>
@@ -141,10 +141,10 @@ async function loadActivityFeed() {
     el.innerHTML = resp.data.map(a => {
       const t = a.updated_at ? new Date(a.updated_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—';
       return `<div style="display:flex;gap:6px;padding:3px 0;border-bottom:1px solid var(--bd2);align-items:center">
-        <span style="color:var(--t4);min-width:50px;font-size:11px">${t}</span>
+        <span style="color:var(--t4);min-width:50px;font-size:12px">${t}</span>
         <span>${icons[a.status]||'📋'}</span>
         <span style="flex:1"><b style="color:var(--gold)">${a.order_id}</b> ${a.store_id} — <b style="color:${colors[a.status]||'var(--t2)'}">${a.status}</b></span>
-        <span style="font-size:11px;color:var(--t4)">${a.display_name||''}</span>
+        <span style="font-size:12px;color:var(--t4)">${a.display_name||''}</span>
       </div>`;
     }).join('');
   } catch(e) { el.textContent = '—'; }
@@ -174,7 +174,7 @@ async function renderAdminProducts() {
   const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
   
   el.innerHTML = `
-    <div style="padding:14px 18px">
+    <div style="padding:16px 20px">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <div class="filter-chip ${tab==='active'?'active':''}" onclick="S.adminProductTab='active';renderAdminProducts()">Active (${active.length})</div>
         <div class="filter-chip ${tab==='inactive'?'active':''}" onclick="S.adminProductTab='inactive';renderAdminProducts()">Inactive (${inactive.length})</div>
@@ -187,32 +187,32 @@ async function renderAdminProducts() {
       <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:700px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
         <tbody>${filtered.map(p => {
           const isAct = p.is_active === true || p.is_active === 'TRUE';
           const catObj = (S.categories||[]).find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id));
           const catName = catObj ? (catObj.cat_name||catObj.category_name) : (p.cat_id||'—');
           return `<tr>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${p.product_name}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${catName}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:13px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:13px">Hidden</span>'}</td>
-            <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${p.product_name}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${catName}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:13px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:13px">Hidden</span>'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>`}
@@ -276,7 +276,7 @@ async function renderProductEditScreen() {
   const isAct = isEdit && (p.is_active === true || p.is_active === 'TRUE');
 
   el.innerHTML = `
-    <div style="padding:14px 18px">
+    <div style="padding:16px 20px">
       <!-- Preview Area -->
       <div style="display:flex;gap:12px;margin-bottom:16px">
         <div id="imgPreview" style="width:80px;height:80px;background:${isEdit?'var(--gold-bg)':'var(--s2)'};border:2px solid ${isEdit?'var(--gold)':'var(--bd)'};border-radius:var(--rd2);display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;overflow:hidden">
@@ -381,18 +381,18 @@ async function renderProductEditScreen() {
 
       <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-          <th style="padding:6px 8px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Department</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Visible?</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Department</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Visible?</th>
         </tr></thead>
         <tbody>${stores.map(store => {
           return store.depts.map(dept => {
             const vis = (S._editVisibility||[]).find(v => v.store_id === store.id && v.dept_id === dept);
             const checked = vis ? vis.is_active : (!isEdit);
             return `<tr>
-              <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);font-weight:600">${store.name}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid var(--bd2)">${dept}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid var(--bd2);text-align:center">
+              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${store.name}</td>
+              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${dept}</td>
+              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">
                 <span style="color:${checked?'var(--green)':'var(--t4)'};font-size:14px;cursor:pointer" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.textContent=this.dataset.on==='1'?'☑':'☐';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--t4)';document.getElementById('vis_${store.id}_${dept}').checked=this.dataset.on==='1'" data-on="${checked?'1':'0'}">${checked?'☑':'☐'}</span>
                 <input type="checkbox" id="vis_${store.id}_${dept}" ${checked?'checked':''} style="display:none">
               </td>
@@ -532,7 +532,7 @@ async function renderAdminAccess() {
           </thead>
           <tbody>
             ${functions.map(fn => `<tr style="border-bottom:1px solid var(--s2)">
-              <td style="padding:6px 8px;font-weight:500;position:sticky;left:0;background:var(--bg);z-index:1;font-size:13px" title="${fn.description||''}">${fn.function_name || fn.function_id}</td>
+              <td style="padding:8px 16px;font-weight:500;position:sticky;left:0;background:var(--bg);z-index:1;font-size:13px" title="${fn.description||''}">${fn.function_name || fn.function_id}</td>
               ${tiers.map(t => {
                 const allowed = matrix[fn.function_id] && matrix[fn.function_id][t];
                 return `<td style="padding:6px;text-align:center">
@@ -572,25 +572,25 @@ async function renderAdminDeptMapping() {
     const mappings = resp.data || [];
     const roleColors = { store:'var(--blue)', bc_production:'var(--green)', bc_management:'var(--gold)', all:'var(--purple)' };
     
-    el.innerHTML = `<div style="padding:14px 18px">
+    el.innerHTML = `<div style="padding:16px 20px">
       <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏢 Department → Module Role Mapping (${mappings.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Dept</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Module Role</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section Scope</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
-          <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Dept</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Module Role</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section Scope</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Active</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
         <tbody>${mappings.map(m => {
           const roleColor = roleColors[m.module_role] || 'var(--td)';
           const isNA = m.module_role === 'not_applicable';
           return `<tr style="${m.is_active?'':'opacity:.5'}">
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${m.dept_id}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${roleColor}20;color:${roleColor};padding:1px 5px;border-radius:3px;font-size:12px;font-weight:600">${m.module_role}</span></td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${m.section_scope||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;color:${m.is_active?'var(--green)':'var(--red)'};cursor:pointer" onclick="toggleDeptActive('${m.dept_id}',${!m.is_active})">${m.is_active?'ON':'OFF'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:11px" onclick="editDeptMapping('${m.dept_id}','${m.module_role}','${m.section_scope||''}',${!!m.is_active})">✏️</button></td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${m.dept_id}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span style="background:${roleColor}20;color:${roleColor};padding:1px 5px;border-radius:3px;font-size:12px;font-weight:600">${m.module_role}</span></td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${m.section_scope||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:${m.is_active?'var(--green)':'var(--red)'};cursor:pointer" onclick="toggleDeptActive('${m.dept_id}',${!m.is_active})">${m.is_active?'ON':'OFF'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:2px 5px;font-size:12px" onclick="editDeptMapping('${m.dept_id}','${m.module_role}','${m.section_scope||''}',${!!m.is_active})">✏️</button></td>
           </tr>`;
         }).join('')}</tbody>
       </table>
@@ -660,10 +660,10 @@ async function renderAdminConfig() {
     { key:'auto_refresh_seconds', label:'🔄 Auto Refresh (วินาที)', desc:'รีเฟรชอัตโนมัติ', type:'number' },
   ];
   
-  el.innerHTML = `<div style="padding:14px 18px">
+  el.innerHTML = `<div style="padding:16px 20px">
     <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⚙️ System Configuration</div>
     ${items.map(i => `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
-      <div><div style="font-size:13px;font-weight:500">${i.label}</div><div style="font-size:11px;color:var(--t3)">${i.desc}</div></div>
+      <div><div style="font-size:13px;font-weight:500">${i.label}</div><div style="font-size:12px;color:var(--t3)">${i.desc}</div></div>
       <div style="font-size:13px;font-weight:700;color:var(--gold)">${config[i.key]||'—'} <span style="font-size:12px;color:var(--blue);cursor:pointer" onclick="editConfig('${i.key}','${config[i.key]||''}','${i.type}')">✏️</span></div>
     </div>`).join('')}
   </div>`;
@@ -720,7 +720,7 @@ async function renderAdminNotifSettings() {
       ]},
     ];
     
-    el.innerHTML = `<div style="padding:14px 18px">
+    el.innerHTML = `<div style="padding:16px 20px">
       <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:2px">🔔 Notification Settings</div>
       <div style="font-size:12px;color:var(--t3);margin-bottom:6px">กดเพื่อ toggle ON/OFF</div>
       ${groups.map(g => `
@@ -728,7 +728,7 @@ async function renderAdminNotifSettings() {
         ${g.items.map(i => {
           const on = settings[i.key] !== false;
           return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bd2)">
-            <div><div style="font-size:13px;font-weight:500">${i.label}</div><div style="font-size:11px;color:var(--t3)">${i.desc}</div></div>
+            <div><div style="font-size:13px;font-weight:500">${i.label}</div><div style="font-size:12px;color:var(--t3)">${i.desc}</div></div>
             <div onclick="toggleNotifSetting('${i.key}',${!on})" style="cursor:pointer;width:32px;height:18px;border-radius:9px;background:${on?'var(--green)':'var(--bd)'};position:relative;flex-shrink:0">
               <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${on?'right:2px':'left:2px'};box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
             </div>
@@ -754,25 +754,25 @@ function renderAdminCutoff() {
   const orders = S.orders || [];
   const violations = orders.filter(o => o.is_cutoff_violation);
 
-  document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:14px 18px">
+  document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:16px 20px">
     <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⏰ Cutoff Violations (${violations.length})</div>
     ${violations.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี violation</div></div>' : `
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
       <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งเมื่อ</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันส่ง</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งโดย</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งเมื่อ</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันส่ง</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งโดย</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
       </tr></thead>
       <tbody>${violations.map(o => `<tr style="cursor:pointer;border-left:3px solid var(--red)" onclick="viewOrderDetail('${o.order_id}')">
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${getStoreName(o.store_id)}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${o.created_at ? new Date(o.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—'}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${o.display_name||o.created_by||'—'}</td>
-        <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${getStoreName(o.store_id)}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.created_at ? new Date(o.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—'}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.display_name||o.created_by||'—'}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
       </tr>`).join('')}</tbody>
     </table>`}
   </div>`;
@@ -801,7 +801,7 @@ async function renderAdminAudit() {
       update_product: { bg:'rgba(8,145,178,.1)', color:'var(--blue)', label:'📦 product' },
     };
 
-    el.innerHTML = `<div style="padding:14px 18px">
+    el.innerHTML = `<div style="padding:16px 20px">
       <div style="display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap">
         <span class="filter-chip ${filter==='all'?'active':''}" onclick="S.auditFilter='all';renderAdminAudit()">ทั้งหมด</span>
         <span class="filter-chip ${filter==='permission'?'active':''}" onclick="S.auditFilter='permission';renderAdminAudit()">🔒 สิทธิ์</span>
@@ -813,22 +813,22 @@ async function renderAdminAudit() {
       ${logs.length === 0 ? '<div class="empty"><div class="empty-icon">📝</div><div class="empty-title">ยังไม่มีบันทึก</div></div>' : `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--s1)">
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เวลา</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Action</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Target</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนจาก</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนเป็น</th>
-          <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เวลา</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Action</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Target</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนจาก</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">เปลี่ยนเป็น</th>
+          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
         </tr></thead>
         <tbody>${logs.map(l => {
           const tc = typeColors[l.action_type] || { bg:'var(--s2)', color:'var(--td)', label:l.action_type };
           return `<tr>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${l.changed_at ? new Date(l.changed_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)"><span style="background:${tc.bg};color:${tc.color};padding:1px 4px;border-radius:3px;font-size:11px;font-weight:600">${tc.label}</span></td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-size:12px">${l.target_id||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--red);font-size:12px">${truncate(l.old_value,30)||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:var(--green);font-size:12px">${truncate(l.new_value,30)||'—'}</td>
-            <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${l.changed_by_name||l.changed_by||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${l.changed_at ? new Date(l.changed_at).toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span style="background:${tc.bg};color:${tc.color};padding:1px 4px;border-radius:3px;font-size:12px;font-weight:600">${tc.label}</span></td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${l.target_id||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);color:var(--red);font-size:12px">${truncate(l.old_value,30)||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);color:var(--green);font-size:12px">${truncate(l.new_value,30)||'—'}</td>
+            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${l.changed_by_name||l.changed_by||'—'}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>`}

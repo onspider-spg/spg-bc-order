@@ -1,4 +1,4 @@
-// Version 7.4 | 7 MAR 2026 | Siam Palette Group
+// Version 8.0 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -31,7 +31,7 @@ function renderWasteList() {
 
   const reasonColor = r => r === 'Expired' ? 'var(--red)' : r === 'Damaged' ? 'var(--orange)' : r === 'Production Error' ? 'var(--purple)' : 'var(--td)';
 
-  content.innerHTML = `<div style="padding:14px 18px">
+  content.innerHTML = `<div style="padding:16px 20px">
     <!-- Filter Chips -->
     <div style="display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap">
       <span style="font-size:12px;padding:3px 10px;border-radius:14px;border:1px solid ${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'var(--gold)':'var(--bd)'};color:${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'#fff':'var(--t3)'};background:${!S.wasteSelectedCat||S.wasteSelectedCat==='all'?'var(--gold)':'#fff'};cursor:pointer" onclick="S.wasteSelectedCat='all';renderWasteList()">ทั้งหมด</span>
@@ -42,26 +42,26 @@ function renderWasteList() {
     ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ยังไม่มีรายการ Waste</div><div class="empty-desc">14 วันล่าสุด</div></div>' : `
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
       <thead><tr style="background:var(--s1)">
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันที่</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สาเหตุ</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">ผลิต</th>
-        <th style="padding:5px 7px;text-align:left;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
-        <th style="padding:5px 7px;text-align:center;font-weight:600;font-size:11px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">วันที่</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
+        <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สาเหตุ</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">ผลิต</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
+        <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
       </tr></thead>
       <tbody>${filtered.map(w => {
         const pName = ((S.products||[]).find(p => p.product_id === w.product_id) || {}).product_name || w.product_id;
         const unit = ((S.products||[]).find(p => p.product_id === w.product_id) || {}).unit || '';
         const reasonMap = { Expired:'Expired', Damaged:'Damaged', 'Production Error':'Prod Error', Quality:'Quality' };
         return `<tr>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${formatDateAU(w.waste_date)}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(pName)} ${pName}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700;color:var(--red)">−${w.quantity} ${unit}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);color:${reasonColor(w.reason)}">${reasonMap[w.reason]||w.reason}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${w.production_date ? formatDateAU(w.production_date) : '—'}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2)">${w.recorded_by||'—'}</td>
-          <td style="padding:5px 7px;border-bottom:1px solid var(--bd2);text-align:center;white-space:nowrap"><span style="color:var(--blue);cursor:pointer" onclick="showWasteEdit('${w.waste_id}')">✏️</span> <span style="color:var(--red);cursor:pointer" onclick="deleteWaste('${w.waste_id}')">🗑️</span></td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(w.waste_date)}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(pName)} ${pName}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700;color:var(--red)">−${w.quantity} ${unit}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);color:${reasonColor(w.reason)}">${reasonMap[w.reason]||w.reason}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.production_date ? formatDateAU(w.production_date) : '—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.recorded_by||'—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;white-space:nowrap"><span style="color:var(--blue);cursor:pointer" onclick="showWasteEdit('${w.waste_id}')">✏️</span> <span style="color:var(--red);cursor:pointer" onclick="deleteWaste('${w.waste_id}')">🗑️</span></td>
         </tr>`;
       }).join('')}</tbody>
     </table>`}
@@ -226,7 +226,7 @@ function renderReturnsScreen() {
   const borderMap = { Reported:'var(--orange)', Received:'var(--blue)', Returning:'var(--orange)', Reworked:'var(--green)', Wasted:'var(--red)' };
   const isResolved = st => st === 'Reworked' || st === 'Wasted';
 
-  content.innerHTML = `<div style="padding:14px 18px">
+  content.innerHTML = `<div style="padding:16px 20px">
     <button class="btn btn-gold" style="margin-bottom:10px" onclick="showReturnForm()">➕ แจ้ง Return ใหม่</button>
     <div style="font-size:13px;font-weight:700;margin-bottom:6px">📋 รายการ Return (${items.length})</div>
 
@@ -250,8 +250,8 @@ function renderReturnsScreen() {
           <div style="display:flex;gap:5px;margin-top:6px">
             <button class="btn btn-outline btn-sm" style="padding:3px 10px;font-size:12px" onclick="event.stopPropagation();showReturnDetail('${r.return_id}')">👁️ ดู Detail</button>
             ${canEdit ? `<button class="btn btn-outline btn-sm" style="padding:3px 10px;font-size:12px;color:var(--gold);border-color:var(--gold)" onclick="event.stopPropagation();showEditReturnForm('${r.return_id}')">✏️ แก้ไข</button>` :
-              resolved ? '<span style="font-size:11px;color:var(--t4);padding:4px 0">✅ BC ดำเนินการแล้ว</span>' :
-              '<span style="font-size:11px;color:var(--t4);padding:4px 0">🔒 BC รับแล้ว — แก้ไขไม่ได้</span>'}
+              resolved ? '<span style="font-size:12px;color:var(--t4);padding:4px 0">✅ BC ดำเนินการแล้ว</span>' :
+              '<span style="font-size:12px;color:var(--t4);padding:4px 0">🔒 BC รับแล้ว — แก้ไขไม่ได้</span>'}
           </div>
         </div>`;
       }).join('')}</div>`
@@ -455,19 +455,19 @@ async function renderReturnDashboard() {
     html += `
       <div style="padding:0 16px 10px"><div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
         <div style="padding:10px;background:var(--red-bg);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:11px;color:var(--red);font-weight:600">TOTAL</div>
+          <div style="font-size:12px;color:var(--red);font-weight:600">TOTAL</div>
           <div style="font-size:22px;font-weight:800;color:var(--red)">${d.summary.total}</div>
         </div>
         <div style="padding:10px;background:var(--orange-bg);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:11px;color:var(--orange);font-weight:600">Reported</div>
+          <div style="font-size:12px;color:var(--orange);font-weight:600">Reported</div>
           <div style="font-size:22px;font-weight:800;color:var(--orange)">${bs.Reported||0}</div>
         </div>
         <div style="padding:10px;background:var(--blue-bg);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:11px;color:var(--blue);font-weight:600">Received</div>
+          <div style="font-size:12px;color:var(--blue);font-weight:600">Received</div>
           <div style="font-size:22px;font-weight:800;color:var(--blue)">${bs.Received||0}</div>
         </div>
         <div style="padding:10px;background:var(--green-bg);border-radius:var(--rd2);text-align:center">
-          <div style="font-size:11px;color:var(--green);font-weight:600">Resolved</div>
+          <div style="font-size:12px;color:var(--green);font-weight:600">Resolved</div>
           <div style="font-size:22px;font-weight:800;color:var(--green)">${(bs.Reworked||0)+(bs.Wasted||0)}</div>
         </div>
       </div></div>`;
@@ -570,17 +570,17 @@ function renderBcHome() {
   if (bs.Pending > 0) alerts.push(`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);margin-bottom:2px;font-size:13px;font-weight:500;background:var(--red-bg);color:var(--red)">🚨 ${bs.Pending} order pending accept</div>`);
   if (d.urgent_items > 0) alerts.push(`<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--rd2);margin-bottom:2px;font-size:13px;font-weight:500;background:#fef3c7;color:#92400e">⚡ ${d.urgent_items} urgent items</div>`);
 
-  document.getElementById('bcHomeContent').innerHTML = `<div style="padding:14px 18px">
+  document.getElementById('bcHomeContent').innerHTML = `<div style="padding:16px 20px">
     <!-- KPI Pills -->
     <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
-      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--red-bg)"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--red)">Pending</div><div style="font-size:16px;font-weight:800;color:var(--red)">${bs.Pending||0}</div></div>
-      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--blue-bg)"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--blue)">Ordered</div><div style="font-size:16px;font-weight:800;color:var(--blue)">${bs.Ordered||0}</div></div>
-      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--orange-bg)"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--orange)">In Progress</div><div style="font-size:16px;font-weight:800;color:var(--orange)">${bs.InProgress||0}</div></div>
-      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--green-bg)"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--green)">Done</div><div style="font-size:16px;font-weight:800;color:var(--green)">${done}</div></div>
+      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--red-bg)"><div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--red)">Pending</div><div style="font-size:16px;font-weight:800;color:var(--red)">${bs.Pending||0}</div></div>
+      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--blue-bg)"><div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--blue)">Ordered</div><div style="font-size:16px;font-weight:800;color:var(--blue)">${bs.Ordered||0}</div></div>
+      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--orange-bg)"><div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--orange)">In Progress</div><div style="font-size:16px;font-weight:800;color:var(--orange)">${bs.InProgress||0}</div></div>
+      <div style="padding:7px 12px;border-radius:var(--rd2);background:var(--green-bg)"><div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--green)">Done</div><div style="font-size:16px;font-weight:800;color:var(--green)">${done}</div></div>
     </div>
 
     <!-- Progress bar -->
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);font-weight:600;margin-bottom:2px"><span><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--green);margin-right:2px"></span>Today</span><span style="color:var(--green)">${done}/${d.today_total}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t3);font-weight:600;margin-bottom:2px"><span><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--green);margin-right:2px"></span>Today</span><span style="color:var(--green)">${done}/${d.today_total}</span></div>
     <div style="height:4px;border-radius:2px;background:var(--s2);overflow:hidden;margin-bottom:8px"><div style="height:100%;border-radius:2px;width:${pct}%;background:linear-gradient(90deg,var(--green),#2ecc71)"></div></div>
 
     ${alerts.length > 0 ? `<div style="margin-bottom:8px">${alerts.join('')}</div>` : ''}
@@ -588,24 +588,24 @@ function renderBcHome() {
     <!-- Orders -->
     <div class="sec-hd" style="padding-left:0">Orders</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
-      <div class="card" style="border-left:3px solid var(--blue)" onclick="showScreen('bc-orders')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📋</div><div style="flex:1"><div class="card-title" style="font-size:13px">View Orders</div><div class="card-desc" style="font-size:11px">ออเดอร์ ${scope} ทั้งหมด</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
-      <div class="card" onclick="showScreen('bc-stock')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📦</div><div style="flex:1"><div class="card-title" style="font-size:13px">Manage Stock</div><div class="card-desc" style="font-size:11px">เพิ่ม/ลดสต็อก</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
-      <div class="card" onclick="showScreen('bc-print')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🖨️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Print Centre</div><div class="card-desc" style="font-size:11px">Production / Delivery Slip</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" style="border-left:3px solid var(--blue)" onclick="showScreen('bc-orders')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📋</div><div style="flex:1"><div class="card-title" style="font-size:13px">View Orders</div><div class="card-desc" style="font-size:12px">ออเดอร์ ${scope} ทั้งหมด</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('bc-stock')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📦</div><div style="flex:1"><div class="card-title" style="font-size:13px">Manage Stock</div><div class="card-desc" style="font-size:12px">เพิ่ม/ลดสต็อก</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('bc-print')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🖨️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Print Centre</div><div class="card-desc" style="font-size:12px">Production / Delivery Slip</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
     </div>
 
     <!-- Records -->
     <div class="sec-hd" style="padding-left:0">Records</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
-      <div class="card" onclick="showScreen('waste')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🗑️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Record Waste</div><div class="card-desc" style="font-size:11px">ผลิตเสีย / เสียหาย / หมดอายุ</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
-      <div class="card" onclick="showScreen('bc-returns')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">↩️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Incoming Returns</div><div class="card-desc" style="font-size:11px">รับ-จัดการ return จากร้าน</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('waste')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🗑️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Record Waste</div><div class="card-desc" style="font-size:12px">ผลิตเสีย / เสียหาย / หมดอายุ</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('bc-returns')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">↩️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Incoming Returns</div><div class="card-desc" style="font-size:12px">รับ-จัดการ return จากร้าน</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
     </div>
 
     <!-- Dashboard -->
     <div class="sec-hd" style="padding-left:0">Dashboard</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
-      <div class="card" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🏆</div><div style="flex:1"><div class="card-title" style="font-size:13px">Top Products</div><div class="card-desc" style="font-size:11px">สินค้ายอดนิยม</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
-      <div class="card" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🗑️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Waste Dashboard</div><div class="card-desc" style="font-size:11px">สรุปของเสีย</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
-      <div class="card" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">↩️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Return Dashboard</div><div class="card-desc" style="font-size:11px">สรุป return ทั้งหมด</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('admin-top-products')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🏆</div><div style="flex:1"><div class="card-title" style="font-size:13px">Top Products</div><div class="card-desc" style="font-size:12px">สินค้ายอดนิยม</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">🗑️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Waste Dashboard</div><div class="card-desc" style="font-size:12px">สรุปของเสีย</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
+      <div class="card" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">↩️</div><div style="flex:1"><div class="card-title" style="font-size:13px">Return Dashboard</div><div class="card-desc" style="font-size:12px">สรุป return ทั้งหมด</div></div><div class="card-right" style="font-size:13px">→</div></div></div>
     </div>
 
     ${bcAdminMenus}
@@ -652,13 +652,13 @@ function getBcAdminMenus() {
   const allowedAdmin = adminMenus.filter(m => hasAdminPerm(m.perm));
 
   const renderCard = (m) => `
-    <div class="card" onclick="showScreen('${m.screen}')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">${m.icon}</div><div style="flex:1"><div class="card-title" style="font-size:13px">${m.title}</div><div class="card-desc" style="font-size:11px">${m.desc}</div></div><div class="card-right" style="font-size:13px">→</div></div></div>`;
+    <div class="card" onclick="showScreen('${m.screen}')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">${m.icon}</div><div style="flex:1"><div class="card-title" style="font-size:13px">${m.title}</div><div class="card-desc" style="font-size:12px">${m.desc}</div></div><div class="card-right" style="font-size:13px">→</div></div></div>`;
 
   let html = '';
 
   if (allowedAdmin.length > 0) {
     html += `
-    <div style="padding:8px 10px;background:var(--purple-bg);border:1px dashed var(--purple);border-radius:var(--rd2);font-size:12px;color:var(--purple);margin-top:4px;margin-bottom:8px">👑 <b>Admin</b></div>
+    <div style="padding:12px 16px;background:var(--purple-bg);border:1px dashed var(--purple);border-radius:var(--rd2);font-size:12px;color:var(--purple);margin-top:4px;margin-bottom:8px">👑 <b>Admin</b></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
       ${allowedAdmin.map(renderCard).join('')}
     </div>`;
