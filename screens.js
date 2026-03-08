@@ -1,4 +1,4 @@
-// Version 9.4 | 8 MAR 2026 | Siam Palette Group
+// Version 9.5 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -534,6 +534,8 @@ function renderBrowse() {
     S.cart = [];
     S.headerNote = '';
   }
+  // Ensure delivery date is set (always default tomorrow)
+  if (!S.deliveryDate) S.deliveryDate = tomorrowSydney();
   // Date pills
   const today = todaySydney();
   const tmrStr = tomorrowSydney();
@@ -599,6 +601,14 @@ function renderProducts() {
   let prods = S.products.filter(p => p.is_active === true || p.is_active === 'TRUE');
   if (S.productFilter !== 'all') prods = prods.filter(p => p.cat_id === S.productFilter);
   if (S.productSearch) { const q = S.productSearch.toLowerCase(); prods = prods.filter(p => p.product_name.toLowerCase().includes(q)); }
+
+  // Sort: in-cart first, then A-Z
+  prods.sort((a, b) => {
+    const aInCart = S.cart.some(c => c.product_id === a.product_id) ? 0 : 1;
+    const bInCart = S.cart.some(c => c.product_id === b.product_id) ? 0 : 1;
+    if (aInCart !== bInCart) return aInCart - bInCart;
+    return a.product_name.localeCompare(b.product_name);
+  });
 
   const grid = document.getElementById('productGrid');
   if (prods.length === 0) {
