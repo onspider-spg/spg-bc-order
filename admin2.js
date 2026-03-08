@@ -1,4 +1,4 @@
-// Version 9.4 | 8 MAR 2026 | Siam Palette Group
+// Version 9.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -183,10 +183,7 @@ async function renderAdminTopProducts() {
       </div>
       ${S.role === 'bc' ? `<div class="filter-bar" style="margin-top:0">
         <div class="filter-chip ${S.topProdStore==='ALL'?'active':''}" onclick="S.topProdStore='ALL';renderAdminTopProducts()">ทุกร้าน</div>
-        <div class="filter-chip ${S.topProdStore==='MNG'?'active':''}" onclick="S.topProdStore='MNG';renderAdminTopProducts()">MNG</div>
-        <div class="filter-chip ${S.topProdStore==='ISH'?'active':''}" onclick="S.topProdStore='ISH';renderAdminTopProducts()">ISH</div>
-        <div class="filter-chip ${S.topProdStore==='GB'?'active':''}" onclick="S.topProdStore='GB';renderAdminTopProducts()">GB</div>
-        <div class="filter-chip ${S.topProdStore==='TMC'?'active':''}" onclick="S.topProdStore='TMC';renderAdminTopProducts()">TMC</div>
+        ${(S.stores||[]).filter(s => !['BC'].includes(s.store_id)).map(s => `<div class="filter-chip ${S.topProdStore===s.store_id?'active':''}" onclick="S.topProdStore='${s.store_id}';renderAdminTopProducts()">${s.store_id}</div>`).join('')}
       </div>` : ''}`;
     
     // Summary cards — wireframe 3-col KPI
@@ -1410,8 +1407,8 @@ function renderProductionSheet() {
     return;
   }
 
-  // Always show all 4 stores
-  const allStores = ['MNG','ISH','GB','TMC'];
+  // Always show stores that have orders (dynamic from DB)
+  const allStores = (S.stores||[]).filter(s => !['BC'].includes(s.store_id)).map(s => s.store_id);
   const prodSet = new Set();
   allItems.forEach(it => { prodSet.add(it.product_name); });
   const products = [...prodSet].sort();

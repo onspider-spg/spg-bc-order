@@ -1,4 +1,4 @@
-// Version 9.5 | 8 MAR 2026 | Siam Palette Group
+// Version 9.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -45,7 +45,10 @@ const S = {
   wasteSelectedCat: '',
   returns: [],
   notifications: [],
-  dashboard: null,
+  dashboard: {},
+  stores: [],
+  departments: [],
+  orderingChannels: [],
   currentScreen: 'loading',
   currentParam: null,
   productSearch: '',
@@ -203,10 +206,17 @@ async function init() {
         return;
       }
       if (!S.session) { showScreen('invalid-token'); return; }
-      S.notifications = resp.notifications || [];
       S.myPerms = resp.permissions || [];
-      S.dashboard = resp.dashboard || {};
+      S.stores = resp.stores || [];
+      S.departments = resp.departments || [];
+      S.orderingChannels = resp.orderingChannels || [];
       await routeToHome();
+      // Async: load dashboard + notifications after render (non-blocking)
+      loadDashboard().then(() => {
+        if (S.currentScreen === 'home') renderHomeDashboard();
+        if (S.currentScreen === 'admin-dashboard') renderAdminDashboard();
+      }).catch(() => {});
+      loadNotifications().then(() => checkNotifications()).catch(() => {});
     } else {
       const role = (demoMode === 'bc') ? 'bc' : 'store';
       S.session = getMockSession(role);
@@ -408,6 +418,9 @@ function getMockSession(role) {
 }
 
 function loadMockData(role) {
+  S.stores = [{ store_id:'MNG', store_name:'Mango Coco' }, { store_id:'ISH', store_name:'Issho Cafe' }, { store_id:'GB', store_name:'Golden Brown' }, { store_id:'TMC', store_name:'The Melting Cheese' }, { store_id:'BC', store_name:'Bakery Centre' }];
+  S.departments = [{ dept_id:'dessert', dept_name:'Dessert' }, { dept_id:'drink', dept_name:'Drink' }];
+  S.orderingChannels = S.stores.filter(s => s.store_id !== 'BC').flatMap(s => S.departments.map(d => ({ store_id: s.store_id, dept_id: d.dept_id, is_active: true })));
   S.categories = [
     { cat_id:'CAT-CAKE', cat_name:'Cake', section_id:'cake', sort_order:1 },
     { cat_id:'CAT-SAUCE', cat_name:'Sauce', section_id:'sauce', sort_order:2 },
@@ -600,13 +613,17 @@ function formatDateAU(str) {
 }
 
 function getStoreName(id) {
-  const map = { MNG:'Mango Coco', ISH:'Issho Cafe', GB:'Golden Brown', TMC:'The Melting Cheese', BC:'Bakery Centre', ALL:'ทุกร้าน' };
-  return map[id] || id;
+  if (!id) return '';
+  if (id === 'ALL') return 'ทุกร้าน';
+  const s = (S.stores || []).find(s => s.store_id === id);
+  return s ? s.store_name : id;
 }
 
 function getDeptName(id) {
-  const map = { dessert:'Dessert', front:'Front', kitchen:'Kitchen', drink:'Drink', cake:'Cake', sauce:'Sauce', bakery:'Bakery', ALL:'All' };
-  return map[id] || id;
+  if (!id) return '';
+  if (id === 'ALL') return 'All';
+  const d = (S.departments || []).find(d => d.dept_id === id);
+  return d ? d.dept_name : id;
 }
 
 function getCatName(sectionId) {

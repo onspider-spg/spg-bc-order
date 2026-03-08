@@ -1,4 +1,4 @@
-// Version 9.4 | 8 MAR 2026 | Siam Palette Group
+// Version 9.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -292,15 +292,14 @@ async function renderProductEditScreen() {
   }
 
   const cats = S.categories || [];
-  const sections = ['cake', 'sauce', 'bakery'];
+  const sections = [...new Set((S.products||[]).map(p => p.section_id).filter(Boolean))].sort();
   const unitOpts = ['pieces','pcs','loaves','btl','pack','kg','g'];
-  const stores = [
-    { id:'MNG', name:'MNG Haymarket', depts:['dessert','drink'] },
-    { id:'ISH', name:'ISH Burwood', depts:['dessert','drink'] },
-    { id:'GB',  name:'GB City', depts:['dessert','drink'] },
-    { id:'TMC', name:'TMC', depts:['dessert','drink'] },
-    { id:'RW',  name:'RW Marketplace', depts:['dessert','drink'] },
-  ];
+  // Build store+dept combos from ordering channels (DB-driven)
+  const storeVisRows = [];
+  (S.orderingChannels || []).forEach(ch => {
+    const store = (S.stores || []).find(s => s.store_id === ch.store_id);
+    if (store) storeVisRows.push({ store_id: ch.store_id, store_name: store.store_name, dept_id: ch.dept_id });
+  });
 
   const imgUrl = isEdit ? (p.image_url || '') : '';
   const catObj = isEdit ? (cats.find(c => (c.cat_id||c.category_id) === (p.cat_id||p.category_id))) : null;
@@ -417,19 +416,17 @@ async function renderProductEditScreen() {
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Department</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Visible?</th>
         </tr></thead>
-        <tbody>${stores.map(store => {
-          return store.depts.map(dept => {
-            const vis = (S._editVisibility||[]).find(v => v.store_id === store.id && v.dept_id === dept);
+        <tbody>${storeVisRows.map(row => {
+            const vis = (S._editVisibility||[]).find(v => v.store_id === row.store_id && v.dept_id === row.dept_id);
             const checked = vis ? vis.is_active : (!isEdit);
             return `<tr>
-              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${store.name}</td>
-              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${dept}</td>
+              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${row.store_name}</td>
+              <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${row.dept_id}</td>
               <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">
-                <span style="color:${checked?'var(--green)':'var(--t4)'};font-size:14px;cursor:pointer" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.textContent=this.dataset.on==='1'?'☑':'☐';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--t4)';document.getElementById('vis_${store.id}_${dept}').checked=this.dataset.on==='1'" data-on="${checked?'1':'0'}">${checked?'☑':'☐'}</span>
-                <input type="checkbox" id="vis_${store.id}_${dept}" ${checked?'checked':''} style="display:none">
+                <span style="color:${checked?'var(--green)':'var(--t4)'};font-size:14px;cursor:pointer" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.textContent=this.dataset.on==='1'?'☑':'☐';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--t4)';document.getElementById('vis_${row.store_id}_${row.dept_id}').checked=this.dataset.on==='1'" data-on="${checked?'1':'0'}">${checked?'☑':'☐'}</span>
+                <input type="checkbox" id="vis_${row.store_id}_${row.dept_id}" ${checked?'checked':''} style="display:none">
               </td>
             </tr>`;
-          }).join('');
         }).join('')}</tbody>
       </table>
 
@@ -505,16 +502,12 @@ async function submitProductEdit(productId) {
   if (isEdit) body.product_id = productId;
   
   // Collect visibility
-  const stores = ['MNG','ISH','GB','TMC','RW'];
-  const depts = ['dessert','drink'];
   const visibility = [];
-  stores.forEach(sid => {
-    depts.forEach(dept => {
-      const cb = document.getElementById('vis_' + sid + '_' + dept);
-      if (cb) {
-        visibility.push({ store_id: sid, dept_id: dept, is_active: cb.checked });
-      }
-    });
+  (S.orderingChannels || []).forEach(ch => {
+    const cb = document.getElementById('vis_' + ch.store_id + '_' + ch.dept_id);
+    if (cb) {
+      visibility.push({ store_id: ch.store_id, dept_id: ch.dept_id, is_active: cb.checked });
+    }
   });
   
   try {
