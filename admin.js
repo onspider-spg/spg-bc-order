@@ -1,4 +1,4 @@
-// Version 8.5 | 8 MAR 2026 | Siam Palette Group
+// Version 8.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -154,7 +154,6 @@ async function loadActivityFeed() {
 async function renderAdminProducts() {
   const el = document.getElementById('adminProductsContent');
   
-  // Only load if not yet loaded (lazy load in showScreen handles first load)
   if (!S._productsLoaded) {
     el.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
     try { await loadProducts(); S._productsLoaded = true; } catch(e) {}
@@ -164,14 +163,9 @@ async function renderAdminProducts() {
   const active = prods.filter(p => p.is_active === true || p.is_active === 'TRUE');
   const inactive = prods.filter(p => p.is_active !== true && p.is_active !== 'TRUE');
   
-  // Search state
   if (!S.adminProductSearch) S.adminProductSearch = '';
   if (!S.adminProductTab) S.adminProductTab = 'active';
-  
   const tab = S.adminProductTab;
-  const list = tab === 'active' ? active : inactive;
-  const q = S.adminProductSearch.toLowerCase();
-  const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
   
   el.innerHTML = `
     <div style="padding:16px 20px">
@@ -181,9 +175,22 @@ async function renderAdminProducts() {
         <div style="flex:1"></div>
         <button class="btn btn-gold btn-sm" onclick="showAddProductForm()">+ Add</button>
       </div>
-      <input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProducts()" style="width:100%;margin-bottom:8px">
+      <input class="search-input" id="adminProdSearch" placeholder="🔍 ค้นหาสินค้า..." value="${S.adminProductSearch}" oninput="S.adminProductSearch=this.value;renderAdminProductList()" style="width:100%;margin-bottom:8px">
+      <div id="adminProdListWrap"></div>
+    </div>`;
+  renderAdminProductList();
+}
 
-      ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' :
+function renderAdminProductList() {
+  const wrap = document.getElementById('adminProdListWrap');
+  if (!wrap) return;
+  const prods = S.products || [];
+  const tab = S.adminProductTab || 'active';
+  const list = tab === 'active' ? prods.filter(p => p.is_active === true || p.is_active === 'TRUE') : prods.filter(p => p.is_active !== true && p.is_active !== 'TRUE');
+  const q = (S.adminProductSearch || '').toLowerCase();
+  const filtered = q ? list.filter(p => p.product_name.toLowerCase().includes(q)) : list;
+
+  wrap.innerHTML = filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' :
       window.innerWidth < 768 ? `
       <div style="display:flex;flex-direction:column;gap:4px">${filtered.map(p => {
         const isAct = p.is_active === true || p.is_active === 'TRUE';
@@ -231,8 +238,7 @@ async function renderAdminProducts() {
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
           </tr>`;
         }).join('')}</tbody>
-      </table></div>`}
-    </div>`;
+      </table></div>`;
 }
 
 async function toggleProduct(productId, newActive) {
@@ -240,6 +246,8 @@ async function toggleProduct(productId, newActive) {
   try {
     const resp = await api('update_product', { product_id: productId, is_active: newActive });
     toast(resp.message || 'อัพเดตแล้ว', 'success');
+    _C.del('prods');
+    S._productsLoaded = false;
     await renderAdminProducts();
   } catch(e) { toast('เกิดข้อผิดพลาด', 'error'); }
 }
@@ -517,7 +525,10 @@ async function submitProductEdit(productId) {
     }
     
     toast(resp.message || '✅ บันทึกเรียบร้อย', 'success');
+    _C.del('prods');
+    S._productsLoaded = false;
     await loadProducts();
+    S._productsLoaded = true;
     showScreen('admin-products');
   } catch(e) {
     toast('❌ Error: ' + e.message, 'error');

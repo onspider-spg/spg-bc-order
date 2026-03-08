@@ -1,4 +1,4 @@
-// Version 8.8 | 8 MAR 2026 | Siam Palette Group
+// Version 8.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -56,7 +56,7 @@ function renderWasteList() {
         const reasonMap = { Expired:'Expired', Damaged:'Damaged', 'Production Error':'Prod Error', Quality:'Quality' };
         return `<tr>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(w.waste_date)}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(pName)} ${pName}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${pName}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700;color:var(--red)">−${w.quantity} ${unit}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);color:${reasonColor(w.reason)}">${reasonMap[w.reason]||w.reason}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.production_date ? formatDateAU(w.production_date) : '—'}</td>

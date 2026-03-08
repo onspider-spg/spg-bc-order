@@ -1,4 +1,4 @@
-// Version 8.8 | 8 MAR 2026 | Siam Palette Group
+// Version 8.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -576,16 +576,18 @@ async function renderBcOrders() {
 function renderBcOrderFilters() {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
   const dated = filterOrdersByDateRangeAndScope(S.bcDateFrom, S.bcDateTo, scope);
-  const counts = { all:dated.length, Pending:0, Ordered:0, InProgress:0, Fulfilled:0, Delivered:0 };
+  const counts = { all:dated.length, Pending:0, Ordered:0, InProgress:0, Fulfilled:0, Delivered:0, Rejected:0, Cancelled:0 };
   dated.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
 
   const chips = [
-    { key:'all', label:`ทั้งหมด (${counts.all})`, color:'' },
-    { key:'Pending', label:`Pending (${counts.Pending})`, color:'var(--red)' },
-    { key:'Ordered', label:`Ordered (${counts.Ordered})`, color:'var(--blue)' },
-    { key:'InProgress', label:`In Prog (${counts.InProgress})`, color:'var(--orange)' },
-    { key:'Fulfilled', label:`Done (${counts.Fulfilled + counts.Delivered})`, color:'var(--green)' },
+    { key:'all', label:`ทั้งหมด (${counts.all})` },
+    { key:'Pending', label:`Pending (${counts.Pending})` },
+    { key:'Ordered', label:`Ordered (${counts.Ordered})` },
+    { key:'InProgress', label:`In Prog (${counts.InProgress})` },
+    { key:'Fulfilled', label:`Done (${counts.Fulfilled + counts.Delivered})` },
   ];
+  if (counts.Rejected > 0) chips.push({ key:'Rejected', label:`Rejected (${counts.Rejected})` });
+  if (counts.Cancelled > 0) chips.push({ key:'Cancelled', label:`Cancelled (${counts.Cancelled})` });
 
   document.getElementById('bcOrderFilters').innerHTML = chips.map(c =>
     `<div class="filter-chip ${S.bcStatusFilter===c.key?'bc-active':''}" onclick="S.bcStatusFilter='${c.key}';renderBcOrderList()">${c.label}</div>`
@@ -738,7 +740,7 @@ function renderBcAccept() {
         <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
       </tr></thead>
       <tbody>${items.map(it => `<tr>
-        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(it.product_name)} ${it.product_name}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${it.product_name}</td>
         <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${it.section_id||''}</td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${it.qty_ordered} ${it.unit||''}</td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${it.is_urgent?'⚡ YES':'—'}</td>
@@ -1056,7 +1058,7 @@ function renderBcStockTable(items) {
         const statusCls = actual === 0 ? 'background:var(--red-bg);color:var(--red)' : (actual <= min2 ? 'background:#fef3c7;color:#92400e' : 'background:var(--green-bg);color:var(--green)');
         const numColor = actual === 0 ? 'var(--red)' : (actual <= min2 ? 'var(--orange)' : 'var(--green)');
         return `<tr>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(s.product_name)} ${s.product_name}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${s.product_name}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>

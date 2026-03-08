@@ -1,4 +1,4 @@
-// Version 8.8 | 8 MAR 2026 | Siam Palette Group
+// Version 8.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -1072,7 +1072,7 @@ async function viewOrder(orderId) {
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Fulfilment</th>
         </tr></thead>
         <tbody>${items.length > 0 ? items.map(item => `<tr>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(item.product_name)} ${item.product_name||item.product_id}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${item.product_name||item.product_id}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${item.qty_ordered} ${item.unit||''}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${item.is_urgent?'⚡':'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${item.item_note||'—'}</td>
@@ -1206,7 +1206,7 @@ function renderStock(search) {
         const statusCls = sa === 0 ? 'background:var(--red-bg);color:var(--red)' : (sa <= min2 ? 'background:#fef3c7;color:#92400e' : 'background:var(--green-bg);color:var(--green)');
         const numColor = sa === 0 ? 'var(--red)' : (sa <= min2 ? 'var(--orange)' : 'var(--green)');
         return `<tr>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(s.product_name)} ${s.product_name}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${s.product_name}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
