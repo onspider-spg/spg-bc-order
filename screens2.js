@@ -1,4 +1,4 @@
-// Version 10.7 | 8 MAR 2026 | Siam Palette Group
+// Version 10.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -52,7 +52,7 @@ function renderWasteList() {
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700;color:var(--red)">−${w.quantity} ${unit}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);color:${reasonColor(w.reason)}">${reasonMap[w.reason]||w.reason}</td>
           <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.production_date ? formatDateAU(w.production_date) : '—'}</td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.recorded_by||'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.recorded_by_name||w.recorded_by||'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;white-space:nowrap"><span style="color:var(--blue);cursor:pointer" onclick="showWasteEdit('${w.waste_id}')">✏️</span> <span style="color:var(--red);cursor:pointer" onclick="deleteWaste('${w.waste_id}')">🗑️</span></td>
         </tr>`;
       }).join('')}</tbody>
@@ -350,15 +350,15 @@ function showReturnDetail(returnId) {
   const statusHistory = [
     `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--orange)"></div>
-      <span style="font-size:14px"><strong>Reported</strong> — ${r.reported_by || 'Store'} · ${formatDate(r.created_at)}</span>
+      <span style="font-size:14px"><strong>Reported</strong> — ${r.reported_by_name || r.reported_by || 'Store'} · ${formatDate(r.created_at)}</span>
     </div>`,
     r.status !== 'Reported' ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
-      <span style="font-size:14px"><strong>Received</strong> — BC ${r.resolved_by||''} · ${formatDate(r.resolved_at||r.updated_at)}</span>
+      <span style="font-size:14px"><strong>Received</strong> — BC ${r.resolved_by_name||r.resolved_by||''} · ${formatDate(r.resolved_at||r.updated_at)}</span>
     </div>` : '',
     (r.status === 'Reworked' || r.status === 'Wasted') ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
       <div style="width:8px;height:8px;border-radius:50%;background:${r.status==='Wasted'?'var(--red)':'var(--green)'}"></div>
-      <span style="font-size:14px"><strong>${r.status}</strong> — ${r.resolved_by||'BC'} ${r.failure_reason ? '· '+r.failure_reason : ''}</span>
+      <span style="font-size:14px"><strong>${r.status}</strong> — ${r.resolved_by_name||r.resolved_by||'BC'} ${r.failure_reason ? '· '+r.failure_reason : ''}</span>
     </div>` : '',
   ].filter(Boolean).join('');
 
