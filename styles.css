@@ -1,4 +1,4 @@
-/* Version 8.0 | 8 MAR 2026 | Siam Palette Group */
+/* Version 8.1 | 8 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Design System + Warm Light Theme */
 /* Phase 11: Foundation rewrite — design tokens, proportion fix, mobile ready */
 
@@ -220,6 +220,8 @@ textarea.form-input{resize:vertical;min-height:72px}
   .sum-grid{grid-template-columns:1fr 1fr}
   .g-tb-sub{display:none}
   .g-tb-title{font-size:var(--fs-h2)}
+  .dash-kpi{grid-template-columns:1fr 1fr!important}
+  .dash-2col{grid-template-columns:1fr!important}
 }
 @media(min-width:768px){
   .sum-grid{grid-template-columns:1fr 1fr 1fr 1fr}

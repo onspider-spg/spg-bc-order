@@ -1,4 +1,4 @@
-// Version 8.0 | 7 MAR 2026 | Siam Palette Group
+// Version 8.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -46,8 +46,8 @@ function renderWasteList() {
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สาเหตุ</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">ผลิต</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">ผลิต</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">โดย</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
       </tr></thead>
       <tbody>${filtered.map(w => {
@@ -59,8 +59,8 @@ function renderWasteList() {
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(pName)} ${pName}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700;color:var(--red)">−${w.quantity} ${unit}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);color:${reasonColor(w.reason)}">${reasonMap[w.reason]||w.reason}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.production_date ? formatDateAU(w.production_date) : '—'}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.recorded_by||'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.production_date ? formatDateAU(w.production_date) : '—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${w.recorded_by||'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;white-space:nowrap"><span style="color:var(--blue);cursor:pointer" onclick="showWasteEdit('${w.waste_id}')">✏️</span> <span style="color:var(--red);cursor:pointer" onclick="deleteWaste('${w.waste_id}')">🗑️</span></td>
         </tr>`;
       }).join('')}</tbody>

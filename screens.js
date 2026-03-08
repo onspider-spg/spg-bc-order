@@ -1,4 +1,4 @@
-// Version 8.0 | 7 MAR 2026 | Siam Palette Group
+// Version 8.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -945,13 +945,13 @@ function filterOrders() {
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;letter-spacing:.2px;border-bottom:2px solid var(--bd)">Order ID</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
       </tr></thead>
       <tbody>${orders.map(o => {
         const bdr = bdrMap[o.status] || 'var(--bd)';
@@ -959,13 +959,13 @@ function filterOrders() {
         const itemsSummary = (o.items||[]).map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ') || '—';
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}" onclick="viewOrder('${o.order_id}')">
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.store_id||'—'}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.store_id||'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${itemsSummary}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status}</span></td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.is_cutoff_violation?'⚠️':'—'}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.created_by||'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${o.is_cutoff_violation?'⚠️':'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.created_by||'—'}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
@@ -1166,9 +1166,9 @@ function renderStock(search) {
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-        <th style="padding:8px 16px;text-align:right;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Actual</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:right;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Actual</th>
         <th style="padding:8px 16px;text-align:right;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Available</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สถานะ</th>
       </tr></thead>
@@ -1181,9 +1181,9 @@ function renderStock(search) {
         const numColor = sa === 0 ? 'var(--red)' : (sa <= min2 ? 'var(--orange)' : 'var(--green)');
         return `<tr>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(s.product_name)} ${s.product_name}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right">${sa}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center"><span style="font-size:12px;font-weight:600;padding:2px 6px;border-radius:6px;${statusCls}">${statusLbl}</span></td>
         </tr>`;

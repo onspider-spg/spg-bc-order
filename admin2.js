@@ -1,4 +1,4 @@
-// Version 8.0 | 7 MAR 2026 | Siam Palette Group
+// Version 8.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -642,12 +642,12 @@ function renderBcOrderList() {
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
       </tr></thead>
       <tbody>${orders.map(o => {
         const bdr = bdrMap[o.status] || 'var(--bd)';
@@ -665,12 +665,12 @@ function renderBcOrderList() {
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}${isRejected?'opacity:.5':''}" onclick="${tapAction}">
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${o.store_id}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${itemsSummary}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status === 'InProgress' ? 'In Progress' : o.status}</span></td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${o.is_cutoff_violation?'<span style="font-size:12px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span>':'—'}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.user_id||'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${o.is_cutoff_violation?'<span style="font-size:12px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span>':'—'}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.user_id||'—'}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
@@ -723,17 +723,17 @@ function renderBcAccept() {
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">⚡</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
       </tr></thead>
       <tbody>${items.map(it => `<tr>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(it.product_name)} ${it.product_name}</td>
-        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${it.section_id||''}</td>
+        <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${it.section_id||''}</td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${it.qty_ordered} ${it.unit||''}</td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${it.is_urgent?'⚡ YES':'—'}</td>
-        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${it.item_note||it.note||'—'}</td>
+        <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${it.item_note||it.note||'—'}</td>
       </tr>`).join('')}</tbody>
     </table>
 
@@ -1011,9 +1011,9 @@ function renderBcStockTable(items) {
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-        <th style="padding:8px 16px;text-align:right;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Actual</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+        <th class="hide-m" style="padding:8px 16px;text-align:right;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Actual</th>
         <th style="padding:8px 16px;text-align:right;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Available</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
@@ -1027,9 +1027,9 @@ function renderBcStockTable(items) {
         const numColor = actual === 0 ? 'var(--red)' : (actual <= min2 ? 'var(--orange)' : 'var(--green)');
         return `<tr>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${prodEmoji(s.product_name)} ${s.product_name}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${getCatName(s.section_id)}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${s.unit}</td>
+          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right;font-weight:700;color:${numColor}">${actual}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:right">${sa}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center"><span style="font-size:12px;font-weight:600;padding:2px 6px;border-radius:6px;${statusCls}">${statusLbl}</span></td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center"><button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:12px" onclick="showBcStockPopup('${s.product_id}')">+/−</button></td>

@@ -1,4 +1,4 @@
-// Version 8.0 | 7 MAR 2026 | Siam Palette Group
+// Version 8.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -39,7 +39,7 @@ function renderAdminDashboard() {
 
   document.getElementById('adminDashboardContent').innerHTML = `<div style="padding:16px 20px">
     <!-- Row 1: KPI -->
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+    <div class="dash-kpi" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
       <div style="padding:12px;background:var(--gold-bg);border-radius:var(--rd2)">
         <div style="font-size:12px;color:var(--gold);font-weight:600;text-transform:uppercase">Total Orders</div>
         <div style="font-size:24px;font-weight:800;color:var(--gold)">${total}</div>
@@ -61,7 +61,7 @@ function renderAdminDashboard() {
     </div>
 
     <!-- Row 2: Store Health + Status Distribution -->
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-bottom:8px">
+    <div class="dash-2col" style="display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-bottom:8px">
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
         <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🏪 Store Health</div>
         ${Object.keys(stores).length === 0 ? '<div style="font-size:13px;color:var(--td);padding:8px 0">ยังไม่มีออเดอร์</div>' :
@@ -109,7 +109,7 @@ function renderAdminDashboard() {
     </div>
 
     <!-- Row 5: Recent Activity + Quick Links -->
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:8px">
+    <div class="dash-2col" style="display:grid;grid-template-columns:3fr 2fr;gap:8px">
       <div style="background:#fff;border:1px solid var(--bd2);border-radius:var(--rd2);padding:10px">
         <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">🕐 Recent Activity</div>
         <div id="activityFeed" style="font-size:12px;color:var(--t3)">Loading...</div>
@@ -189,12 +189,12 @@ async function renderAdminProducts() {
         <thead><tr style="background:var(--s1)">
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Category</th>
-          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
-          <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
-          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
-          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
-          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
-          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
+          <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Section</th>
+          <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Unit</th>
+          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Min</th>
+          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Step</th>
+          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Max</th>
+          <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Stock?</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:13px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
         </tr></thead>
@@ -205,12 +205,12 @@ async function renderAdminProducts() {
           return `<tr>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${p.product_name}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${catName}</td>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
-            <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
+            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.section_id||'—'}</td>
+            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${p.unit}</td>
+            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.min_order||1}</td>
+            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.order_step||1}</td>
+            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.max_order||'—'}</td>
+            <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${p.allow_stock?'Yes':'No'}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${isAct ? '<span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:10px;font-size:13px;font-weight:600">Active</span>' : '<span style="color:var(--t4);font-size:13px">Hidden</span>'}</td>
             <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;cursor:pointer" onclick="showEditProductForm('${p.product_id}')">✏️</td>
           </tr>`;
