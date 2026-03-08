@@ -1,4 +1,4 @@
-// Version 7.4 | 7 MAR 2026 | Siam Palette Group
+// Version 8.1 | 7 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -503,7 +503,7 @@ function renderGlobalTopbar() {
 
   el.innerHTML = `
     <div class="g-tb-ham" onclick="toggleSidebar()"><div class="g-tb-ham-lines"><span></span><span></span><span></span></div></div>
-    <div class="g-tb-logo">SPG</div>
+    <div class="g-tb-logo" onclick="location.href='${HOME_URL}'" title="กลับ Home">SPG</div>
     <div class="g-tb-title">สั่งของเบเกอรี่ <span style="color:var(--t4);font-weight:400">:</span> <span style="color:var(--gold)" id="gtbScreenTitle">${title}</span><div class="g-tb-sub">${s.display_name || ''} · ${s.tier_id || ''}</div></div>
     <div class="g-tb-bell" onclick="showNotifPanel()">🔔${hasNotif ? '<span class="g-tb-dot"></span>' : ''}</div>
     <div class="g-tb-av${avClass}" onclick="showProfileInfo()" style="cursor:pointer">${(s.display_name||'?').charAt(0)}</div>`;
