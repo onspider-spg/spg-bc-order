@@ -1,4 +1,4 @@
-// Version 9.6 | 8 MAR 2026 | Siam Palette Group
+// Version 9.7 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -654,9 +654,6 @@ function toast(msg, type='success') {
   setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(-20px)'; setTimeout(() => t.remove(), 300); }, 3000);
 }
 
-// Dialog
-function showDialog(html) {
-
 // ─── SECTION FILTER (shared across all pages) ─────────────
 const SEC_ICONS = { cake:'🎂', sauce:'🍶', tart:'🥧', bread:'🍞', bakery:'🍞' };
 
@@ -680,6 +677,9 @@ function sfFilter(key, items, field) {
   if (!S[key] || S[key].length === 0) return items;
   return items.filter(i => S[key].includes(i[field]));
 }
+
+// Dialog
+function showDialog(html) {
   document.getElementById('dialogContent').innerHTML = html;
   document.getElementById('overlay').classList.add('show');
 }
