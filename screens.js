@@ -1,4 +1,4 @@
-// Version 9.5 | 8 MAR 2026 | Siam Palette Group
+// Version 9.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -1229,6 +1229,7 @@ function renderStock(search) {
   if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_stock', sections, 'renderStockScreen');
   else if (secEl) secEl.innerHTML = '';
   items = sfFilter('sf_stock', items, 'section_id');
+  items.sort((a, b) => a.product_name.localeCompare(b.product_name));
 
   if (items.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่มีข้อมูลสต็อก</div></div>';

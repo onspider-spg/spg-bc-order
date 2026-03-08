@@ -1,4 +1,4 @@
-// Version 9.6 | 8 MAR 2026 | Siam Palette Group
+// Version 9.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -1045,7 +1045,7 @@ function renderBcStock() {
 
   let items = S.stock;
   if (scope.length > 0) items = items.filter(s => scope.includes(s.section_id));
-  items.sort((a, b) => a.stock_actual - b.stock_actual);
+  items.sort((a, b) => a.product_name.localeCompare(b.product_name));
 
   // Category chips
   const cats = [...new Set(items.map(s => s.section_id))];
@@ -1080,6 +1080,7 @@ function filterBcStock(q) {
   if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_bcstock', sections, 'renderBcStock');
   else if (secEl) secEl.innerHTML = '';
   items = sfFilter('sf_bcstock', items, 'section_id');
+  items.sort((a, b) => a.product_name.localeCompare(b.product_name));
 
   renderBcStockTable(items);
 }

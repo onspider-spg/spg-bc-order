@@ -1,4 +1,4 @@
-// Version 9.8 | 8 MAR 2026 | Siam Palette Group
+// Version 9.9 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -197,6 +197,7 @@ function renderAdminProductList() {
   if (secEl && sections.length > 1) secEl.innerHTML = sfChips('sf_products', sections, 'renderAdminProductList');
   else if (secEl) secEl.innerHTML = '';
   filtered = sfFilter('sf_products', filtered, 'section_id');
+  filtered.sort((a, b) => a.product_name.localeCompare(b.product_name));
 
   wrap.innerHTML = filtered.length === 0 ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">ไม่พบสินค้า</div></div>' :
       window.innerWidth < 768 ? `
