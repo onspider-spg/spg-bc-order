@@ -1,4 +1,4 @@
-// Version 9.1 | 8 MAR 2026 | Siam Palette Group
+// Version 9.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -198,6 +198,7 @@ function renderApp() {
         <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" onchange="S.bcPrintDate=this.value;renderBcPrint()" id="bcPrintDateInput">
       </div>
       <div class="filter-bar" id="bcPrintTabs"></div>
+      <div id="bcPrintSectionFilter"></div>
       <div class="content" id="bcPrintContent"></div>
       <div class="bottomnav bc-nav" id="bcPrintNav"></div>
     </div>

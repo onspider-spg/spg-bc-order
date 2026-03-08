@@ -1,4 +1,4 @@
-// Version 9.1 | 8 MAR 2026 | Siam Palette Group
+// Version 9.2 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -941,10 +941,11 @@ function renderBcFulfil() {
   html += `</div>`;
 
   // Bottom actions
+  const canDeliver = isFulfilled || o.status === 'Delivered';
   html += `<div style="padding:16px 20px;display:flex;flex-direction:column;gap:5px">
-    <button class="btn btn-blue" onclick="submitFulfilment()">💾 บันทึกระหว่างทาง</button>
-    <button class="btn btn-green" onclick="submitFulfilment()" ${!allDone || partialMissingNote ? 'disabled' : ''}>✅ Fulfil ครบ${!allDone ? ' (ต้อง mark ทุกตัว)' : ''}</button>
-    <button class="btn btn-outline" style="color:var(--purple);border-color:var(--purple);${!isFulfilled?'opacity:.4':''}" ${!isFulfilled?'disabled':''} onclick="markDelivered('${o.order_id}')">🚚 Mark as Delivered</button>
+    <button class="btn btn-blue" onclick="submitFulfilment(false)">💾 บันทึกระหว่างทาง</button>
+    ${allDone && !isFulfilled ? `<button class="btn btn-green" onclick="submitFulfilment(true)" ${partialMissingNote ? 'disabled' : ''}>✅ Fulfil ครบ</button>` : ''}
+    <button class="btn btn-outline" style="color:var(--purple);border-color:var(--purple);${!canDeliver?'opacity:.4':''}" ${!canDeliver?'disabled':''} onclick="markDelivered('${o.order_id}')">🚚 Mark as Delivered</button>
     <button class="btn btn-outline" style="color:var(--red);border-color:var(--red)" onclick="bcCancelOrder('${o.order_id}')">🚫 Cancel Order</button>
   </div>`;
 
@@ -977,34 +978,35 @@ function fulQty(i, d) {
   renderBcFulfil();
 }
 
-async function submitFulfilment() {
-  const btn = document.getElementById('btnFulfilSubmit');
-  if (btn) btn.disabled = true;
+async function submitFulfilment(isFinal) {
+  toast('⏳ กำลังบันทึก...', 'info');
 
-  let allSuccess = true;
-  for (const item of S.fulfilmentItems) {
-    try {
-      const r = await api('update_fulfilment', {
-        item_id: item.item_id,
-        fulfilment_status: item.ful_status,
-        qty_sent: item.qty_sent,
-        note: item.ful_note,
-        fulfilled_by: S.fulfilmentBy,
-      });
-      if (r && !r.success) allSuccess = false;
-    } catch (e) {
-      // Error: continue with local state
-    }
-  }
+  // Parallel submit all items
+  const results = await Promise.all(S.fulfilmentItems.map(item =>
+    api('update_fulfilment', {
+      item_id: item.item_id,
+      fulfilment_status: item.ful_status || '',
+      qty_sent: item.qty_sent || 0,
+      note: item.ful_note || '',
+      fulfilled_by: S.fulfilmentBy,
+    }).catch(() => ({ success: false }))
+  ));
 
+  const allSuccess = results.every(r => r && r.success);
   toast(allSuccess ? '✅ อัปเดตเรียบร้อย' : '⚠️ บางรายการมีปัญหา', allSuccess ? 'success' : 'warning');
 
   // Update local order status
-  const allFull = S.fulfilmentItems.every(i => i.ful_status === 'full');
+  const allDone = S.fulfilmentItems.every(i => i.ful_status);
   const o = S.orders.find(x => x.order_id === S.currentOrder.order_id);
-  if (o) o.status = allFull ? 'Fulfilled' : 'InProgress';
+  if (o) o.status = allDone ? 'Fulfilled' : 'InProgress';
+  if (S.currentOrder) S.currentOrder.status = allDone ? 'Fulfilled' : 'InProgress';
 
-  setTimeout(() => showScreen('bc-orders'), 800);
+  // Stay on page to show Delivered button, or go back
+  if (allDone || isFinal) {
+    renderBcFulfil(); // re-render with Delivered button enabled
+  } else {
+    setTimeout(() => showScreen('bc-orders'), 800);
+  }
 }
 
 // v7.1: Mark Delivered (UI stub — connects to existing API)
@@ -1337,7 +1339,7 @@ async function renderBcPrint() {
     <div class="filter-chip ${S.bcPrintSections.length===0?'active':''}" onclick="S.bcPrintSections=[];renderBcPrint()">ทั้งหมด</div>
     ${sections.map(sec => {
       const isActive = S.bcPrintSections.length > 0 && S.bcPrintSections.includes(sec);
-      return `<div class="filter-chip ${isActive?'active':''}" onclick="S.bcPrintSections=['${sec}'];renderBcPrint()">${secIcons[sec]||'📦'} ${sec}</div>`;
+      return `<div class="filter-chip ${isActive?'active':''}" onclick="setPrintSection('${sec}')">${secIcons[sec]||'📦'} ${sec}</div>`;
     }).join('')}
   </div>` : '';
 
@@ -1346,15 +1348,17 @@ async function renderBcPrint() {
     <div class="filter-chip ${S.bcPrintTab==='production'?'active':''}" onclick="S.bcPrintTab='production';renderBcPrint()">📄 Production Sheet</div>
     <div class="filter-chip ${S.bcPrintTab==='slip'?'active':''}" onclick="S.bcPrintTab='slip';renderBcPrint()">🧾 Delivery Slip</div>`;
 
-  // Insert section filter after tabs
-  const tabsEl = document.getElementById('bcPrintTabs');
-  if (tabsEl) tabsEl.insertAdjacentHTML('afterend', `<div id="bcPrintSectionFilter">${sectionFilterHtml}</div>`);
-  // Remove old if re-rendered
-  const oldFilter = document.querySelectorAll('#bcPrintSectionFilter');
-  if (oldFilter.length > 1) oldFilter[0].remove();
+  // Insert section filter into dedicated container
+  const secFilterEl = document.getElementById('bcPrintSectionFilter');
+  if (secFilterEl) secFilterEl.innerHTML = sectionFilterHtml;
 
   if (S.bcPrintTab === 'production') renderProductionSheet();
   else renderDeliverySlip();
+}
+
+function setPrintSection(sec) {
+  S.bcPrintSections = [sec];
+  renderBcPrint();
 }
 
 // ─── B8: PRODUCTION SHEET ───
@@ -1544,7 +1548,7 @@ function renderDeliverySlip() {
         orderNotes.push({ order_id: o.order_id, dept: o.dept_id, name: o.display_name || '', text: o.header_note });
       }
 
-      bySection[sec][deptKey].push({ ...it, itemNoteIdx, order_id: o.order_id });
+      bySection[sec][deptKey].push({ ...it, itemNoteIdx, order_id: o.order_id, _orderStatus: o.status });
     });
   });
 
@@ -1555,6 +1559,7 @@ function renderDeliverySlip() {
     <div class="slip-hd">
       <div style="font-size:16px;font-weight:700">${getStoreName(S.bcPrintStore)}</div>
       <div style="font-size:12px;color:#888">Delivery: ${formatDateThai(S.bcPrintDate)} | Printed: ${now}</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px">Orders: ${orderIds.join(', ')}</div>
     </div>`;
 
   // Render sections
@@ -1568,7 +1573,8 @@ function renderDeliverySlip() {
         const noteRef = it.itemNoteIdx.length ? `<sup>${it.itemNoteIdx.join(',')}</sup>` : '';
         const nameStr = `${urgent}<strong>${it.product_name}</strong>${noteRef}`;
         let qtyStr;
-        if (it.fulfilment_status === 'full') qtyStr = `${it.qty_ordered} → <strong>${it.qty_sent} ✓</strong>`;
+        if (it._orderStatus === 'Cancelled') qtyStr = `${it.qty_ordered} → <strong style="color:#dc2626">X</strong>`;
+        else if (it.fulfilment_status === 'full') qtyStr = `${it.qty_ordered} → <strong>${it.qty_sent} ✓</strong>`;
         else if (it.fulfilment_status === 'partial') qtyStr = `${it.qty_ordered} → <strong style="color:#dc2626">${it.qty_sent} ✗</strong>`;
         else qtyStr = `${it.qty_ordered} → ___`;
         html += `<div class="slip-row"><span>${nameStr}</span><span>${qtyStr}</span></div>`;
