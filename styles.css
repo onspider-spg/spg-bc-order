@@ -1,4 +1,4 @@
-/* Version 7.3 | 7 MAR 2026 | Siam Palette Group */
+/* Version 7.4 | 7 MAR 2026 | Siam Palette Group */
 /* BC Order — styles.css: Warm Light Theme + Sidebar Layout */
 /* Fix: sidebar desktop toggle, larger base font */
 
@@ -89,7 +89,7 @@ body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--s1);
 .g-tb-ham-lines{display:flex;flex-direction:column;gap:3px;width:14px}
 .g-tb-ham-lines span{display:block;height:1.5px;border-radius:1px;background:var(--t1)}
 .g-tb-logo{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#d4990f,#a67208);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px;color:#fff;margin-right:8px;flex-shrink:0}
-.g-tb-title{flex:1;font-size:15px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-tb-title{flex:1;font-size:17px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .g-tb-sub{font-size:10px;color:var(--t3);font-weight:400}
 .g-tb-bell{width:36px;height:36px;border-radius:8px;border:1px solid var(--bd);background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--t3);box-shadow:var(--shadow);position:relative;margin-left:6px;cursor:pointer}
 .g-tb-bell:hover{border-color:var(--gold)}
@@ -169,6 +169,8 @@ textarea.form-input{resize:none;min-height:72px}
 .st-progress{background:#fce7f3;color:#9d174d}
 .st-fulfilled{background:#d1fae5;color:#065f46}
 .st-delivered{background:#e0e7ff;color:#3730a3}
+.st-rejected{background:#fee2e2;color:#991b1b}
+.st-cancelled{background:#f3f4f6;color:#6b7280}
 .st-reported{background:#fef3c7;color:#92400e}
 .st-returning{background:#fce7f3;color:#9d174d}
 .st-received{background:#dbeafe;color:#1e40af}

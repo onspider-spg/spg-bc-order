@@ -1,4 +1,4 @@
-// Version 7.3 | 7 MAR 2026 | Siam Palette Group
+// Version 7.4 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -753,7 +753,9 @@ async function acceptPending(id) {
     const r = await api('accept_pending', { order_id: id });
     toast(r.message || '✅ Accept เรียบร้อย', r.success ? 'success' : 'error');
   } catch (e) {
-    toast('✅ Accept เรียบร้อย (Demo)', 'success');
+    toast('❌ Accept ไม่สำเร็จ: ' + (e.message||'ลองใหม่'), 'error');
+    if (btn) btn.disabled = false;
+    return;
   }
 
   // Update local state
@@ -764,17 +766,19 @@ async function acceptPending(id) {
 }
 
 async function rejectPending(id) {
-  if (!confirm('ปฏิเสธออเดอร์ ' + id + ' ?\n\nร้านจะต้องสั่งใหม่')) return;
+  const reason = prompt('เหตุผลที่ปฏิเสธ:');
+  if (reason === null) return;
 
   try {
-    const r = await api('delete_order', { order_id: id });
+    const r = await api('reject_order', { order_id: id, reason: reason || '' });
     toast(r.message || '❌ ปฏิเสธแล้ว', r.success ? 'warning' : 'error');
   } catch (e) {
-    toast('❌ ปฏิเสธแล้ว (Demo)', 'warning');
+    toast('❌ ไม่สำเร็จ: ' + (e.message||'ลองใหม่'), 'error');
+    return;
   }
 
-  // Remove from local state
-  S.orders = S.orders.filter(o => o.order_id !== id);
+  const o = S.orders.find(x => x.order_id === id);
+  if (o) o.status = 'Rejected';
 
   setTimeout(() => showScreen('bc-orders'), 800);
 }
@@ -927,7 +931,7 @@ async function submitFulfilment() {
       });
       if (r && !r.success) allSuccess = false;
     } catch (e) {
-      // Demo mode: continue
+      // Error: continue with local state
     }
   }
 
@@ -948,7 +952,7 @@ async function markDelivered(orderId) {
     const r = await api('mark_delivered', { order_id: orderId });
     toast(r.message || '🚚 Delivered!', r.success ? 'success' : 'error');
   } catch(e) {
-    toast('🚚 Delivered! (Demo)', 'success');
+    toast('❌ Deliver ไม่สำเร็จ', 'error'); return;
   }
   const o = S.orders.find(x => x.order_id === orderId);
   if (o) o.status = 'Delivered';
@@ -1095,7 +1099,7 @@ async function submitBcStock() {
     });
     toast(r.message || `✅ ${S.bcStockAction==='add'?'เพิ่ม':'ลด'}สต็อกเรียบร้อย`, r.success ? 'success' : 'error');
   } catch (e) {
-    toast(`✅ ${S.bcStockAction==='add'?'เพิ่ม':'ลด'}สต็อกเรียบร้อย (Demo)`, 'success');
+    toast('❌ อัพเดทสต็อกไม่สำเร็จ', 'error'); return;
   }
 
   // Update local stock

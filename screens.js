@@ -1,4 +1,4 @@
-// Version 7.3 | 7 MAR 2026 | Siam Palette Group
+// Version 7.4 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -851,7 +851,7 @@ async function submitOrder() {
         submitBtn.innerHTML = '💾 บันทึกการแก้ไข';
       }
     } catch (err) {
-      toast('✅ แก้ไขเรียบร้อย! (Demo)', 'success');
+      toast('❌ แก้ไขไม่สำเร็จ', 'error');
       S.cart = [];
       S.editingOrderId = null;
       setTimeout(() => showScreen('orders'), 1500);
@@ -887,7 +887,7 @@ async function submitOrder() {
         submitBtn.innerHTML = '📤 สั่งเลย';
       }
     } catch (err) {
-      toast('✅ สั่งเรียบร้อย! (Demo)', 'success');
+      toast('❌ สั่งไม่สำเร็จ', 'error');
       S.cart = [];
       setTimeout(() => showScreen('home'), 1500);
     }
@@ -915,7 +915,8 @@ function filterOrders() {
   if (to) orders = orders.filter(o => (o.delivery_date||o.order_date) <= to);
 
   // Status filter
-  if (S.orderFilter !== 'all') orders = orders.filter(o => o.status === S.orderFilter);
+  if (S.orderFilter === 'Fulfilled') orders = orders.filter(o => o.status === 'Fulfilled' || o.status === 'Delivered');
+  else if (S.orderFilter !== 'all') orders = orders.filter(o => o.status === S.orderFilter);
 
   // Update counts based on date-filtered orders
   const dateFiltered = S.orders.filter(o => {
@@ -923,20 +924,22 @@ function filterOrders() {
     if (to && (o.delivery_date||o.order_date) > to) return false;
     return true;
   });
-  const counts = { all:dateFiltered.length, Pending:dateFiltered.filter(o=>o.status==='Pending').length, Ordered:dateFiltered.filter(o=>o.status==='Ordered').length, Fulfilled:dateFiltered.filter(o=>o.status==='Fulfilled').length, Delivered:dateFiltered.filter(o=>o.status==='Delivered').length };
+  const counts = { all:dateFiltered.length, Pending:dateFiltered.filter(o=>o.status==='Pending').length, Ordered:dateFiltered.filter(o=>o.status==='Ordered').length, Fulfilled:dateFiltered.filter(o=>o.status==='Fulfilled'||o.status==='Delivered').length, Rejected:dateFiltered.filter(o=>o.status==='Rejected').length, Cancelled:dateFiltered.filter(o=>o.status==='Cancelled').length };
 
   document.getElementById('orderFilters').innerHTML = `
     <div class="filter-chip ${S.orderFilter==='all'?'active':''}" onclick="S.orderFilter='all';filterOrders()">ทั้งหมด (${counts.all})</div>
     <div class="filter-chip ${S.orderFilter==='Pending'?'active':''}" onclick="S.orderFilter='Pending';filterOrders()">Pending (${counts.Pending})</div>
     <div class="filter-chip ${S.orderFilter==='Ordered'?'active':''}" onclick="S.orderFilter='Ordered';filterOrders()">Ordered (${counts.Ordered})</div>
-    <div class="filter-chip ${S.orderFilter==='Fulfilled'?'active':''}" onclick="S.orderFilter='Fulfilled';filterOrders()">Done (${counts.Fulfilled + counts.Delivered})</div>`;
+    <div class="filter-chip ${S.orderFilter==='Fulfilled'?'active':''}" onclick="S.orderFilter='Fulfilled';filterOrders()">Done (${counts.Fulfilled})</div>
+    ${counts.Rejected > 0 ? `<div class="filter-chip ${S.orderFilter==='Rejected'?'active':''}" onclick="S.orderFilter='Rejected';filterOrders()">Rejected (${counts.Rejected})</div>` : ''}
+    ${counts.Cancelled > 0 ? `<div class="filter-chip ${S.orderFilter==='Cancelled'?'active':''}" onclick="S.orderFilter='Cancelled';filterOrders()">Cancelled (${counts.Cancelled})</div>` : ''}`;
 
   if (orders.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">ไม่มีออเดอร์</div></div>';
     return;
   }
 
-  const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)' };
+  const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)', Cancelled:'var(--t4)' };
 
   content.innerHTML = `<div style="padding:8px 16px;overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -1055,9 +1058,11 @@ async function viewOrder(orderId) {
         <div style="padding:8px 10px;background:var(--orange-bg);border:1px solid #f0d8a0;border-radius:var(--rd2);font-size:12px;color:var(--orange);margin-bottom:10px">⚠️ <b>หมายเหตุ:</b> ถ้าแก้ไข order หลัง cutoff time → status จะเปลี่ยนจาก <b>Ordered → Pending</b> โดยอัตโนมัติ</div>
         <div style="display:flex;gap:5px">
           <button class="btn btn-outline" style="flex:1" onclick="editOrder('${o.order_id}')">✏️ แก้ไข</button>
-          <button class="btn btn-red btn-sm" style="padding:7px 10px" onclick="deleteOrder('${o.order_id}')">🗑️ ลบ</button>
+          ${o.status === 'Pending' ? `<button class="btn btn-red btn-sm" style="padding:7px 10px" onclick="cancelOrder('${o.order_id}')">🚫 ยกเลิก</button>` : ''}
         </div>
       ` : ''}
+      ${o.status === 'Rejected' ? `<div style="padding:8px 10px;background:var(--red-bg);border-radius:var(--rd2);font-size:12px;color:var(--red)">❌ BC ปฏิเสธออเดอร์นี้${o.reject_reason ? ' — '+o.reject_reason : ''}</div>` : ''}
+      ${o.status === 'Cancelled' ? `<div style="padding:8px 10px;background:var(--s1);border-radius:var(--rd2);font-size:12px;color:var(--t3)">🚫 ยกเลิกแล้ว${o.cancel_reason ? ' — '+o.cancel_reason : ''}</div>` : ''}
     </div>
   `;
 }
@@ -1106,8 +1111,23 @@ async function deleteOrder(orderId) {
     const resp = await api('delete_order', { order_id: orderId });
     toast(resp.message || 'ลบแล้ว', resp.success ? 'success' : 'error');
   } catch(e) {
-    toast('ลบแล้ว (Demo)', 'success');
+    toast('❌ ลบไม่สำเร็จ', 'error');
   }
+  showScreen('orders');
+}
+
+async function cancelOrder(orderId) {
+  const reason = prompt('เหตุผลที่ยกเลิก:');
+  if (reason === null) return;
+  try {
+    const resp = await api('cancel_order', { order_id: orderId, reason: reason || '' });
+    toast(resp.message || '🚫 ยกเลิกแล้ว', resp.success ? 'warning' : 'error');
+  } catch(e) {
+    toast('❌ ยกเลิกไม่สำเร็จ: ' + (e.message||'ลองใหม่'), 'error');
+    return;
+  }
+  const o = S.orders.find(x => x.order_id === orderId);
+  if (o) o.status = 'Cancelled';
   showScreen('orders');
 }
 

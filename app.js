@@ -1,4 +1,4 @@
-// Version 7.3 | 7 MAR 2026 | Siam Palette Group
+// Version 7.4 | 7 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -156,7 +156,6 @@ const SB_CFG = {
       { scr: 'admin-dept-mapping', lbl: 'Dept Mapping' },
       { scr: 'admin-config', lbl: 'System Config' },
       { scr: 'admin-notif-settings', lbl: 'Notification Settings' },
-      { scr: 'admin-announcements', lbl: 'Announcements' },
       { scr: 'admin-audit', lbl: 'Audit Trail' },
     ]},
   ],
@@ -614,7 +613,7 @@ function getCatName(sectionId) {
 }
 
 function statusClass(s) {
-  const map = { Pending:'st-pending', Ordered:'st-ordered', InProgress:'st-progress', Fulfilled:'st-fulfilled', Delivered:'st-delivered' };
+  const map = { Pending:'st-pending', Ordered:'st-ordered', InProgress:'st-progress', Fulfilled:'st-fulfilled', Delivered:'st-delivered', Rejected:'st-rejected', Cancelled:'st-cancelled' };
   return map[s] || '';
 }
 

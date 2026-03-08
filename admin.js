@@ -1,4 +1,4 @@
-// Version 7.2 | 7 MAR 2026 | Siam Palette Group
+// Version 7.4 | 7 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -116,7 +116,6 @@ function renderAdminDashboard() {
         <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-waste-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>🗑️</span><span style="font-size:13px;font-weight:600">Waste Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
         <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('return-dashboard')"><div style="display:flex;align-items:center;gap:6px"><span>↩️</span><span style="font-size:13px;font-weight:600">Return Dashboard</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
         <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-cutoff')"><div style="display:flex;align-items:center;gap:6px"><span>⏰</span><span style="font-size:13px;font-weight:600">Cutoff Violations</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
-        <div class="card" style="padding:8px 10px;margin:0" onclick="showScreen('admin-announcements')"><div style="display:flex;align-items:center;gap:6px"><span>📢</span><span style="font-size:13px;font-weight:600">Announcements</span><span style="margin-left:auto;font-size:13px;color:var(--t4)">→</span></div></div>
       </div>
     </div>
   </div>`;

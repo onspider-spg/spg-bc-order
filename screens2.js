@@ -1,4 +1,4 @@
-// Version 7.3 | 7 MAR 2026 | Siam Palette Group
+// Version 7.4 | 7 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -175,7 +175,7 @@ async function submitWaste() {
     });
     toast(resp.message || '✅ บันทึกแล้ว', resp.success ? 'success' : 'error');
   } catch(e) {
-    toast('✅ บันทึกแล้ว (Demo)', 'success');
+    toast('❌ บันทึกไม่สำเร็จ', 'error');
   }
   
   closeDialog();
@@ -198,7 +198,7 @@ async function saveWasteEdit(wasteId) {
     });
     toast(resp.message || '✅ แก้ไขแล้ว', resp.success ? 'success' : 'error');
   } catch(e) {
-    toast('✅ แก้ไขแล้ว (Demo)', 'success');
+    toast('❌ แก้ไขไม่สำเร็จ', 'error');
   }
   
   closeDialog();
@@ -211,7 +211,7 @@ async function deleteWaste(wasteId) {
     const resp = await api('delete_waste', { waste_id: wasteId });
     toast(resp.message || '✅ ลบแล้ว', resp.success ? 'success' : 'error');
   } catch(e) {
-    toast('✅ ลบแล้ว (Demo)', 'success');
+    toast('❌ ลบไม่สำเร็จ', 'error');
   }
   if (S.currentScreen === 'waste') renderWaste();
 }
