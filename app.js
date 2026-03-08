@@ -1,4 +1,4 @@
-// Version 8.3 | 8 MAR 2026 | Siam Palette Group
+// Version 8.6 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
