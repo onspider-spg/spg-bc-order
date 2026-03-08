@@ -1,4 +1,4 @@
-// Version 10.0 | 8 MAR 2026 | Siam Palette Group
+// Version 10.1 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -1121,8 +1121,9 @@ function renderBcStockTable(items) {
 
 function showBcStockPopup(preselect) {
   const scope = S.deptMapping ? S.deptMapping.section_scope : [];
-  let items = S.stock;
+  let items = [...S.stock];
   if (scope.length > 0) items = items.filter(s => scope.includes(s.section_id));
+  items.sort((a,b) => a.product_name.localeCompare(b.product_name));
 
   S.bcStockProduct = preselect || '';
   S.bcStockQty = 1;
@@ -1517,7 +1518,7 @@ function renderDeliverySlip() {
   // Get unique stores
   const storeSet = new Set();
   orders.forEach(o => storeSet.add(o.store_id));
-  const storeList = [...storeSet].sort();
+  const storeList = [...storeSet].sort((a,b) => getStoreName(a).localeCompare(getStoreName(b)));
 
   if (!storeList.length) {
     document.getElementById('bcPrintContent').innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">ไม่มีข้อมูล</div><div class="empty-desc">ไม่มีออเดอร์สำหรับวันที่เลือก</div></div>';
