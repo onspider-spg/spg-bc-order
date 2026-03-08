@@ -1,4 +1,4 @@
-// Version 8.9 | 8 MAR 2026 | Siam Palette Group
+// Version 9.0 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -646,19 +646,48 @@ function renderBcOrderList() {
     return;
   }
 
-  const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)' };
+  const bdrMap = { Pending:'var(--red)', Ordered:'var(--blue)', InProgress:'var(--orange)', Fulfilled:'var(--green)', Delivered:'var(--green)', Rejected:'var(--red)', Cancelled:'var(--t4)' };
+  const isMob = window.innerWidth < 768;
 
-  el.innerHTML = `<div style="padding:4px 16px;overflow-x:auto">
+  if (isMob) {
+    // ── MOBILE: Card layout ──
+    el.innerHTML = `<div style="padding:8px 16px;display:flex;flex-direction:column;gap:6px">${orders.map(o => {
+      const bdr = bdrMap[o.status] || 'var(--bd)';
+      const isDone = o.status === 'Fulfilled' || o.status === 'Delivered';
+      let items = o.items || [];
+      if (scope.length > 0) items = items.filter(it => scope.includes(it.section_id));
+      const items3 = items.slice(0,3).map(i => `${(i.product_name||'').split(' ')[0]} ×${i.qty_ordered}${i.is_urgent?'⚡':''}`).join(', ');
+      const more = items.length > 3 ? ` +${items.length - 3}` : '';
+
+      let tapAction;
+      if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
+      else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
+      else tapAction = `viewOrderDetail('${o.order_id}')`;
+
+      return `<div style="padding:12px;border:1px solid var(--bd2);border-left:3px solid ${bdr};border-radius:0 var(--rd2) var(--rd2) 0;cursor:pointer;${isDone?'opacity:.7':''}" onclick="${tapAction}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:700;color:var(--gold)">${o.order_id}</span>
+          <span class="status ${statusClass(o.status)}">${o.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--t2)">${o.store_id} · ส่ง ${formatDateAU(o.delivery_date)} · ${o.display_name||''}</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${items3}${more}</div>
+      </div>`;
+    }).join('')}
+    <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders</div>
+    </div>`;
+  } else {
+    // ── DESKTOP: Table layout (unchanged) ──
+    el.innerHTML = `<div style="padding:4px 16px;overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:var(--s1)">
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order ID</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Store</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Order</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Delivery</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Items</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
-        <th class="hide-m" style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
+        <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Cutoff</th>
+        <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">By</th>
       </tr></thead>
       <tbody>${orders.map(o => {
         const bdr = bdrMap[o.status] || 'var(--bd)';
@@ -676,17 +705,18 @@ function renderBcOrderList() {
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}${isRejected?'opacity:.5':''}" onclick="${tapAction}">
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${o.store_id}</td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${itemsSummary}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><span class="status ${statusClass(o.status)}">${o.status === 'InProgress' ? 'In Progress' : o.status}</span></td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${o.is_cutoff_violation?'<span style="font-size:12px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span>':'—'}</td>
-          <td class="hide-m" style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.user_id||'—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${o.is_cutoff_violation?'<span style="font-size:12px;background:var(--orange-bg);color:var(--orange);padding:1px 4px;border-radius:3px">⚠️</span>':'—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.display_name||o.user_id||'—'}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
-    <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders · 30 วัน · ทุกร้าน</div>
+    <div style="font-size:12px;color:var(--t3);text-align:center;padding:6px">แสดง ${orders.length} orders</div>
   </div>`;
+  }
 
   renderBcOrderFilters();
 }

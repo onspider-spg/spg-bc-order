@@ -1,4 +1,4 @@
-// Version 8.9 | 8 MAR 2026 | Siam Palette Group
+// Version 9.0 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -778,10 +778,21 @@ async function toggleNotifSetting(key, enabled) {
 
 // ─── A2: Cutoff Violations ───────────────────────────────────
 function renderAdminCutoff() {
+  if (!S.cutoffFrom) { const d = new Date(); d.setDate(d.getDate() - 30); S.cutoffFrom = d.toISOString().split('T')[0]; }
+  if (!S.cutoffTo) S.cutoffTo = new Date().toISOString().split('T')[0];
+
   const orders = S.orders || [];
-  const violations = orders.filter(o => o.is_cutoff_violation);
+  const violations = orders.filter(o => o.is_cutoff_violation && (!S.cutoffFrom || (o.delivery_date||o.order_date) >= S.cutoffFrom) && (!S.cutoffTo || (o.delivery_date||o.order_date) <= S.cutoffTo));
 
   document.getElementById('adminCutoffContent').innerHTML = `<div style="padding:16px 20px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12px">
+      <span style="color:var(--t3)">📅</span>
+      <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.cutoffFrom}" onchange="S.cutoffFrom=this.value;renderAdminCutoff()">
+      <span style="color:var(--t4)">→</span>
+      <input class="form-input" type="date" style="flex:1;padding:6px 10px;font-size:12px" value="${S.cutoffTo}" onchange="S.cutoffTo=this.value;renderAdminCutoff()">
+      <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="S.cutoffFrom=todaySydney();S.cutoffTo=todaySydney();renderAdminCutoff()">วันนี้</span>
+      <span style="font-size:12px;color:var(--blue);cursor:pointer;white-space:nowrap" onclick="const d=new Date();d.setDate(d.getDate()-30);S.cutoffFrom=d.toISOString().split('T')[0];S.cutoffTo=new Date().toISOString().split('T')[0];renderAdminCutoff()">30 วัน</span>
+    </div>
     <div style="font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:6px">⏰ Cutoff Violations (${violations.length})</div>
     ${violations.length === 0 ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี violation</div></div>' : `
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
