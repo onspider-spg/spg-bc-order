@@ -1,4 +1,4 @@
-// Version 10.1 | 8 MAR 2026 | Siam Palette Group
+// Version 10.4 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -1100,8 +1100,8 @@ function renderBcStockTable(items) {
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)"></th>
       </tr></thead>
       <tbody>${items.map(s => {
-        const sa = s.stock_available || 0;
-        const actual = s.stock_actual || sa;
+        const sa = Math.max(0, s.stock_available || 0);
+        const actual = Math.max(0, s.stock_actual || sa);
         const min2 = 4;
         const statusLbl = actual === 0 ? 'OUT' : (actual <= min2 ? 'LOW' : 'OK');
         const statusCls = actual === 0 ? 'background:var(--red-bg);color:var(--red)' : (actual <= min2 ? 'background:#fef3c7;color:#92400e' : 'background:var(--green-bg);color:var(--green)');
@@ -1136,7 +1136,7 @@ function showBcStockPopup(preselect) {
       <label class="form-label">สินค้า</label>
       <select class="form-input" onchange="S.bcStockProduct=this.value" id="bcStockSelect">
         <option value="">— เลือกสินค้า —</option>
-        ${items.map(p => `<option value="${p.product_id}" ${p.product_id===preselect?'selected':''}>${prodEmoji(p.product_name)} ${p.product_name} (${p.stock_actual} ${p.unit})</option>`).join('')}
+        ${items.map(p => `<option value="${p.product_id}" ${p.product_id===preselect?'selected':''}>${p.product_name} (${p.stock_actual} ${p.unit})</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
@@ -1252,7 +1252,7 @@ function renderBcReturns() {
         <span style="font-size:13px;font-weight:700;color:var(--gold)">${r.return_id}</span>
         ${statusTag}
       </div>
-      <div style="font-size:12px;font-weight:700">${prodEmoji(pName)} ${pName} ×${r.quantity||r.qty} ${r.unit||''}</div>
+      <div style="font-size:12px;font-weight:700">${pName} ×${r.quantity||r.qty} ${r.unit||''}</div>
       <div style="font-size:12px;color:var(--t3);margin-top:2px">จาก <b>${getStoreName(r.store_id)}</b> · ${r.issue_type||''} · ${r.action === 'return_to_bakery' ? 'ส่งคืน BC' : r.action === 'discard_at_store' ? 'ทิ้งที่ร้าน' : ''} · ${formatDateAU(r.created_at)}</div>
       ${r.failure_reason ? `<div style="font-size:12px;color:var(--td);margin-top:3px">📋 ${r.failure_reason}</div>` : ''}
       ${actions}
@@ -1267,7 +1267,7 @@ function showReceivePopup(returnId) {
   const pName = r.product_name || r.product_id;
   showDialog(`
     <div style="font-size:14px;font-weight:700;margin-bottom:6px">📦 Receive Return</div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px">${prodEmoji(pName)} ${pName} ×${r.quantity||r.qty} ${r.unit||''} — ${r.return_id}</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">${pName} ×${r.quantity||r.qty} ${r.unit||''} — ${r.return_id}</div>
     <div style="font-size:13px;color:var(--t3);margin-bottom:8px">จาก ${getStoreName(r.store_id)} · ${r.issue_type||''} · ${formatDateAU(r.created_at)}</div>
     <div style="padding:8px 16px;background:var(--blue-bg);border-radius:var(--rd2);font-size:13px;color:var(--blue);margin-bottom:8px">ยืนยันว่า BC ได้รับสินค้าคืนแล้ว → status จะเปลี่ยนเป็น <b>Received</b></div>
     <div style="display:flex;gap:6px">

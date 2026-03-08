@@ -1,4 +1,4 @@
-// Version 10.2 | 8 MAR 2026 | Siam Palette Group
+// Version 10.4 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -619,9 +619,9 @@ function renderProducts() {
   grid.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;padding:0 4px 120px">${prods.map(p => {
     const inCart = S.cart.find(c => c.product_id === p.product_id);
     const qty = inCart ? inCart.qty : 0;
-    const sa = p.stock_available || 0;
-    const stockColor = sa === 0 ? 'var(--red)' : (sa <= (p.min_order || 1) * 2 ? 'var(--orange)' : 'var(--green)');
-    const stockText = sa === 0 ? `📦 0 ${p.unit} — ผลิตใหม่` : `📦 ${sa} ${p.unit}`;
+    const sa = Math.max(0, p.stock_available || 0);
+    const stockColor = sa <= (p.min_order || 1) * 2 ? 'var(--orange)' : 'var(--green)';
+    const stockLine = sa > 0 ? `<div style="font-size:13px;color:${stockColor}">📦 ${sa} ${p.unit}</div>` : '';
     const canMinus = qty > 0;
     const borderStyle = inCart ? 'border:1px solid #c8e6c9;background:var(--green-bg)' : 'border:1px solid var(--bd2);background:#fff';
     const btnBorder = inCart ? 'var(--green)' : 'var(--bd)';
@@ -631,7 +631,7 @@ function renderProducts() {
       ${p.image_url ? `<div style="width:44px;height:44px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 44)}</div>` : ''}
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700">${p.product_name}</div>
-        <div style="font-size:13px;color:${stockColor}">${stockText}</div>
+        ${stockLine}
         <div style="font-size:12px;color:var(--t4)">min: ${p.min_order||1} | step: ${p.order_step||1}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -1247,8 +1247,8 @@ function renderStock(search) {
         <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สถานะ</th>
       </tr></thead>
       <tbody>${items.map(s => {
-        const sa = s.stock_available || 0;
-        const actual = s.stock_actual || sa;
+        const sa = Math.max(0, s.stock_available || 0);
+        const actual = Math.max(0, s.stock_actual || sa);
         const min2 = (s.min_order || 1) * 2;
         const statusLbl = sa === 0 ? 'OUT' : (sa <= min2 ? 'LOW' : 'OK');
         const statusCls = sa === 0 ? 'background:var(--red-bg);color:var(--red)' : (sa <= min2 ? 'background:#fef3c7;color:#92400e' : 'background:var(--green-bg);color:var(--green)');
