@@ -1,4 +1,4 @@
-// Version 8.1 | 7 MAR 2026 | Siam Palette Group
+// Version 8.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -911,6 +911,20 @@ function filterOrders() {
   const toEl = document.getElementById('orderDateTo');
   const from = fromEl ? fromEl.value : '';
   const to = toEl ? toEl.value : '';
+
+  // T1/T2: if date_from is beyond loaded 30 days, re-fetch from API
+  const tier = parseInt((S.session?.tier_id || 'T9').replace('T', ''));
+  if (from && tier <= 2) {
+    const cutoff30 = new Date(); cutoff30.setDate(cutoff30.getDate() - 30);
+    const fromDate = new Date(from);
+    if (fromDate < cutoff30 && !S._orderExtendedLoad) {
+      S._orderExtendedLoad = true;
+      content.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+      loadOrders('', from, to).then(() => { S._orderExtendedLoad = false; filterOrders(); });
+      return;
+    }
+  }
+
   if (from) orders = orders.filter(o => (o.delivery_date||o.order_date) >= from);
   if (to) orders = orders.filter(o => (o.delivery_date||o.order_date) <= to);
 
@@ -997,6 +1011,7 @@ function clearOrderDates() {
   if (el1) el1.value = '';
   if (el2) el2.value = '';
   S.orderFilter = 'all';
+  S._orderExtendedLoad = false;
   filterOrders();
 }
 
@@ -1058,7 +1073,7 @@ async function viewOrder(orderId) {
         <div style="padding:12px 16px;background:var(--orange-bg);border:1px solid #f0d8a0;border-radius:var(--rd2);font-size:12px;color:var(--orange);margin-bottom:10px">⚠️ <b>หมายเหตุ:</b> ถ้าแก้ไข order หลัง cutoff time → status จะเปลี่ยนจาก <b>Ordered → Pending</b> โดยอัตโนมัติ</div>
         <div style="display:flex;gap:5px">
           <button class="btn btn-outline" style="flex:1" onclick="editOrder('${o.order_id}')">✏️ แก้ไข</button>
-          ${o.status === 'Pending' ? `<button class="btn btn-red btn-sm" style="padding:7px 10px" onclick="cancelOrder('${o.order_id}')">🚫 ยกเลิก</button>` : ''}
+          <button class="btn btn-red btn-sm" style="padding:7px 10px" onclick="cancelOrder('${o.order_id}')">🚫 ยกเลิก</button>
         </div>
       ` : ''}
       ${o.status === 'Rejected' ? `<div style="padding:12px 16px;background:var(--red-bg);border-radius:var(--rd2);font-size:12px;color:var(--red)">❌ BC ปฏิเสธออเดอร์นี้${o.reject_reason ? ' — '+o.reject_reason : ''}</div>` : ''}

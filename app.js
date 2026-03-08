@@ -1,4 +1,4 @@
-// Version 8.1 | 7 MAR 2026 | Siam Palette Group
+// Version 8.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -335,13 +335,15 @@ async function loadDashboard() {
   };
 }
 
-async function loadOrders(status = '') {
-  const params = { limit: '100' };
+async function loadOrders(status = '', dateFrom = '', dateTo = '') {
+  const params = { limit: '200' };
   if (status && status !== 'all') params.status = status;
-  if (S.role === 'store') {
+  if (dateFrom) params.date_from = dateFrom;
+  else if (S.role === 'store') {
     const d = sydneyNow(); d.setDate(d.getDate() - 14);
     params.date_from = formatDate(d);
   }
+  if (dateTo) params.date_to = dateTo;
   const resp = await api('get_orders', null, params);
   if (resp.success) S.orders = resp.data;
   else S.orders = [];

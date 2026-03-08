@@ -1,4 +1,4 @@
-// Version 8.1 | 7 MAR 2026 | Siam Palette Group
+// Version 8.3 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -740,6 +740,7 @@ function renderBcAccept() {
     <div style="display:flex;gap:5px;margin-top:8px">
       <button class="btn btn-green" style="flex:1" id="btnAccept" onclick="acceptPending('${o.order_id}')">✓ Accept ทั้งหมด</button>
       <button class="btn btn-red" style="flex:1" onclick="rejectPending('${o.order_id}')">✕ Reject</button>
+      <button class="btn btn-outline" style="color:var(--red);border-color:var(--red)" onclick="bcCancelOrder('${o.order_id}')">🚫 Cancel</button>
       <button class="btn btn-outline" onclick="showScreen('bc-orders')">← กลับ</button>
     </div>
   </div>`;
@@ -779,6 +780,25 @@ async function rejectPending(id) {
 
   const o = S.orders.find(x => x.order_id === id);
   if (o) o.status = 'Rejected';
+
+  setTimeout(() => showScreen('bc-orders'), 800);
+}
+
+async function bcCancelOrder(id) {
+  const reason = prompt('เหตุผลที่ยกเลิก:');
+  if (reason === null) return;
+
+  try {
+    const r = await api('cancel_order', { order_id: id, reason: reason || '' });
+    toast(r.message || '🚫 ยกเลิกแล้ว', r.success ? 'warning' : 'error');
+    if (!r.success) return;
+  } catch (e) {
+    toast('❌ ไม่สำเร็จ: ' + (e.message||'ลองใหม่'), 'error');
+    return;
+  }
+
+  const o = S.orders.find(x => x.order_id === id);
+  if (o) o.status = 'Cancelled';
 
   setTimeout(() => showScreen('bc-orders'), 800);
 }
@@ -884,6 +904,7 @@ function renderBcFulfil() {
     <button class="btn btn-blue" onclick="submitFulfilment()">💾 บันทึกระหว่างทาง</button>
     <button class="btn btn-green" onclick="submitFulfilment()" ${!allDone || partialMissingNote ? 'disabled' : ''}>✅ Fulfil ครบ${!allDone ? ' (ต้อง mark ทุกตัว)' : ''}</button>
     <button class="btn btn-outline" style="color:var(--purple);border-color:var(--purple);${!isFulfilled?'opacity:.4':''}" ${!isFulfilled?'disabled':''} onclick="markDelivered('${o.order_id}')">🚚 Mark as Delivered</button>
+    <button class="btn btn-outline" style="color:var(--red);border-color:var(--red)" onclick="bcCancelOrder('${o.order_id}')">🚫 Cancel Order</button>
   </div>`;
 
   document.getElementById('bcFulfilContent').innerHTML = html;
