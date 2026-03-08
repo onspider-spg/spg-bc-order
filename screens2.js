@@ -1,4 +1,4 @@
-// Version 9.4 | 8 MAR 2026 | Siam Palette Group
+// Version 10.7 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens2.js: Waste, Returns, BC Home, Print Slip
 // Phase 3: Store Records UI overhaul (wireframe match)
 
@@ -96,8 +96,8 @@ function showWasteForm(editData) {
     <select class="form-input" id="wasteProduct" ${isEdit ? 'disabled style="opacity:.6"' : ''}>
       <option value="">🔍 เลือกสินค้า...</option>
       ${isEdit ? 
-        `<option value="${editData.product_id}" selected>${prodEmoji((S.products.find(p=>p.product_id===editData.product_id)||{}).product_name||editData.product_id)} ${(S.products.find(p=>p.product_id===editData.product_id)||{}).product_name||editData.product_id}</option>` :
-        wasteProducts.map(p => `<option value="${p.product_id}">${prodEmoji(p.product_name)} ${p.product_name} (${p.unit}) — ${p.section_id}</option>`).join('')
+        `<option value="${editData.product_id}" selected>${(S.products.find(p=>p.product_id===editData.product_id)||{}).product_name||editData.product_id}</option>` :
+        wasteProducts.map(p => `<option value="${p.product_id}">${p.product_name} (${p.unit}) — ${p.section_id}</option>`).join('')
       }
     </select>
     ${wasteProducts.length === 0 && !isEdit ? '<div style="font-size:13px;color:var(--red);margin-top:4px">⚠️ ไม่พบสินค้าสำหรับ scope นี้</div>' : ''}
@@ -139,7 +139,7 @@ function selectWasteCat(catId, keepProduct) {
     const sel = document.getElementById('wasteProduct');
     if (sel && !sel.disabled) {
       sel.innerHTML = '<option value="">🔍 ค้นหา / เลือกสินค้า</option>' +
-        filtered.map(p => `<option value="${p.product_id}">${prodEmoji(p.product_name)} ${p.product_name} (${p.unit})</option>`).join('');
+        filtered.map(p => `<option value="${p.product_id}">${p.product_name} (${p.unit})</option>`).join('');
     }
   }
 }
@@ -248,7 +248,7 @@ function renderReturnsScreen() {
             <span style="font-size:13px;font-weight:700;color:${resolved?'var(--t3)':'var(--gold)'}">${r.return_id}</span>
             ${statusTag}
           </div>
-          <div style="font-size:14px;font-weight:600">${prodEmoji(pName)} ${pName} ×${r.quantity} ${r.unit||''}</div>
+          <div style="font-size:14px;font-weight:600">${pName} ×${r.quantity} ${r.unit||''}</div>
           <div style="font-size:12px;color:var(--t3);margin-top:2px">${r.issue_type||''} · ${actionLabel} · ${formatDateAU(r.created_at)}</div>
           <div style="display:flex;gap:5px;margin-top:6px">
             <button class="btn btn-outline btn-sm" style="padding:3px 10px;font-size:12px" onclick="event.stopPropagation();showReturnDetail('${r.return_id}')">👁️ ดู Detail</button>
@@ -269,7 +269,7 @@ function showReturnForm() {
       <label class="form-label">❶ สินค้า *</label>
       <select class="form-input" id="rtnProduct">
         <option value="">-- เลือก --</option>
-        ${S.products.map(p => `<option value="${p.product_id}">${prodEmoji(p.product_name)} ${p.product_name} (${p.unit})</option>`).join('')}
+        ${S.products.map(p => `<option value="${p.product_id}">${p.product_name} (${p.unit})</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
@@ -308,30 +308,33 @@ function showReturnForm() {
 
 async function submitReturn() {
   const data = {
-    item_id: 'ITM-000000', // simplified
+    item_id: 'ITM-000000',
     product_id: document.getElementById('rtnProduct').value,
     quantity: parseInt(document.getElementById('rtnQty').value),
     issue_type: document.getElementById('rtnIssue').value,
-    description: document.getElementById('rtnDesc').value,
+    description: document.getElementById('rtnDesc').value || '-',
     production_date: document.getElementById('rtnProdDate').value,
     action: document.getElementById('rtnAction').value,
   };
   
-  if (!data.product_id || !data.quantity) {
+  if (!data.product_id || !data.quantity || !data.action) {
     toast('กรุณากรอกข้อมูลให้ครบ', 'error');
     return;
   }
   
   try {
     const resp = await api('report_return', data);
-    toast(resp.message || '✅ แจ้งแล้ว', resp.success ? 'success' : 'error');
-    if (resp.success) await loadReturns();
+    if (resp.success) {
+      toast(resp.message || '✅ แจ้งแล้ว', 'success');
+      closeDialog();
+      await loadReturns();
+      renderReturnsScreen();
+    } else {
+      toast('❌ ' + (resp.message || resp.error || 'บันทึกไม่สำเร็จ'), 'error');
+    }
   } catch(e) {
     toast('❌ เกิดข้อผิดพลาด: ' + (e.message||'ลองใหม่'), 'error');
   }
-  
-  closeDialog();
-  renderReturnsScreen();
 }
 
 
@@ -362,7 +365,7 @@ function showReturnDetail(returnId) {
   showDialog(`
     <div class="dialog-title">↩️ ${r.return_id}</div>
     <div style="margin-bottom:12px">${statusTag}</div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px">${prodEmoji(pName)} ${pName}</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">${pName}</div>
     <div style="font-size:14px;color:var(--td);margin-bottom:12px">
       จำนวน: ${r.quantity} · ${r.issue_type || ''}<br>
       ${r.description || r.detail || ''}<br>
