@@ -1,4 +1,4 @@
-// Version 8.3 | 8 MAR 2026 | Siam Palette Group
+// Version 8.4 | 8 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -45,9 +45,6 @@ function renderApp() {
         <div class="topbar-title">ตะกร้า<div class="topbar-sub" id="cartCount"></div></div>
       </div>
       <div class="content" id="cartContent"></div>
-      <div style="padding:12px 16px;border-top:1px solid var(--b1);background:var(--bg)">
-        <button class="btn btn-gold" id="submitOrderBtn" onclick="submitOrder()">📤 สั่งเลย</button>
-      </div>
     </div>
     
     <!-- ORDER HISTORY -->
@@ -708,20 +705,15 @@ function updateCartFooter() {
 function renderCart() {
   document.getElementById('cartCount').textContent = S.cart.length + ' รายการ';
   const content = document.getElementById('cartContent');
-  const submitBtn = document.getElementById('submitOrderBtn');
-
-  if (S.editingOrderId) {
-    submitBtn.innerHTML = '💾 บันทึกการแก้ไข';
-    document.getElementById('cartCount').textContent = S.cart.length + ' รายการ · ✏️ ' + S.editingOrderId;
-  } else {
-    submitBtn.innerHTML = '📤 สั่งเลย';
-  }
 
   if (S.cart.length === 0) {
     content.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">ตะกร้าว่าง</div><div class="empty-desc">กดสินค้าเพื่อเพิ่ม</div></div>';
-    submitBtn.disabled = true; submitBtn.style.display = 'none'; return;
+    return;
   }
-  submitBtn.disabled = false; submitBtn.style.display = '';
+
+  if (S.editingOrderId) {
+    document.getElementById('cartCount').textContent = S.cart.length + ' รายการ · ✏️ ' + S.editingOrderId;
+  }
 
   const totalPcs = S.cart.reduce((s,c) => s + c.qty, 0);
   const urgentCount = S.cart.filter(c => c.is_urgent).length;
@@ -769,7 +761,7 @@ function renderCart() {
       <!-- Summary + Submit -->
       <div style="padding:12px 16px;background:var(--s1);border-radius:var(--rd2);display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin:10px 0 8px"><span>${S.cart.length} รายการ · ${totalPcs} ชิ้น</span>${urgentCount > 0 ? `<span style="color:var(--red)">${urgentCount} urgent</span>` : ''}</div>
       <div style="display:flex;gap:5px">
-        <button class="btn btn-gold" style="flex:1;padding:10px;font-size:12px" onclick="submitOrder()">📤 ${S.editingOrderId ? 'บันทึกการแก้ไข' : 'สั่งเลย'}</button>
+        <button class="btn btn-gold" id="submitOrderBtn" style="flex:1;padding:10px;font-size:12px" onclick="submitOrder()">📤 ${S.editingOrderId ? 'บันทึกการแก้ไข' : 'สั่งเลย'}</button>
         <button class="btn btn-outline" style="flex:0.5;padding:10px;font-size:13px" onclick="${S.editingOrderId ? "showScreen('orders')" : "showScreen('browse')"}">← ${S.editingOrderId ? 'ยกเลิก' : 'เลือกเพิ่ม'}</button>
       </div>
     </div>`;
@@ -815,8 +807,7 @@ async function submitOrder() {
   if (S.cart.length === 0) return;
   
   const submitBtn = document.getElementById('submitOrderBtn');
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> กำลังส่ง...';
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> กำลังส่ง...'; }
   
   const isEdit = !!S.editingOrderId;
   
@@ -847,8 +838,7 @@ async function submitOrder() {
         setTimeout(() => showScreen('orders'), 1500);
       } else {
         toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '💾 บันทึกการแก้ไข';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '💾 บันทึกการแก้ไข'; }
       }
     } catch (err) {
       toast('❌ แก้ไขไม่สำเร็จ', 'error');
@@ -883,8 +873,7 @@ async function submitOrder() {
         }, 1500);
       } else {
         toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '📤 สั่งเลย';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '📤 สั่งเลย'; }
       }
     } catch (err) {
       toast('❌ สั่งไม่สำเร็จ', 'error');
