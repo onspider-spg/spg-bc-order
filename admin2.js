@@ -1,4 +1,4 @@
-// Version 9.3 | 8 MAR 2026 | Siam Palette Group
+// Version 9.4 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
 // Fix: Print section filter, tab selected state, cleaner print header
 
@@ -673,11 +673,11 @@ function renderBcOrderList() {
       let tapAction;
       if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
       else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
-      else tapAction = `viewOrderDetail('${o.order_id}')`;
+      else tapAction = `viewOrder('${o.order_id}')`;
 
       return `<div style="padding:12px;border:1px solid var(--bd2);border-left:3px solid ${bdr};border-radius:0 var(--rd2) var(--rd2) 0;cursor:pointer;${isDone?'opacity:.7':''}" onclick="${tapAction}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <span style="font-size:13px;font-weight:700;color:var(--gold)">${o.order_id}</span>
+          <a href="#order-detail/${o.order_id}" onclick="event.stopPropagation()" style="font-size:13px;font-weight:700;color:var(--gold);text-decoration:none">${o.order_id}</a>
           <span class="status ${statusClass(o.status)}">${o.status}</span>
         </div>
         <div style="font-size:13px;color:var(--t2)">${o.store_id} · ส่ง ${formatDateAU(o.delivery_date)} · ${o.display_name||''}</div>
@@ -711,10 +711,10 @@ function renderBcOrderList() {
         let tapAction;
         if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
         else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
-        else tapAction = `viewOrderDetail('${o.order_id}')`;
+        else tapAction = `viewOrder('${o.order_id}')`;
 
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}${isRejected?'opacity:.5':''}" onclick="${tapAction}">
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><a href="#order-detail/${o.order_id}" onclick="event.stopPropagation()" style="font-weight:700;color:var(--gold);text-decoration:none">${o.order_id}</a></td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${o.store_id}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.order_date)}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
@@ -748,7 +748,7 @@ async function showBcAccept(orderId) {
   }
 
   if (!S.currentOrder || S.currentOrder.status !== 'Pending') {
-    viewOrderDetail(orderId);
+    viewOrder(orderId);
     return;
   }
   showScreen('bc-accept', orderId);

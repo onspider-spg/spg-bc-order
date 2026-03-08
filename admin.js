@@ -1,4 +1,4 @@
-// Version 9.3 | 8 MAR 2026 | Siam Palette Group
+// Version 9.4 | 8 MAR 2026 | Siam Palette Group
 // BC Order — admin.js: Admin Menu, A1-A9 Panels
 // Phase 6: Admin screens + Product wireframe match
 
@@ -812,8 +812,8 @@ function renderAdminCutoff() {
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สั่งโดย</th>
         <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Status</th>
       </tr></thead>
-      <tbody>${violations.map(o => `<tr style="cursor:pointer;border-left:3px solid var(--red)" onclick="viewOrderDetail('${o.order_id}')">
-        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:700;color:var(--gold)">${o.order_id}</td>
+      <tbody>${violations.map(o => `<tr style="cursor:pointer;border-left:3px solid var(--red)" onclick="viewOrder('${o.order_id}')">
+        <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)"><a href="#order-detail/${o.order_id}" onclick="event.stopPropagation()" style="font-weight:700;color:var(--gold);text-decoration:none">${o.order_id}</a></td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${getStoreName(o.store_id)}</td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${o.created_at ? new Date(o.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}) : '—'}</td>
         <td style="padding:8px 16px;border-bottom:1px solid var(--bd2)">${formatDateAU(o.delivery_date)}</td>
