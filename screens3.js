@@ -1,6 +1,6 @@
-// Version 2.3 | 10 MAR 2026 | Siam Palette Group
+// Version 2.4 | 10 MAR 2026 | Siam Palette Group
 // BC Order — screens3.js: Phase E — Browse V2 (Quota + Stock + Auto Calc)
-// Fix: stock persists via S._stockInput, grid card UI, min/step calc note
+// Fix: +/- moved to grid, larger fonts, stock persists, addToCart reads S._stockInput
 // Overrides: renderBrowse, renderProducts, addToCart, removeFromBrowse,
 //            toggleUrgentBrowse, renderCart, submitOrder, setDeliveryDate
 // Rollback: remove <script src="screens3.js"> from index.html
@@ -124,37 +124,38 @@ function _renderRow(p) {
   if (sVal !== '' && autoQty > 0) {
     const raw = Math.max(0, qNum - parseInt(sVal));
     if (autoQty > raw) {
-      calcNote = `<div style="font-size:10px;color:var(--t3);margin-top:3px;padding:0 4px">💡 need ${raw} → min ${p.min_order||1}/step ${p.order_step||1} → <b>${autoQty}</b></div>`;
+      calcNote = `<div style="font-size:11px;color:var(--t3);margin-top:4px;padding:0 8px">💡 need ${raw} → min ${p.min_order||1}/step ${p.order_step||1} → <b>${autoQty}</b></div>`;
     }
   }
 
   const stockBdr = sVal === '' ? 'var(--orange)' : '#94a3b8';
 
-  return `<div id="row-${p.product_id}" style="border:1px solid ${cardBdr};background:${cardBg};border-radius:12px;padding:10px 12px">
+  return `<div id="row-${p.product_id}" style="border:1px solid ${cardBdr};background:${cardBg};border-radius:12px;padding:12px">
     <div style="display:flex;align-items:center;gap:10px">
       ${p.image_url ? `<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--s1);display:flex;align-items:center;justify-content:center">${prodImg(p, 36)}</div>` : ''}
-      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;line-height:1.3">${p.product_name}</div></div>
-      <div style="display:flex;align-items:center;gap:5px">
-        <div style="width:26px;height:26px;border-radius:50%;border:1.5px solid ${isInCart?'var(--green)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:13px;color:${isInCart?'var(--green)':'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
-        <div style="font-size:15px;font-weight:800;min-width:22px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
-        <div style="width:26px;height:26px;border-radius:50%;border:1.5px solid ${isInCart?'var(--green)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:13px;color:${isInCart?'var(--green)':'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
-        ${isInCart ? `<div style="width:24px;height:24px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;${inCart.is_urgent?'':'opacity:.35'}" onclick="toggleUrgentBrowse('${p.product_id}')">⚡</div>` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;line-height:1.3">${p.product_name}</div>
       </div>
+      ${isInCart ? `<div style="width:28px;height:28px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;${inCart.is_urgent?'':'opacity:.35'}" onclick="toggleUrgentBrowse('${p.product_id}')">⚡</div>` : ''}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:4px;margin-top:8px;background:var(--s1);border-radius:8px;padding:6px 8px;align-items:center">
+    <div style="display:grid;grid-template-columns:1fr 1.5fr 1.2fr;gap:6px;margin-top:8px;background:var(--s1);border-radius:10px;padding:10px 12px;align-items:center">
       <div style="text-align:center">
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px">โควตา</div>
-        <div style="font-size:15px;font-weight:800;color:var(--blue)">${qNum}</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:2px">โควตา</div>
+        <div style="font-size:18px;font-weight:800;color:var(--blue)">${qNum}</div>
       </div>
       <div style="text-align:center">
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px">สต็อก</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:2px">สต็อก</div>
         <input type="number" min="0" inputmode="numeric" value="${sVal}" placeholder="—"
-          style="width:52px;padding:4px 2px;border:1.5px solid ${stockBdr};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:#fff;margin-top:2px"
+          style="width:64px;padding:6px 4px;border:1.5px solid ${stockBdr};border-radius:8px;font-size:18px;font-weight:700;text-align:center;background:#fff"
           onfocus="this.select()" onchange="_onStock('${p.product_id}',this.value)" onclick="event.stopPropagation()">
       </div>
       <div style="text-align:center">
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px">สั่ง</div>
-        <div style="font-size:15px;font-weight:800;color:${sVal !== '' ? (autoQty > 0 ? 'var(--blue)' : 'var(--green)') : 'var(--t4)'}">${sVal !== '' ? autoQty : '—'}</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:2px">สั่ง</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+          <div style="width:24px;height:24px;border-radius:50%;border:1.5px solid ${isInCart?'var(--green)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:12px;color:${isInCart?'var(--green)':'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
+          <div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
+          <div style="width:24px;height:24px;border-radius:50%;border:1.5px solid ${isInCart?'var(--green)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:12px;color:${isInCart?'var(--green)':'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
+        </div>
       </div>
     </div>
     ${calcNote}
@@ -209,14 +210,16 @@ function addToCart(productId) {
   const p = S.products.find(x => x.product_id === productId);
   if (!p) return;
   if (p.popup_notice) toast(p.popup_notice, 'warning');
+  if (!S._stockInput) S._stockInput = {};
+  const soh = S._stockInput[productId] ?? null;
   const existing = S.cart.find(c => c.product_id === productId);
-  if (existing) { existing.qty += p.order_step || 1; }
+  if (existing) { existing.qty += p.order_step || 1; if (soh !== null) existing.stock_on_hand = soh; }
   else {
     S.cart.push({
       product_id: p.product_id, product_name: p.product_name,
       qty: p.min_order || 1, unit: p.unit, section_id: p.section_id,
       min_order: p.min_order, order_step: p.order_step || 1,
-      is_urgent: false, note: '', stock_on_hand: null,
+      is_urgent: false, note: '', stock_on_hand: soh,
     });
   }
   _patchRow(productId);
