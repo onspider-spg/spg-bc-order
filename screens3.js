@@ -1,6 +1,6 @@
-// Version 2.1 | 9 MAR 2026 | Siam Palette Group
+// Version 2.2 | 9 MAR 2026 | Siam Palette Group
 // BC Order — screens3.js: Phase E — Browse V2 (Quota + Stock + Auto Calc)
-// Fix: show quota+stock+order columns on ALL products, stock is required
+// Fix: mobile friendly UI, quota/stock/order bar on every product, stock required
 // Overrides: renderBrowse, renderProducts, addToCart, removeFromBrowse,
 //            toggleUrgentBrowse, renderCart, submitOrder, setDeliveryDate
 // Rollback: remove <script src="screens3.js"> from index.html
@@ -110,45 +110,61 @@ function _renderRow(p) {
   const stockVal = inCart ? inCart.stock_on_hand : null;
   const quota = _getQuota(p.product_id);
   const qNum = (quota !== null) ? quota : 0;
+  const sVal = (stockVal !== null && stockVal !== undefined) ? stockVal : '';
+  const autoQty = _calcQty(qNum, stockVal, p.min_order, p.order_step);
+
   const border = inCart ? 'border:1px solid #c8e6c9;background:var(--green-bg)' : 'border:1px solid var(--bd2);background:#fff';
   const canMinus = qty > 0;
   const btnBdr = inCart ? 'var(--green)' : 'var(--bd)';
   const btnClr = inCart ? 'var(--green)' : 'var(--t4)';
 
-  // Quota badge — always show
-  const qBadge = `<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--blue-bg);color:var(--blue);font-weight:600">โควตา ${qNum}</span>`;
-
-  // Stock input + auto calc — always show
-  const sVal = (stockVal !== null && stockVal !== undefined) ? stockVal : '';
-  const autoQty = _calcQty(qNum, stockVal, p.min_order, p.order_step);
-  let calcTxt = '';
+  // Auto calc explanation
+  let calcLine = '';
   if (sVal !== '') {
-    calcTxt = autoQty > 0
-      ? `<span style="color:var(--blue);font-weight:600">→ สั่ง ${autoQty}</span>`
-      : `<span style="color:var(--green)">→ สั่ง 0</span>`;
+    const raw = qNum - parseInt(sVal);
+    if (autoQty > 0 && autoQty > raw) {
+      // min_order or step kicked in
+      calcLine = `<div style="font-size:11px;color:var(--blue);margin-top:2px">need ${Math.max(0,raw)} → min ${p.min_order||1} / step ${p.order_step||1} → <b>${autoQty}</b></div>`;
+    } else if (autoQty > 0) {
+      calcLine = `<div style="font-size:11px;color:var(--blue);margin-top:2px">${qNum} − ${sVal} → <b>สั่ง ${autoQty}</b></div>`;
+    } else {
+      calcLine = `<div style="font-size:11px;color:var(--green);margin-top:2px">✓ สต็อกเพียงพอ</div>`;
+    }
   }
-  const stockRow = `<div style="display:flex;align-items:center;gap:4px;margin-top:4px">
-    <span style="font-size:11px;color:var(--t3)">สต็อก:</span>
-    <input type="number" min="0" inputmode="numeric" value="${sVal}" placeholder="กรอก"
-      style="width:56px;padding:3px 4px;border:1.5px solid ${sVal === '' ? 'var(--orange)' : 'var(--bd)'};border-radius:6px;font-size:13px;font-weight:600;text-align:center"
-      onfocus="this.select()" onchange="_onStock('${p.product_id}',this.value)" onclick="event.stopPropagation()">
-    <span style="font-size:11px;color:var(--t4)">${p.unit||''}</span>
-    ${calcTxt}
-  </div>`;
 
-  return `<div id="row-${p.product_id}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;${border};border-radius:var(--rd)">
-    ${p.image_url ? `<div style="width:44px;height:44px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 44)}</div>` : ''}
-    <div style="flex:1;min-width:0">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:12px;font-weight:700">${p.product_name}</span>${qBadge}</div>
-      <div style="font-size:12px;color:var(--t4)">min: ${p.min_order||1} | step: ${p.order_step||1}</div>
-      ${stockRow}
+  // Stock input border: orange if empty, green if filled
+  const stockBorder = sVal === '' ? 'var(--orange)' : 'var(--green)';
+
+  return `<div id="row-${p.product_id}" style="padding:10px 12px;${border};border-radius:var(--rd);margin-bottom:0">
+    <div style="display:flex;align-items:center;gap:10px">
+      ${p.image_url ? `<div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 40)}</div>` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${p.product_name}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${canMinus?btnBdr:'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:14px;color:${canMinus?btnClr:'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
+        <div style="font-size:16px;font-weight:800;min-width:24px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
+        <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${btnBdr};display:flex;align-items:center;justify-content:center;font-size:14px;color:${inCart?btnClr:'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
+        ${inCart ? `<div style="width:28px;height:28px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;${inCart.is_urgent?'':'opacity:.4'}" onclick="toggleUrgentBrowse('${p.product_id}')" title="⚡ Urgent">⚡</div>` : ''}
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${canMinus?btnBdr:'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:14px;color:${canMinus?btnClr:'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
-      <div style="font-size:16px;font-weight:800;min-width:20px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
-      <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${btnBdr};display:flex;align-items:center;justify-content:center;font-size:14px;color:${inCart?btnClr:'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
-      ${inCart ? `<div style="width:28px;height:28px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;${inCart.is_urgent?'':'opacity:.4'}" onclick="toggleUrgentBrowse('${p.product_id}')" title="⚡ Urgent">⚡</div>` : ''}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 8px;background:var(--s1);border-radius:8px;font-size:12px">
+      <div style="flex:1;display:flex;align-items:center;gap:4px">
+        <span style="color:var(--t3)">โควตา</span>
+        <span style="font-weight:700;color:var(--blue)">${qNum}</span>
+      </div>
+      <div style="flex:1.2;display:flex;align-items:center;gap:4px">
+        <span style="color:var(--t3)">สต็อก</span>
+        <input type="number" min="0" inputmode="numeric" value="${sVal}" placeholder="—"
+          style="width:48px;padding:4px;border:1.5px solid ${stockBorder};border-radius:6px;font-size:13px;font-weight:700;text-align:center;background:#fff"
+          onfocus="this.select()" onchange="_onStock('${p.product_id}',this.value)" onclick="event.stopPropagation()">
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:4px">
+        <span style="color:var(--t3)">สั่ง</span>
+        <span style="font-weight:800;font-size:14px;color:${autoQty > 0 ? 'var(--blue)' : 'var(--t4)'}">${sVal !== '' ? autoQty : '—'}</span>
+      </div>
     </div>
+    ${calcLine}
   </div>`;
 }
 
