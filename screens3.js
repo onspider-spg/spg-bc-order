@@ -1,6 +1,6 @@
-// Version 2.5 | 10 MAR 2026 | Siam Palette Group
+// Version 2.6 | 10 MAR 2026 | Siam Palette Group
 // BC Order — screens3.js: Phase E — Browse V2 (Quota + Stock + Auto Calc)
-// Fix: clear S._stockInput on new order + after submit success
+// Add: send all_stock on create/edit for stock history, clear cache on new order
 // Overrides: renderBrowse, renderProducts, addToCart, removeFromBrowse,
 //            toggleUrgentBrowse, renderCart, submitOrder, setDeliveryDate
 // Rollback: remove <script src="screens3.js"> from index.html
@@ -329,8 +329,20 @@ async function submitOrder() {
       item_id: c.item_id, product_id: c.product_id, qty: c.qty,
       is_urgent: c.is_urgent, note: c.note, stock_on_hand: c.stock_on_hand ?? null,
     }));
+
+    // Build all_stock for stock history
+    const allStock = [];
+    (S.products || []).forEach(p => {
+      if (!S._stockInput) return;
+      const sv = S._stockInput[p.product_id];
+      if (sv === undefined || sv === null) return;
+      const q = _getQuota(p.product_id) ?? 0;
+      const cartItem = S.cart.find(c => c.product_id === p.product_id);
+      allStock.push({ product_id: p.product_id, stock_on_hand: sv, quota_qty: q, order_qty: cartItem ? cartItem.qty : 0 });
+    });
+
     try {
-      const resp = await api('edit_order', { order_id: S.editingOrderId, delivery_date: S.deliveryDate, header_note: S.headerNote, items });
+      const resp = await api('edit_order', { order_id: S.editingOrderId, delivery_date: S.deliveryDate, header_note: S.headerNote, items, all_stock: allStock });
       if (resp.success) {
         toast(resp.message || '✅ แก้ไขเรียบร้อย!', 'success');
         S.cart = []; S.headerNote = ''; S.editingOrderId = null;
@@ -350,8 +362,25 @@ async function submitOrder() {
       product_id: c.product_id, qty: c.qty, is_urgent: c.is_urgent,
       note: c.note, stock_on_hand: c.stock_on_hand ?? null,
     }));
+
+    // Build all_stock: every product that has stock filled (for stock history)
+    const allStock = [];
+    (S.products || []).forEach(p => {
+      if (!S._stockInput) return;
+      const sv = S._stockInput[p.product_id];
+      if (sv === undefined || sv === null) return;
+      const q = _getQuota(p.product_id) ?? 0;
+      const cartItem = S.cart.find(c => c.product_id === p.product_id);
+      allStock.push({
+        product_id: p.product_id,
+        stock_on_hand: sv,
+        quota_qty: q,
+        order_qty: cartItem ? cartItem.qty : 0,
+      });
+    });
+
     try {
-      const resp = await api('create_order', { delivery_date: S.deliveryDate, header_note: S.headerNote, items });
+      const resp = await api('create_order', { delivery_date: S.deliveryDate, header_note: S.headerNote, items, all_stock: allStock });
       if (resp.success) {
         toast(resp.message || '✅ สั่งเรียบร้อย!', 'success');
         S.cart = []; S.headerNote = '';

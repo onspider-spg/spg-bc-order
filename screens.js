@@ -1,6 +1,6 @@
-// Version 10.7.2 | 9 MAR 2026 | Siam Palette Group
+// Version 10.8 | 10 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
-// Phase F: Order Detail stock_on_hand + Set Quota in quick menu
+// Add: Stock History screen, hide stock from BC, show fulfilled_by name
 
 // ─── SCREEN RENDERER ─────────────────────────────────────────
 function renderApp() {
@@ -313,6 +313,10 @@ function renderApp() {
     <div class="screen" id="scr-store-quota">
       <div class="content" id="quotaContent"></div>
     </div>
+
+    <div class="screen" id="scr-stock-history">
+      <div class="content" id="stockHistoryContent"></div>
+    </div>
   `;
 }
 
@@ -377,6 +381,7 @@ async function showScreen(name, param) {
       case 'orders': renderOrders(); break;
       case 'stock': renderStockScreen(); break;
       case 'store-quota': renderQuotaScreen(); break;
+      case 'stock-history': renderStockHistory(); break;
       case 'waste': renderWaste(); break;
       case 'returns': renderReturnsScreen(); break;
       // BC screens
@@ -517,6 +522,7 @@ function renderHomeDashboard() {
         ${hasPerm('fn_create_order') ? `<div class="card" style="border-left:3px solid var(--gold)" onclick="startOrder()"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📝</div><div style="flex:1"><div class="card-title" style="font-size:13px">Create Order</div><div class="card-desc" style="font-size:12px">สั่งเค้ก ซอสไปที่ร้าน</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
         ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📋</div><div style="flex:1"><div class="card-title" style="font-size:13px">View Orders</div><div class="card-desc" style="font-size:12px">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
         ${hasPerm('fn_create_order') ? `<div class="card" onclick="showScreen('store-quota')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📊</div><div style="flex:1"><div class="card-title" style="font-size:13px">Set Quota</div><div class="card-desc" style="font-size:12px">ตั้งโควตาสินค้ารายวัน</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
+        ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('stock-history')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📦</div><div style="flex:1"><div class="card-title" style="font-size:13px">Stock History</div><div class="card-desc" style="font-size:12px">ประวัติสต็อกย้อนหลัง</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
       </div>
 
       <!-- Records Quick Menu -->
@@ -1117,7 +1123,7 @@ async function viewOrder(orderId) {
         <thead><tr style="background:var(--s1)">
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
-          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สต็อก</th>
+          ${S.role === 'store' ? `<th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สต็อก</th>` : ''}
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">⚡</th>
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Fulfilment</th>
@@ -1125,11 +1131,11 @@ async function viewOrder(orderId) {
         <tbody>${items.length > 0 ? items.map(item => `<tr>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${item.product_name||item.product_id}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${item.qty_ordered} ${item.unit||''}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-size:12px;color:var(--blue)">${item.stock_on_hand !== null && item.stock_on_hand !== undefined ? item.stock_on_hand : '—'}</td>
+          ${S.role === 'store' ? `<td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-size:12px;color:var(--blue)">${item.stock_on_hand !== null && item.stock_on_hand !== undefined ? item.stock_on_hand : '—'}</td>` : ''}
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${item.is_urgent?'⚡':'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${item.item_note||'—'}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${item.fulfilment_status ? `<span style="color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'};font-weight:600">${item.fulfilment_status} (${item.qty_sent||0})</span>` : '—'}</td>
-        </tr>`).join('') : '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--tm)">ไม่มีรายการ</td></tr>'}</tbody>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${item.fulfilment_status ? `<span style="color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'};font-weight:600">${item.fulfilment_status} (${item.qty_sent||0})</span>${item.fulfilled_by ? `<div style="font-size:11px;color:var(--t3)">${item.fulfilled_by}</div>` : ''}` : '—'}</td>
+        </tr>`).join('') : `<tr><td colspan="${S.role === 'store' ? 6 : 5}" style="padding:16px;text-align:center;color:var(--tm)">ไม่มีรายการ</td></tr>`}</tbody>
       </table>
 
       ${['Pending','Ordered'].includes(o.status) ? `
@@ -1393,5 +1399,93 @@ async function saveAllQuotas() {
   }
 
   if (btn) { btn.disabled = false; btn.innerHTML = '💾 บันทึก'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STOCK HISTORY — ประวัติสต็อกย้อนหลัง 30 วัน
+// ═══════════════════════════════════════════════════════════════
+
+async function renderStockHistory() {
+  const el = document.getElementById('stockHistoryContent');
+  el.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+
+  try {
+    const resp = await api('get_stock_history');
+    if (!resp.success) { el.innerHTML = '<div class="pad" style="padding:20px;color:var(--red)">❌ ' + (resp.error || 'Error') + '</div>'; return; }
+
+    const rows = resp.data || [];
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty" style="padding:40px 20px"><div class="empty-icon">📦</div><div class="empty-title">ยังไม่มีประวัติสต็อก</div><div class="empty-desc">กดสั่งออเดอร์แล้วกรอกสต็อก จะเก็บประวัติที่นี่</div></div>';
+      return;
+    }
+
+    // Group by delivery_date + order_id
+    const groups = {};
+    rows.forEach(r => {
+      const key = r.delivery_date + '|' + r.order_id;
+      if (!groups[key]) groups[key] = { delivery_date: r.delivery_date, order_id: r.order_id, created_at: r.created_at, items: [] };
+      groups[key].items.push(r);
+    });
+
+    const sorted = Object.values(groups).sort((a, b) => b.delivery_date.localeCompare(a.delivery_date) || b.order_id.localeCompare(a.order_id));
+
+    // Section filter
+    const sections = [...new Set(rows.map(r => r.section_id).filter(Boolean))].sort();
+    S._shSection = S._shSection || [];
+    const secChips = sections.length > 1 ? sfChips('_shSection', sections, 'filterStockHistory') : '';
+
+    el.innerHTML = `<div style="padding:16px 20px">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px">ประวัติสต็อกที่กรอกตอนสั่งของ — 30 วันล่าสุด</div>
+      ${secChips}
+      <div id="shList">${_renderSHGroups(sorted)}</div>
+    </div>`;
+
+    S._shData = sorted;
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;color:var(--red)">❌ ' + e.message + '</div>';
+  }
+}
+
+function filterStockHistory() {
+  const el = document.getElementById('shList');
+  if (!el || !S._shData) return;
+  el.innerHTML = _renderSHGroups(S._shData);
+}
+
+function _renderSHGroups(groups) {
+  const filter = S._shSection || [];
+  return groups.map(g => {
+    let items = g.items;
+    if (filter.length > 0) items = items.filter(i => filter.includes(i.section_id));
+    if (!items.length) return '';
+
+    items.sort((a, b) => (a.product_name || '').localeCompare(b.product_name || ''));
+
+    return `<div style="margin-bottom:12px;border:1px solid var(--bd2);border-radius:10px;overflow:hidden">
+      <div style="padding:8px 12px;background:var(--s1);display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <div>
+          <span style="font-size:13px;font-weight:700">${formatDateThai(g.delivery_date)}</span>
+          <span style="font-size:12px;color:var(--gold);margin-left:8px">${g.order_id}</span>
+        </div>
+        <span style="font-size:12px;color:var(--t3)">${items.length} สินค้า ▾</span>
+      </div>
+      <div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--t3)">สินค้า</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--t3)">โควตา</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--t3)">สต็อก</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--t3)">สั่ง</th>
+          </tr></thead>
+          <tbody>${items.map(i => `<tr>
+            <td style="padding:5px 10px;border-top:1px solid var(--bd2);font-weight:600">${i.product_name}</td>
+            <td style="padding:5px 8px;border-top:1px solid var(--bd2);text-align:center;color:var(--blue)">${i.quota_qty}</td>
+            <td style="padding:5px 8px;border-top:1px solid var(--bd2);text-align:center">${i.stock_on_hand}</td>
+            <td style="padding:5px 8px;border-top:1px solid var(--bd2);text-align:center;font-weight:700;color:${i.order_qty > 0 ? 'var(--blue)' : 'var(--t4)'}">${i.order_qty}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
 }
 
