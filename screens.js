@@ -1,6 +1,6 @@
-// Version 10.8 | 10 MAR 2026 | Siam Palette Group
-// BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
-// Add: Stock History screen, hide stock from BC, show fulfilled_by name
+// Version 10.8.1 | 10 MAR 2026 | Siam Palette Group
+// BC Order — screens.js
+// Fix: Stock History card list + tap to view detail dialog
 
 // ─── SCREEN RENDERER ─────────────────────────────────────────
 function renderApp() {
@@ -1419,73 +1419,81 @@ async function renderStockHistory() {
       return;
     }
 
-    // Group by delivery_date + order_id
+    // Group by order_id
     const groups = {};
     rows.forEach(r => {
-      const key = r.delivery_date + '|' + r.order_id;
-      if (!groups[key]) groups[key] = { delivery_date: r.delivery_date, order_id: r.order_id, created_at: r.created_at, items: [] };
-      groups[key].items.push(r);
+      if (!groups[r.order_id]) groups[r.order_id] = { delivery_date: r.delivery_date, order_id: r.order_id, created_at: r.created_at, items: [] };
+      groups[r.order_id].items.push(r);
     });
 
-    const sorted = Object.values(groups).sort((a, b) => b.delivery_date.localeCompare(a.delivery_date) || b.order_id.localeCompare(a.order_id));
-
-    // Section filter
-    const sections = [...new Set(rows.map(r => r.section_id).filter(Boolean))].sort();
-    S._shSection = S._shSection || [];
-    const secChips = sections.length > 1 ? sfChips('_shSection', sections, 'filterStockHistory') : '';
+    S._shGroups = Object.values(groups).sort((a, b) => b.delivery_date.localeCompare(a.delivery_date) || b.order_id.localeCompare(a.order_id));
 
     el.innerHTML = `<div style="padding:16px 20px">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:8px">ประวัติสต็อกที่กรอกตอนสั่งของ — 30 วันล่าสุด</div>
-      ${secChips}
-      <div id="shList">${_renderSHGroups(sorted)}</div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px">ประวัติสต็อกที่กรอกตอนสั่งของ — 30 วันล่าสุด</div>
+      <div id="shList">${_renderSHCards()}</div>
     </div>`;
-
-    S._shData = sorted;
   } catch(e) {
     el.innerHTML = '<div style="padding:20px;color:var(--red)">❌ ' + e.message + '</div>';
   }
 }
 
-function filterStockHistory() {
-  const el = document.getElementById('shList');
-  if (!el || !S._shData) return;
-  el.innerHTML = _renderSHGroups(S._shData);
-}
+function _renderSHCards() {
+  if (!S._shGroups || !S._shGroups.length) return '';
+  return S._shGroups.map(g => {
+    const ordered = g.items.filter(i => i.order_qty > 0);
+    const totalItems = g.items.length;
+    const totalOrdered = ordered.length;
+    const summary = ordered.slice(0, 3).map(i => `${i.product_name} ×${i.order_qty}`).join(', ');
+    const more = totalOrdered > 3 ? ` +${totalOrdered - 3}` : '';
 
-function _renderSHGroups(groups) {
-  const filter = S._shSection || [];
-  return groups.map(g => {
-    let items = g.items;
-    if (filter.length > 0) items = items.filter(i => filter.includes(i.section_id));
-    if (!items.length) return '';
-
-    items.sort((a, b) => (a.product_name || '').localeCompare(b.product_name || ''));
-
-    return `<div style="margin-bottom:12px;border:1px solid var(--bd2);border-radius:10px;overflow:hidden">
-      <div style="padding:8px 12px;background:var(--s1);display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-        <div>
-          <span style="font-size:13px;font-weight:700">${formatDateThai(g.delivery_date)}</span>
-          <span style="font-size:12px;color:var(--gold);margin-left:8px">${g.order_id}</span>
-        </div>
-        <span style="font-size:12px;color:var(--t3)">${items.length} สินค้า ▾</span>
+    return `<div style="border-left:3px solid var(--blue);border:1px solid var(--bd2);border-left:3px solid var(--blue);border-radius:var(--rd);padding:12px 16px;margin-bottom:6px;cursor:pointer" onclick="showSHDetail('${g.order_id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;font-weight:700;color:var(--gold)">${g.order_id}</span>
+        <span style="font-size:12px;color:var(--t3)">📦 ${totalItems} สินค้า · สั่ง ${totalOrdered}</span>
       </div>
-      <div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:#f8fafc">
-            <th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--t3)">สินค้า</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--t3)">โควตา</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--t3)">สต็อก</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--t3)">สั่ง</th>
-          </tr></thead>
-          <tbody>${items.map(i => `<tr>
-            <td style="padding:5px 10px;border-top:1px solid var(--bd2);font-weight:600">${i.product_name}</td>
-            <td style="padding:5px 8px;border-top:1px solid var(--bd2);text-align:center;color:var(--blue)">${i.quota_qty}</td>
-            <td style="padding:5px 8px;border-top:1px solid var(--bd2);text-align:center">${i.stock_on_hand}</td>
-            <td style="padding:5px 8px;border-top:1px solid var(--bd2);text-align:center;font-weight:700;color:${i.order_qty > 0 ? 'var(--blue)' : 'var(--t4)'}">${i.order_qty}</td>
-          </tr>`).join('')}</tbody>
-        </table>
-      </div>
+      <div style="font-size:12px;color:var(--t3);margin-top:2px">ส่ง ${formatDateThai(g.delivery_date)}</div>
+      ${summary ? `<div style="font-size:12px;color:var(--t4);margin-top:4px">${summary}${more}</div>` : '<div style="font-size:12px;color:var(--t4);margin-top:4px">ไม่มีรายการสั่ง</div>'}
     </div>`;
   }).join('');
+}
+
+function showSHDetail(orderId) {
+  const g = (S._shGroups || []).find(x => x.order_id === orderId);
+  if (!g) return;
+
+  const items = [...g.items].sort((a, b) => (a.product_name || '').localeCompare(b.product_name || ''));
+
+  showDialog(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--gold)">${g.order_id}</div>
+        <div style="font-size:12px;color:var(--t3)">ส่ง ${formatDateThai(g.delivery_date)}</div>
+      </div>
+      <div style="font-size:12px;color:var(--t3)">${items.length} สินค้า</div>
+    </div>
+    <div style="max-height:60vh;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--s1);position:sticky;top:0">
+          <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--t3);border-bottom:2px solid var(--bd)">สินค้า</th>
+          <th style="padding:8px 6px;text-align:center;font-weight:600;color:var(--t3);border-bottom:2px solid var(--bd)">โควตา</th>
+          <th style="padding:8px 6px;text-align:center;font-weight:600;color:var(--t3);border-bottom:2px solid var(--bd)">สต็อก</th>
+          <th style="padding:8px 6px;text-align:center;font-weight:600;color:var(--t3);border-bottom:2px solid var(--bd)">สั่ง</th>
+        </tr></thead>
+        <tbody>${items.map(i => `<tr${i.order_qty > 0 ? ' style="background:#f0fdf4"' : ''}>
+          <td style="padding:6px 10px;border-top:1px solid var(--bd2);font-weight:600">${i.product_name}</td>
+          <td style="padding:6px;border-top:1px solid var(--bd2);text-align:center;color:var(--blue)">${i.quota_qty}</td>
+          <td style="padding:6px;border-top:1px solid var(--bd2);text-align:center">${i.stock_on_hand}</td>
+          <td style="padding:6px;border-top:1px solid var(--bd2);text-align:center;font-weight:700;color:${i.order_qty > 0 ? 'var(--blue)' : 'var(--t4)'}">${i.order_qty}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeDialog()">ปิด</button>
+  `);
+}
+
+function filterStockHistory() {
+  const el = document.getElementById('shList');
+  if (!el || !S._shGroups) return;
+  el.innerHTML = _renderSHCards();
 }
 
