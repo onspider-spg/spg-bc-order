@@ -1,5 +1,6 @@
-// Version 2.0 | 9 MAR 2026 | Siam Palette Group
+// Version 2.1 | 9 MAR 2026 | Siam Palette Group
 // BC Order — screens3.js: Phase E — Browse V2 (Quota + Stock + Auto Calc)
+// Fix: show quota+stock+order columns on ALL products, stock is required
 // Overrides: renderBrowse, renderProducts, addToCart, removeFromBrowse,
 //            toggleUrgentBrowse, renderCart, submitOrder, setDeliveryDate
 // Rollback: remove <script src="screens3.js"> from index.html
@@ -108,30 +109,32 @@ function _renderRow(p) {
   const qty = inCart ? inCart.qty : 0;
   const stockVal = inCart ? inCart.stock_on_hand : null;
   const quota = _getQuota(p.product_id);
-  const hasQuota = quota !== null && quota > 0;
+  const qNum = (quota !== null) ? quota : 0;
   const border = inCart ? 'border:1px solid #c8e6c9;background:var(--green-bg)' : 'border:1px solid var(--bd2);background:#fff';
   const canMinus = qty > 0;
   const btnBdr = inCart ? 'var(--green)' : 'var(--bd)';
   const btnClr = inCart ? 'var(--green)' : 'var(--t4)';
 
-  const qBadge = hasQuota ? `<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--blue-bg);color:var(--blue);font-weight:600">โควตา ${quota}</span>` : '';
+  // Quota badge — always show
+  const qBadge = `<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--blue-bg);color:var(--blue);font-weight:600">โควตา ${qNum}</span>`;
 
-  let stockRow = '';
-  if (hasQuota) {
-    const sVal = (stockVal !== null && stockVal !== undefined) ? stockVal : '';
-    const autoQty = _calcQty(quota, stockVal, p.min_order, p.order_step);
-    const calcTxt = (sVal !== '')
-      ? (autoQty > 0 ? `<span style="color:var(--blue);font-weight:600">→ สั่ง ${autoQty}</span>` : `<span style="color:var(--green)">✓ พอ</span>`)
-      : '';
-    stockRow = `<div style="display:flex;align-items:center;gap:4px;margin-top:4px">
-      <span style="font-size:11px;color:var(--t3)">สต็อก:</span>
-      <input type="number" min="0" inputmode="numeric" value="${sVal}" placeholder="กรอก"
-        style="width:56px;padding:3px 4px;border:1.5px solid var(--bd);border-radius:6px;font-size:13px;font-weight:600;text-align:center"
-        onfocus="this.select()" onchange="_onStock('${p.product_id}',this.value)" onclick="event.stopPropagation()">
-      <span style="font-size:11px;color:var(--t4)">${p.unit||''}</span>
-      ${calcTxt}
-    </div>`;
+  // Stock input + auto calc — always show
+  const sVal = (stockVal !== null && stockVal !== undefined) ? stockVal : '';
+  const autoQty = _calcQty(qNum, stockVal, p.min_order, p.order_step);
+  let calcTxt = '';
+  if (sVal !== '') {
+    calcTxt = autoQty > 0
+      ? `<span style="color:var(--blue);font-weight:600">→ สั่ง ${autoQty}</span>`
+      : `<span style="color:var(--green)">→ สั่ง 0</span>`;
   }
+  const stockRow = `<div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+    <span style="font-size:11px;color:var(--t3)">สต็อก:</span>
+    <input type="number" min="0" inputmode="numeric" value="${sVal}" placeholder="กรอก"
+      style="width:56px;padding:3px 4px;border:1.5px solid ${sVal === '' ? 'var(--orange)' : 'var(--bd)'};border-radius:6px;font-size:13px;font-weight:600;text-align:center"
+      onfocus="this.select()" onchange="_onStock('${p.product_id}',this.value)" onclick="event.stopPropagation()">
+    <span style="font-size:11px;color:var(--t4)">${p.unit||''}</span>
+    ${calcTxt}
+  </div>`;
 
   return `<div id="row-${p.product_id}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;${border};border-radius:var(--rd)">
     ${p.image_url ? `<div style="width:44px;height:44px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 44)}</div>` : ''}
@@ -163,10 +166,12 @@ function _onStock(productId, val) {
   const p = S.products.find(x => x.product_id === productId);
   if (!p) return;
   const stockVal = (val !== '' && val !== null && val !== undefined) ? parseInt(val) : null;
-  const autoQty = _calcQty(_getQuota(productId), stockVal, p.min_order, p.order_step);
+  const qNum = _getQuota(productId) ?? 0;
+  const autoQty = _calcQty(qNum, stockVal, p.min_order, p.order_step);
   const idx = S.cart.findIndex(c => c.product_id === productId);
 
   if (autoQty > 0) {
+    // Add or update cart with auto calc qty
     if (idx >= 0) { S.cart[idx].qty = autoQty; S.cart[idx].stock_on_hand = stockVal; }
     else {
       S.cart.push({
@@ -176,7 +181,10 @@ function _onStock(productId, val) {
         is_urgent: false, note: '', stock_on_hand: stockVal,
       });
     }
-  } else if (idx >= 0) { S.cart.splice(idx, 1); }
+  } else {
+    // autoQty = 0 → update stock_on_hand if in cart, but set qty to 0 → remove
+    if (idx >= 0) { S.cart.splice(idx, 1); }
+  }
 
   _patchRow(productId);
 }
@@ -287,6 +295,14 @@ function renderCart() {
 
 async function submitOrder() {
   if (!S.cart.length) return;
+
+  // Validate: stock_on_hand must be filled for every item
+  const missing = S.cart.filter(c => !c.fulfilment_status && (c.stock_on_hand === null || c.stock_on_hand === undefined));
+  if (missing.length > 0) {
+    toast('⚠️ กรุณากรอกสต็อกให้ครบทุกรายการก่อนสั่ง (' + missing.length + ' รายการยังไม่กรอก)', 'warning');
+    return;
+  }
+
   const btn = document.getElementById('submitOrderBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> กำลังส่ง...'; }
 
