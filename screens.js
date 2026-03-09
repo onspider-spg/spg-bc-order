@@ -1,4 +1,4 @@
-// Version 10.6 | 8 MAR 2026 | Siam Palette Group
+// Version 10.7 | 9 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
 // Phase 2: Store Screens UI overhaul (wireframe match)
 
@@ -309,6 +309,10 @@ function renderApp() {
       </div>
       <div class="content" id="productEditContent"></div>
     </div>
+
+    <div class="screen" id="scr-store-quota">
+      <div class="content" id="quotaContent"></div>
+    </div>
   `;
 }
 
@@ -330,7 +334,7 @@ async function showScreen(name, param) {
     // ── Lazy load: ensure data is loaded before rendering ──
     try {
       // Screens that need products + categories
-      if (['browse','cart','waste','returns','bc-returns','bc-stock','admin-products','admin-product-edit','admin-dashboard','admin-waste-dashboard','admin-top-products','admin-visibility'].includes(name)) {
+      if (['browse','cart','waste','returns','bc-returns','bc-stock','admin-products','admin-product-edit','admin-dashboard','admin-waste-dashboard','admin-top-products','admin-visibility','store-quota'].includes(name)) {
         if (!S._productsLoaded) {
           await Promise.all([loadCategories(), loadProducts()]);
           S._productsLoaded = true;
@@ -372,6 +376,7 @@ async function showScreen(name, param) {
       case 'cart': renderCart(); break;
       case 'orders': renderOrders(); break;
       case 'stock': renderStockScreen(); break;
+      case 'store-quota': renderQuotaScreen(); break;
       case 'waste': renderWaste(); break;
       case 'returns': renderReturnsScreen(); break;
       // BC screens
@@ -1269,5 +1274,122 @@ function renderStock(search) {
       }).join('')}</tbody>
     </table>
   </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STORE QUOTA — Per-product daily quota matrix (Mon–Sun)
+// ═══════════════════════════════════════════════════════════════
+
+const DAY_LABELS = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+
+async function renderQuotaScreen() {
+  const el = document.getElementById('quotaContent');
+  el.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+
+  try {
+    // Load quotas from API
+    const resp = await api('get_quotas');
+    if (!resp.success) { el.innerHTML = '<div class="pad">❌ ' + resp.error + '</div>'; return; }
+
+    S._quotaMap = resp.data || {};
+    S._quotaSearch = S._quotaSearch || '';
+    S._quotaSection = S._quotaSection || [];
+
+    renderQuotaTable();
+  } catch(e) {
+    el.innerHTML = '<div class="pad" style="color:var(--red)">❌ Error: ' + e.message + '</div>';
+  }
+}
+
+function renderQuotaTable() {
+  const el = document.getElementById('quotaContent');
+
+  // Filter products: only visible to this store+dept
+  let prods = (S.products || []).filter(p => p.is_active === true || p.is_active === 'TRUE');
+  
+  // Section filter
+  const sections = [...new Set(prods.map(p => p.section_id).filter(Boolean))].sort();
+  const secChips = sections.length > 1 ? sfChips('_quotaSection', sections, 'renderQuotaTable') : '';
+  if (S._quotaSection && S._quotaSection.length > 0) prods = prods.filter(p => S._quotaSection.includes(p.section_id));
+
+  // Search
+  if (S._quotaSearch) { const q = S._quotaSearch.toLowerCase(); prods = prods.filter(p => p.product_name.toLowerCase().includes(q)); }
+
+  const colW = 54;
+  const minW = 200 + (7 * colW);
+
+  el.innerHTML = `<div style="padding:16px 20px">
+    <div style="font-size:12px;color:var(--t3);margin-bottom:8px">ตั้งจำนวนโควตาสินค้าต่อวัน (จันทร์–อาทิตย์) — กรอกแล้วกด บันทึก</div>
+    <input class="search-input" placeholder="🔍 ค้นหาสินค้า..." value="${S._quotaSearch}" oninput="S._quotaSearch=this.value;renderQuotaTable()" style="width:100%;margin-bottom:8px">
+    ${secChips}
+    <div style="overflow-x:auto;margin-top:8px;max-height:calc(100vh - 260px);overflow-y:auto" id="quotaTableWrap">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:${minW}px">
+        <thead style="position:sticky;top:0;z-index:3;background:#fff">
+          <tr style="background:var(--s1)">
+            <th style="padding:8px 10px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);border-bottom:2px solid var(--bd);position:sticky;left:0;background:var(--s1);z-index:4;min-width:180px">สินค้า</th>
+            ${DAY_LABELS.map((d, i) => `<th style="padding:8px 4px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);border-bottom:2px solid var(--bd);width:${colW}px">${d}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>${prods.map(p => {
+          const q = S._quotaMap[p.product_id] || {};
+          return `<tr>
+            <td style="padding:6px 10px;border-bottom:1px solid var(--bd2);font-weight:600;font-size:12px;position:sticky;left:0;background:#fff;z-index:2;white-space:nowrap">${p.product_name}</td>
+            ${DAY_LABELS.map((_, i) => {
+              const val = q[i] || 0;
+              return `<td style="padding:4px 2px;border-bottom:1px solid var(--bd2);text-align:center">
+                <input type="number" min="0" value="${val}" style="width:${colW - 8}px;text-align:center;border:1px solid var(--bd2);border-radius:4px;padding:4px 2px;font-size:13px;font-weight:600" 
+                  data-pid="${p.product_id}" data-day="${i}"
+                  onfocus="this.select()"
+                  onchange="updateQuotaCell('${p.product_id}',${i},this.value)">
+              </td>`;
+            }).join('')}
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
+      <button class="btn btn-gold" style="padding:10px 40px;font-size:14px" onclick="saveAllQuotas()" id="quotaSaveBtn">💾 บันทึก</button>
+    </div>
+    <div style="font-size:12px;color:var(--t3);margin-top:8px;text-align:center">${prods.length} สินค้า × 7 วัน</div>
+  </div>`;
+}
+
+function updateQuotaCell(productId, day, val) {
+  if (!S._quotaMap[productId]) S._quotaMap[productId] = {};
+  S._quotaMap[productId][day] = parseInt(val) || 0;
+  S._quotaDirty = true;
+}
+
+async function saveAllQuotas() {
+  const btn = document.getElementById('quotaSaveBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> กำลังบันทึก...'; }
+
+  const quotas = [];
+  Object.keys(S._quotaMap).forEach(pid => {
+    const days = S._quotaMap[pid];
+    for (let d = 0; d <= 6; d++) {
+      if (days[d] !== undefined) {
+        quotas.push({ product_id: pid, day_of_week: d, quota_qty: days[d] });
+      }
+    }
+  });
+
+  try {
+    const resp = await api('save_quotas', {
+      store_id: S.session.store_id,
+      dept_id: S.session.dept_id,
+      quotas
+    });
+    if (resp.success) {
+      toast(resp.message || '✅ บันทึกโควตาเรียบร้อย', 'success');
+      S._quotaDirty = false;
+    } else {
+      toast('❌ ' + (resp.message || resp.error), 'error');
+    }
+  } catch(e) {
+    toast('❌ ' + e.message, 'error');
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '💾 บันทึก'; }
 }
 

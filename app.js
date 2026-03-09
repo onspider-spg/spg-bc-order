@@ -1,4 +1,4 @@
-// Version 10.8 | 8 MAR 2026 | Siam Palette Group
+// Version 10.9 | 9 MAR 2026 | Siam Palette Group
 // BC Order — app.js: Core, State, API, Loaders, Sidebar, Routing
 // Fix: sidebar toggle desktop/mobile, logout URL, favicon
 
@@ -76,7 +76,7 @@ const S = {
 
 // ─── HASH ROUTING ─────────────────────────────────────────────
 const HASH_SCREENS = new Set([
-  'home','browse','cart','orders','stock','waste','returns','return-dashboard',
+  'home','browse','cart','orders','stock','store-quota','waste','returns','return-dashboard',
   'order-detail',
   'bc-home','bc-orders','bc-accept','bc-fulfil','bc-stock','bc-returns','bc-print',
   'admin-dashboard','admin-products','admin-access','admin-dept-mapping',
@@ -105,7 +105,7 @@ const SB_CFG = {
       { scr: 'home', lbl: 'Main Menu' },
       { scr: 'browse', lbl: 'Create Order', action: 'startOrder', perm: 'fn_create_order' },
       { scr: 'orders', lbl: 'View Orders', badgeKey: 'orders', perm: 'fn_view_own_orders' },
-      { scr: 'stock', lbl: 'View Stock', perm: 'fn_view_stock' },
+      { scr: 'store-quota', lbl: 'ตั้งโควตา', perm: 'fn_create_order' },
     ]},
     { sec: 'Records', open: true, items: [
       { scr: 'waste', lbl: 'Waste Log', perm: 'fn_view_waste' },
@@ -175,7 +175,7 @@ const SB_CFG = {
 
 const SCREEN_TITLES = {
   'home':'Main Menu','browse':'Create Order','cart':'Cart','orders':'View Orders',
-  'order-detail':'Order Detail','stock':'View Stock','waste':'Waste Log','returns':'Returns',
+  'order-detail':'Order Detail','stock':'View Stock','store-quota':'ตั้งโควตา','waste':'Waste Log','returns':'Returns',
   'return-dashboard':'Return Dashboard',
   'bc-home':'Main Menu','bc-orders':'View Orders','bc-accept':'Accept Order',
   'bc-fulfil':'Fulfil & Deliver','bc-stock':'Manage Stock','bc-returns':'Incoming Returns','bc-print':'Print Centre',
