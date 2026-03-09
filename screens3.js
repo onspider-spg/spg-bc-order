@@ -1,6 +1,6 @@
-// Version 2.4 | 10 MAR 2026 | Siam Palette Group
+// Version 2.5 | 10 MAR 2026 | Siam Palette Group
 // BC Order — screens3.js: Phase E — Browse V2 (Quota + Stock + Auto Calc)
-// Fix: +/- moved to grid, larger fonts, stock persists, addToCart reads S._stockInput
+// Fix: clear S._stockInput on new order + after submit success
 // Overrides: renderBrowse, renderProducts, addToCart, removeFromBrowse,
 //            toggleUrgentBrowse, renderCart, submitOrder, setDeliveryDate
 // Rollback: remove <script src="screens3.js"> from index.html
@@ -47,6 +47,8 @@ function _calcQty(quota, stock, minOrder, orderStep) {
 
 function renderBrowse() {
   if (S.editingOrderId) { S.editingOrderId = null; S.cart = []; S.headerNote = ''; }
+  // Fresh start: clear stock input cache for new order
+  if (!S.editingOrderId) S._stockInput = {};
   if (!S.deliveryDate) S.deliveryDate = tomorrowSydney();
 
   const today = todaySydney();
@@ -332,6 +334,7 @@ async function submitOrder() {
       if (resp.success) {
         toast(resp.message || '✅ แก้ไขเรียบร้อย!', 'success');
         S.cart = []; S.headerNote = ''; S.editingOrderId = null;
+        S._stockInput = {}; // clear stock cache
         setTimeout(() => showScreen('orders'), 1500);
       } else {
         toast(resp.message || 'เกิดข้อผิดพลาด', 'error');
@@ -353,6 +356,7 @@ async function submitOrder() {
         toast(resp.message || '✅ สั่งเรียบร้อย!', 'success');
         S.cart = []; S.headerNote = '';
         S._quotaMap = null; // reset for fresh data next order
+        S._stockInput = {}; // clear stock cache
         setTimeout(async () => {
           try { await loadOrders(); } catch(e) {}
           try { await loadDashboard(); } catch(e) {}
