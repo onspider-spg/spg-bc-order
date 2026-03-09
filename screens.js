@@ -1,6 +1,6 @@
-// Version 10.8.1 | 10 MAR 2026 | Siam Palette Group
+// Version 10.8.2 | 10 MAR 2026 | Siam Palette Group
 // BC Order — screens.js
-// Fix: Stock History card list + tap to view detail dialog
+// Fix: fulfilled_by_name + Stock History card list
 
 // ─── SCREEN RENDERER ─────────────────────────────────────────
 function renderApp() {
@@ -1134,7 +1134,7 @@ async function viewOrder(orderId) {
           ${S.role === 'store' ? `<td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-size:12px;color:var(--blue)">${item.stock_on_hand !== null && item.stock_on_hand !== undefined ? item.stock_on_hand : '—'}</td>` : ''}
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${item.is_urgent?'⚡':'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${item.item_note||'—'}</td>
-          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${item.fulfilment_status ? `<span style="color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'};font-weight:600">${item.fulfilment_status} (${item.qty_sent||0})</span>${item.fulfilled_by ? `<div style="font-size:11px;color:var(--t3)">${item.fulfilled_by}</div>` : ''}` : '—'}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${item.fulfilment_status ? `<span style="color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'};font-weight:600">${item.fulfilment_status} (${item.qty_sent||0})</span>${item.fulfilled_by_name ? `<div style="font-size:11px;color:var(--t3)">${item.fulfilled_by_name}</div>` : ''}` : '—'}</td>
         </tr>`).join('') : `<tr><td colspan="${S.role === 'store' ? 6 : 5}" style="padding:16px;text-align:center;color:var(--tm)">ไม่มีรายการ</td></tr>`}</tbody>
       </table>
 

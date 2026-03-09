@@ -1,6 +1,6 @@
-// Version 10.8 | 8 MAR 2026 | Siam Palette Group
+// Version 10.8.1 | 10 MAR 2026 | Siam Palette Group
 // BC Order — admin2.js: WasteDash, TopProducts, Announcements, BC Orders, BC Fulfil, BC Stock, BC Returns, Print
-// Fix: Print section filter, tab selected state, cleaner print header
+// Fix: Fulfilled orders open showBcFulfil for Mark as Delivered
 
 // ─── B-04: WASTE DASHBOARD ──────────────────────────────────
 async function renderAdminWasteDashboard() {
@@ -669,7 +669,7 @@ function renderBcOrderList() {
 
       let tapAction;
       if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
-      else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
+      else if (o.status === 'Ordered' || o.status === 'InProgress' || o.status === 'Fulfilled') tapAction = `showBcFulfil('${o.order_id}')`;
       else tapAction = `viewOrder('${o.order_id}')`;
 
       return `<div style="padding:12px;border:1px solid var(--bd2);border-left:3px solid ${bdr};border-radius:0 var(--rd2) var(--rd2) 0;cursor:pointer;${isDone?'opacity:.7':''}" onclick="${tapAction}">
@@ -707,7 +707,7 @@ function renderBcOrderList() {
 
         let tapAction;
         if (o.status === 'Pending') tapAction = `showBcAccept('${o.order_id}')`;
-        else if (o.status === 'Ordered' || o.status === 'InProgress') tapAction = `showBcFulfil('${o.order_id}')`;
+        else if (o.status === 'Ordered' || o.status === 'InProgress' || o.status === 'Fulfilled') tapAction = `showBcFulfil('${o.order_id}')`;
         else tapAction = `viewOrder('${o.order_id}')`;
 
         return `<tr style="cursor:pointer;border-left:3px solid ${bdr};${isDone?'opacity:.7':''}${isRejected?'opacity:.5':''}" onclick="${tapAction}">
