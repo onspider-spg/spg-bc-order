@@ -1,6 +1,6 @@
-// Version 10.7 | 9 MAR 2026 | Siam Palette Group
+// Version 10.7.1 | 9 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
-// Phase 2: Store Screens UI overhaul (wireframe match)
+// Phase F: Order Detail shows stock_on_hand column
 
 // ─── SCREEN RENDERER ─────────────────────────────────────────
 function renderApp() {
@@ -1117,6 +1117,7 @@ async function viewOrder(orderId) {
         <thead><tr style="background:var(--s1)">
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สินค้า</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">จำนวน</th>
+          <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">สต็อก</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">⚡</th>
           <th style="padding:8px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Note</th>
           <th style="padding:8px 16px;text-align:center;font-weight:600;font-size:12px;color:var(--t3);text-transform:uppercase;border-bottom:2px solid var(--bd)">Fulfilment</th>
@@ -1124,10 +1125,11 @@ async function viewOrder(orderId) {
         <tbody>${items.length > 0 ? items.map(item => `<tr>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-weight:600">${item.product_name||item.product_id}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-weight:700">${item.qty_ordered} ${item.unit||''}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;font-size:12px;color:var(--blue)">${item.stock_on_hand !== null && item.stock_on_hand !== undefined ? item.stock_on_hand : '—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--red);font-weight:700">${item.is_urgent?'⚡':'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);font-size:12px">${item.item_note||'—'}</td>
           <td style="padding:8px 16px;border-bottom:1px solid var(--bd2);text-align:center">${item.fulfilment_status ? `<span style="color:${item.fulfilment_status==='full'?'var(--green)':'var(--red)'};font-weight:600">${item.fulfilment_status} (${item.qty_sent||0})</span>` : '—'}</td>
-        </tr>`).join('') : '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--tm)">ไม่มีรายการ</td></tr>'}</tbody>
+        </tr>`).join('') : '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--tm)">ไม่มีรายการ</td></tr>'}</tbody>
       </table>
 
       ${['Pending','Ordered'].includes(o.status) ? `
