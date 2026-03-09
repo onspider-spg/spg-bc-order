@@ -1,6 +1,6 @@
-// Version 2.2 | 9 MAR 2026 | Siam Palette Group
+// Version 2.3 | 10 MAR 2026 | Siam Palette Group
 // BC Order — screens3.js: Phase E — Browse V2 (Quota + Stock + Auto Calc)
-// Fix: mobile friendly UI, quota/stock/order bar on every product, stock required
+// Fix: stock persists via S._stockInput, grid card UI, min/step calc note
 // Overrides: renderBrowse, renderProducts, addToCart, removeFromBrowse,
 //            toggleUrgentBrowse, renderCart, submitOrder, setDeliveryDate
 // Rollback: remove <script src="screens3.js"> from index.html
@@ -107,64 +107,57 @@ function renderProducts() {
 function _renderRow(p) {
   const inCart = S.cart.find(c => c.product_id === p.product_id);
   const qty = inCart ? inCart.qty : 0;
-  const stockVal = inCart ? inCart.stock_on_hand : null;
+  // Read stock from S._stockInput first (persists even when not in cart)
+  if (!S._stockInput) S._stockInput = {};
+  const stockVal = S._stockInput[p.product_id] ?? (inCart ? inCart.stock_on_hand : null);
   const quota = _getQuota(p.product_id);
   const qNum = (quota !== null) ? quota : 0;
   const sVal = (stockVal !== null && stockVal !== undefined) ? stockVal : '';
   const autoQty = _calcQty(qNum, stockVal, p.min_order, p.order_step);
 
-  const border = inCart ? 'border:1px solid #c8e6c9;background:var(--green-bg)' : 'border:1px solid var(--bd2);background:#fff';
-  const canMinus = qty > 0;
-  const btnBdr = inCart ? 'var(--green)' : 'var(--bd)';
-  const btnClr = inCart ? 'var(--green)' : 'var(--t4)';
+  const isInCart = qty > 0;
+  const cardBg = isInCart ? '#f0fdf4' : '#fff';
+  const cardBdr = isInCart ? '#bbf7d0' : 'var(--bd2)';
 
-  // Auto calc explanation
-  let calcLine = '';
-  if (sVal !== '') {
-    const raw = qNum - parseInt(sVal);
-    if (autoQty > 0 && autoQty > raw) {
-      // min_order or step kicked in
-      calcLine = `<div style="font-size:11px;color:var(--blue);margin-top:2px">need ${Math.max(0,raw)} → min ${p.min_order||1} / step ${p.order_step||1} → <b>${autoQty}</b></div>`;
-    } else if (autoQty > 0) {
-      calcLine = `<div style="font-size:11px;color:var(--blue);margin-top:2px">${qNum} − ${sVal} → <b>สั่ง ${autoQty}</b></div>`;
-    } else {
-      calcLine = `<div style="font-size:11px;color:var(--green);margin-top:2px">✓ สต็อกเพียงพอ</div>`;
+  // Calc note (shows when min/step kicks in)
+  let calcNote = '';
+  if (sVal !== '' && autoQty > 0) {
+    const raw = Math.max(0, qNum - parseInt(sVal));
+    if (autoQty > raw) {
+      calcNote = `<div style="font-size:10px;color:var(--t3);margin-top:3px;padding:0 4px">💡 need ${raw} → min ${p.min_order||1}/step ${p.order_step||1} → <b>${autoQty}</b></div>`;
     }
   }
 
-  // Stock input border: orange if empty, green if filled
-  const stockBorder = sVal === '' ? 'var(--orange)' : 'var(--green)';
+  const stockBdr = sVal === '' ? 'var(--orange)' : '#94a3b8';
 
-  return `<div id="row-${p.product_id}" style="padding:10px 12px;${border};border-radius:var(--rd);margin-bottom:0">
+  return `<div id="row-${p.product_id}" style="border:1px solid ${cardBdr};background:${cardBg};border-radius:12px;padding:10px 12px">
     <div style="display:flex;align-items:center;gap:10px">
-      ${p.image_url ? `<div style="width:40px;height:40px;background:var(--s1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${prodImg(p, 40)}</div>` : ''}
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700">${p.product_name}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${canMinus?btnBdr:'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:14px;color:${canMinus?btnClr:'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
-        <div style="font-size:16px;font-weight:800;min-width:24px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
-        <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${btnBdr};display:flex;align-items:center;justify-content:center;font-size:14px;color:${inCart?btnClr:'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
-        ${inCart ? `<div style="width:28px;height:28px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;${inCart.is_urgent?'':'opacity:.4'}" onclick="toggleUrgentBrowse('${p.product_id}')" title="⚡ Urgent">⚡</div>` : ''}
+      ${p.image_url ? `<div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--s1);display:flex;align-items:center;justify-content:center">${prodImg(p, 36)}</div>` : ''}
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;line-height:1.3">${p.product_name}</div></div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <div style="width:26px;height:26px;border-radius:50%;border:1.5px solid ${isInCart?'var(--green)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:13px;color:${isInCart?'var(--green)':'var(--t4)'};cursor:pointer;font-weight:700" onclick="removeFromBrowse('${p.product_id}')">−</div>
+        <div style="font-size:15px;font-weight:800;min-width:22px;text-align:center;color:${qty>0?'var(--t)':'var(--t4)'}">${qty}</div>
+        <div style="width:26px;height:26px;border-radius:50%;border:1.5px solid ${isInCart?'var(--green)':'var(--bd)'};display:flex;align-items:center;justify-content:center;font-size:13px;color:${isInCart?'var(--green)':'var(--t2)'};cursor:pointer;font-weight:700" onclick="addToCart('${p.product_id}')">+</div>
+        ${isInCart ? `<div style="width:24px;height:24px;border-radius:50%;background:${inCart.is_urgent?'var(--orange)':'var(--s2)'};display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;${inCart.is_urgent?'':'opacity:.35'}" onclick="toggleUrgentBrowse('${p.product_id}')">⚡</div>` : ''}
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 8px;background:var(--s1);border-radius:8px;font-size:12px">
-      <div style="flex:1;display:flex;align-items:center;gap:4px">
-        <span style="color:var(--t3)">โควตา</span>
-        <span style="font-weight:700;color:var(--blue)">${qNum}</span>
+    <div style="display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:4px;margin-top:8px;background:var(--s1);border-radius:8px;padding:6px 8px;align-items:center">
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px">โควตา</div>
+        <div style="font-size:15px;font-weight:800;color:var(--blue)">${qNum}</div>
       </div>
-      <div style="flex:1.2;display:flex;align-items:center;gap:4px">
-        <span style="color:var(--t3)">สต็อก</span>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px">สต็อก</div>
         <input type="number" min="0" inputmode="numeric" value="${sVal}" placeholder="—"
-          style="width:48px;padding:4px;border:1.5px solid ${stockBorder};border-radius:6px;font-size:13px;font-weight:700;text-align:center;background:#fff"
+          style="width:52px;padding:4px 2px;border:1.5px solid ${stockBdr};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:#fff;margin-top:2px"
           onfocus="this.select()" onchange="_onStock('${p.product_id}',this.value)" onclick="event.stopPropagation()">
       </div>
-      <div style="flex:1;display:flex;align-items:center;gap:4px">
-        <span style="color:var(--t3)">สั่ง</span>
-        <span style="font-weight:800;font-size:14px;color:${autoQty > 0 ? 'var(--blue)' : 'var(--t4)'}">${sVal !== '' ? autoQty : '—'}</span>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px">สั่ง</div>
+        <div style="font-size:15px;font-weight:800;color:${sVal !== '' ? (autoQty > 0 ? 'var(--blue)' : 'var(--green)') : 'var(--t4)'}">${sVal !== '' ? autoQty : '—'}</div>
       </div>
     </div>
-    ${calcLine}
+    ${calcNote}
   </div>`;
 }
 
@@ -181,13 +174,17 @@ function _patchRow(productId) {
 function _onStock(productId, val) {
   const p = S.products.find(x => x.product_id === productId);
   if (!p) return;
+  if (!S._stockInput) S._stockInput = {};
   const stockVal = (val !== '' && val !== null && val !== undefined) ? parseInt(val) : null;
+  // Always persist stock input (survives cart removal)
+  if (stockVal !== null) S._stockInput[productId] = stockVal;
+  else delete S._stockInput[productId];
+
   const qNum = _getQuota(productId) ?? 0;
   const autoQty = _calcQty(qNum, stockVal, p.min_order, p.order_step);
   const idx = S.cart.findIndex(c => c.product_id === productId);
 
   if (autoQty > 0) {
-    // Add or update cart with auto calc qty
     if (idx >= 0) { S.cart[idx].qty = autoQty; S.cart[idx].stock_on_hand = stockVal; }
     else {
       S.cart.push({
@@ -198,7 +195,6 @@ function _onStock(productId, val) {
       });
     }
   } else {
-    // autoQty = 0 → update stock_on_hand if in cart, but set qty to 0 → remove
     if (idx >= 0) { S.cart.splice(idx, 1); }
   }
 
