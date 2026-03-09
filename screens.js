@@ -1,6 +1,6 @@
-// Version 10.7.1 | 9 MAR 2026 | Siam Palette Group
+// Version 10.7.2 | 9 MAR 2026 | Siam Palette Group
 // BC Order — screens.js: renderApp, Home, Browse, Cart, Orders, Stock
-// Phase F: Order Detail shows stock_on_hand column
+// Phase F: Order Detail stock_on_hand + Set Quota in quick menu
 
 // ─── SCREEN RENDERER ─────────────────────────────────────────
 function renderApp() {
@@ -516,7 +516,7 @@ function renderHomeDashboard() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
         ${hasPerm('fn_create_order') ? `<div class="card" style="border-left:3px solid var(--gold)" onclick="startOrder()"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📝</div><div style="flex:1"><div class="card-title" style="font-size:13px">Create Order</div><div class="card-desc" style="font-size:12px">สั่งเค้ก ซอสไปที่ร้าน</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
         ${hasPerm('fn_view_own_orders') ? `<div class="card" onclick="showScreen('orders')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📋</div><div style="flex:1"><div class="card-title" style="font-size:13px">View Orders</div><div class="card-desc" style="font-size:12px">ดูรายการสั่งย้อนหลัง</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
-        ${hasPerm('fn_view_stock') ? `<div class="card" onclick="showScreen('stock')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📦</div><div style="flex:1"><div class="card-title" style="font-size:13px">View Stock</div><div class="card-desc" style="font-size:12px">สินค้าพร้อมส่ง</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
+        ${hasPerm('fn_create_order') ? `<div class="card" onclick="showScreen('store-quota')"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px">📊</div><div style="flex:1"><div class="card-title" style="font-size:13px">Set Quota</div><div class="card-desc" style="font-size:12px">ตั้งโควตาสินค้ารายวัน</div></div><div class="card-right" style="font-size:13px">→</div></div></div>` : ''}
       </div>
 
       <!-- Records Quick Menu -->
